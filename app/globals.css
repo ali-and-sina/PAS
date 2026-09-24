@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ─── Base ───────────────────────────────── */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    /* ─── Surface ────────────────────────────── */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* ─── Primary ────────────────────────────── */
+    --primary: 192 84% 31%;
+    --primary-foreground: 0 0% 100%;
+
+    /* ─── Secondary ──────────────────────────── */
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    /* ─── Muted ──────────────────────────────── */
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    /* ─── Accent ─────────────────────────────── */
+    --accent: 186 100% 96%;
+    --accent-foreground: 192 84% 31%;
+
+    /* ─── Destructive ────────────────────────── */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* ─── Border / Input / Ring ──────────────── */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 192 84% 31%;
+
+    /* ─── Radius ─────────────────────────────── */
+    --radius: 0.5rem;
+
+    /* ─── Status: Normal ─────────────────────── */
+    --status-normal: 142 71% 45%;
+    --status-normal-bg: 138 76% 97%;
+    --status-normal-border: 141 79% 85%;
+
+    /* ─── Status: Low ────────────────────────── */
+    --status-low: 32 95% 44%;
+    --status-low-bg: 48 100% 96%;
+    --status-low-border: 46 97% 65%;
+
+    /* ─── Status: High ───────────────────────── */
+    --status-high: 21 90% 48%;
+    --status-high-bg: 33 100% 96%;
+    --status-high-border: 27 96% 61%;
+
+    /* ─── Status: Critical ───────────────────── */
+    --status-critical: 0 72% 51%;
+    --status-critical-bg: 0 86% 97%;
+    --status-critical-border: 0 96% 89%;
+
+    /* ─── Status: Superseded ─────────────────── */
+    --status-superseded: 215 16% 47%;
+    --status-superseded-bg: 210 40% 98%;
+    --status-superseded-border: 214 32% 91%;
+
+    /* ─── Order Status ───────────────────────── */
+    --order-pending: 215 16% 47%;
+    --order-pending-bg: 210 40% 96%;
+
+    --order-received: 192 84% 31%;
+    --order-received-bg: 186 100% 96%;
+
+    --order-in-progress: 32 95% 44%;
+    --order-in-progress-bg: 48 100% 96%;
+
+    --order-completed: 142 71% 45%;
+    --order-completed-bg: 138 76% 97%;
+
+    --order-cancelled: 0 72% 51%;
+    --order-cancelled-bg: 0 86% 97%;
+
+    /* ─── Prescription Status ────────────────── */
+    --prescription-active: 142 71% 45%;
+    --prescription-active-bg: 138 76% 97%;
+
+    --prescription-completed: 215 16% 47%;
+    --prescription-completed-bg: 210 40% 96%;
+
+    --prescription-cancelled: 0 72% 51%;
+    --prescription-cancelled-bg: 0 86% 97%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    direction: rtl;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-medium tracking-tight;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
