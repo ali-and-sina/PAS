@@ -1,13 +1,5 @@
-import { Vazirmatn } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
-
-const vazirmatn = Vazirmatn({
-  subsets: ["arabic", "latin"],
-  variable: "--font-vazirmatn",
-  display: "swap",
-  weight: ["400", "500", "600"],
-});
 
 export const metadata = {
   title: {
@@ -17,7 +9,10 @@ export const metadata = {
   description:
     "پلتفرم مدیریت گردش‌کار سلامت برای پزشکان، آزمایشگاه‌ها و بیماران.",
   applicationName: "پزشک‌یار",
-  robots: { index: false, follow: false },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export const viewport = {
@@ -29,12 +24,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html
-      lang="fa"
-      dir="rtl"
-      className={vazirmatn.variable}
-      suppressHydrationWarning
-    >
+    <html lang="fa" dir="rtl" suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <a
           href="#main-content"
@@ -42,7 +32,9 @@ export default function RootLayout({ children }) {
         >
           پرش به محتوای اصلی
         </a>
+
         {children}
+
         <Toaster
           position="bottom-left"
           dir="rtl"

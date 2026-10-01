@@ -6,32 +6,13 @@ import { normalizeIranianMobile } from "@/lib/utils/validation";
 
 const ROLES = new Set(["patient", "doctor", "laboratory"]);
 
-/**
- * Normalize a generic string.
- */
-function normalizeString(value) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-/**
- * Normalize Iranian mobile numbers to E.164.
- *
- * Examples:
- * 09121234567   -> +989121234567
- * 9121234567    -> +989121234567
- * 989121234567  -> +989121234567
- * +989121234567 -> +989121234567
- * 00989121234567 -> +989121234567
- */
 function normalizePhone(value) {
-  return normalizeIranianMobile(value) ?? "";
+  const normalized = normalizeIranianMobile(value) ?? "";
+  return normalized.replace(/^\+/, "");
 }
 
-/**
- * Only accept canonical Iranian E.164 mobile numbers.
- */
 function isValidPhone(phone) {
-  return /^\+989\d{9}$/.test(phone);
+  return /^989\d{9}$/.test(phone);
 }
 
 /**
@@ -74,10 +55,35 @@ function invalidInput() {
 }
 
 /**
+ * Best-effort local session cleanup.
+ *
+ * This is intentionally local-only:
+ * we want to clear the browser/server session used by
+ * the current login flow, without affecting other sessions.
+ */
+async function clearCurrentSession(supabase) {
+  try {
+    await supabase.auth.signOut({
+      scope: "local",
+    });
+  } catch {
+    // Best-effort cleanup only.
+  }
+}
+
+/**
  * Convert Supabase Auth OTP errors into stable application codes.
  */
 function mapOtpError(error) {
   const message = String(error?.message || "").toLowerCase();
+  const code = String(error?.code || "").toLowerCase();
+
+  if (
+    code === "otp_disabled" &&
+    message.includes("signups not allowed for otp")
+  ) {
+    return "USER_NOT_FOUND";
+  }
 
   if (
     message.includes("rate") ||
@@ -137,13 +143,23 @@ export async function requestLoginOtp({ role, identifier, phone } = {}) {
 
     const supabase = await createClient();
 
+    /**
+     * Important:
+     *
+     * If another user/session is already authenticated in this
+     * browser, clear the local session before starting a new
+     * login flow. This prevents role/session contamination.
+     */
+    await clearCurrentSession(supabase);
+
     const shouldCreateUser = role === "patient";
 
+    const authPhone = `+${phone}`;
+
     const { error } = await supabase.auth.signInWithOtp({
-      phone,
+      phone: authPhone,
       options: {
         shouldCreateUser,
-
         ...(role === "patient"
           ? {
               data: {
@@ -192,7 +208,14 @@ export async function requestLoginOtp({ role, identifier, phone } = {}) {
  * 3. Verify that the database role matches the requested flow.
  * 4. Verify phone number.
  * 5. Verify role-specific identifier.
- * 6. Redirect according to the authenticated profile.
+ * 6. Verify role-specific domain profile.
+ * 7. Redirect according to the authenticated profile.
+ *
+ * Important:
+ *
+ * After verifyOtp succeeds, Supabase has established a session.
+ * Therefore any later domain-level validation failure must also
+ * clear that local session before returning login failure.
  */
 export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
   try {
@@ -220,15 +243,50 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
     const supabase = await createClient();
 
     /**
+     * Once OTP verification succeeds, a session exists.
+     *
+     * We use authEstablished to distinguish:
+     * - failures before authentication
+     * - failures after authentication
+     */
+    let authEstablished = false;
+
+    /**
+     * Domain/authz failure after OTP success.
+     *
+     * Example:
+     * - OTP is correct
+     * - but user is not a doctor
+     * - or doctor profile is missing
+     * - or license does not match
+     * - or doctor is unverified
+     *
+     * In all of those cases, we must not leave a valid session
+     * behind while telling the UI "login failed".
+     */
+    const authFailure = async (errorCode = "NOT_VERIFIED") => {
+      if (authEstablished) {
+        await clearCurrentSession(supabase);
+      }
+
+      return {
+        ok: false,
+        code: errorCode,
+      };
+    };
+
+    /**
      * Step 1:
      * Verify SMS OTP.
      *
      * Supabase SSR stores the resulting session through
      * the cookie adapter in lib/supabase/server.js.
      */
+    // const authPhone = `+${phone}`;
+
     const { data: verifyData, error: verifyError } =
       await supabase.auth.verifyOtp({
-        phone,
+        phone: authPhone,
         token: code,
         type: "sms",
       });
@@ -252,11 +310,19 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
     }
 
     /**
-     * Step 2:
-     * The OTP has been verified.
+     * OTP verification succeeded.
      *
-     * Now the request is authenticated, so RLS can allow
-     * the user to read their own profile.
+     * From this point forward, domain validation failures
+     * must clean up the session.
+     */
+    authEstablished = true;
+
+    /**
+     * Step 2:
+     * Read the authenticated user's profile.
+     *
+     * Explicitly use the doctor_profiles foreign key because
+     * there can be multiple possible relationships in the schema.
      */
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
@@ -268,16 +334,18 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
         phone,
         national_id,
         avatar_url,
-       doctor_profiles!doctor_profiles_id_fkey (
-       medical_license_number,
-       is_verified,
-       specialty
+
+        doctor_profiles!doctor_profiles_id_fkey (
+          medical_license_number,
+          is_verified,
+          specialty
         ),
+
         laboratory_profiles (
           license_number,
           organization_id
         )
-      `,
+        `,
       )
       .eq("id", user.id)
       .maybeSingle();
@@ -285,17 +353,11 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
     if (profileError) {
       console.error("[verifyLoginOtp:profile]", profileError);
 
-      return {
-        ok: false,
-        code: "SERVER_ERROR",
-      };
+      return authFailure("SERVER_ERROR");
     }
 
     if (!profile) {
-      return {
-        ok: false,
-        code: "NOT_VERIFIED",
-      };
+      return authFailure();
     }
 
     /**
@@ -305,10 +367,7 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
      * The actual role comes from public.profiles.
      */
     if (profile.role !== role) {
-      return {
-        ok: false,
-        code: "NOT_VERIFIED",
-      };
+      return authFailure();
     }
 
     /**
@@ -318,32 +377,33 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
     const profilePhone = normalizePhone(profile.phone);
 
     if (!profilePhone || profilePhone !== phone) {
-      return {
-        ok: false,
-        code: "NOT_VERIFIED",
-      };
+      return authFailure();
     }
 
     /**
      * Step 5:
-     * Verify the role-specific identifier.
+     * Verify role-specific identifier and domain profile.
      */
     if (role === "patient") {
+      /**
+       * Patient identity:
+       *
+       * The authenticated profile must contain the same national ID
+       * that was entered at login.
+       */
       if (profile.national_id !== identifier) {
-        return {
-          ok: false,
-          code: "NOT_VERIFIED",
-        };
+        return authFailure();
       }
 
       /**
-       * A patient is considered a new patient when:
+       * Patient onboarding state:
        *
-       * - Auth user exists
-       * - profiles row exists
-       * - patient_profiles row does not exist
+       * Existence of patient_profiles is the single source of truth.
        *
-       * We deliberately do NOT use full_name === "کاربر جدید".
+       * Auth user exists
+       * + profiles row exists
+       * + patient_profiles row DOES NOT exist
+       * = new/incomplete patient
        */
       const { data: patientProfile, error: patientProfileError } =
         await supabase
@@ -355,13 +415,17 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
       if (patientProfileError) {
         console.error("[verifyLoginOtp:patient_profile]", patientProfileError);
 
-        return {
-          ok: false,
-          code: "SERVER_ERROR",
-        };
+        return authFailure("SERVER_ERROR");
       }
 
       if (!patientProfile) {
+        /**
+         * This is an intentional onboarding response,
+         * not an authentication failure.
+         *
+         * At this point the user is authenticated, and the next
+         * step is to collect the mandatory patient profile data.
+         */
         return {
           ok: true,
           isNewUser: true,
@@ -371,25 +435,35 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
     }
 
     if (role === "doctor") {
-      const doctorProfile = Array.isArray(profile.medical_license_number)
+      /**
+       * IMPORTANT:
+       * doctor_profiles is the nested object.
+       *
+       * Do NOT check Array.isArray(profile.medical_license_number).
+       */
+      const doctorProfile = Array.isArray(profile.doctor_profiles)
         ? profile.doctor_profiles[0]
         : profile.doctor_profiles;
 
+      /**
+       * A doctor Auth user without a domain doctor profile
+       * is not authorized to enter the doctor area.
+       */
       if (!doctorProfile) {
-        return {
-          ok: false,
-          code: "NOT_VERIFIED",
-        };
+        return authFailure();
       }
 
+      /**
+       * Doctor login requires:
+       *
+       * - license matches requested identifier
+       * - doctor profile is verified
+       */
       if (
         doctorProfile.medical_license_number !== identifier ||
         doctorProfile.is_verified !== true
       ) {
-        return {
-          ok: false,
-          code: "NOT_VERIFIED",
-        };
+        return authFailure();
       }
     }
 
@@ -398,18 +472,37 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
         ? profile.laboratory_profiles[0]
         : profile.laboratory_profiles;
 
+      /**
+       * A laboratory Auth user without a domain laboratory profile
+       * is not authorized to enter the laboratory area.
+       */
       if (!laboratoryProfile) {
-        return {
-          ok: false,
-          code: "NOT_VERIFIED",
-        };
+        return authFailure();
       }
 
+      /**
+       * Laboratory login requires the entered license number
+       * to match the trusted domain profile.
+       */
       if (laboratoryProfile.license_number !== identifier) {
-        return {
-          ok: false,
-          code: "NOT_VERIFIED",
-        };
+        return authFailure();
+      }
+    }
+
+    if (role === "admin") {
+      const { data: adminProfile, error: adminProfileError } = await supabase
+        .from("admin_profiles")
+        .select("personnel_code")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (adminProfileError) {
+        console.error("[verifyLoginOtp:adminProfile]", adminProfileError);
+        return authFailure("SERVER_ERROR");
+      }
+
+      if (!adminProfile || adminProfile.personnel_code !== identifier) {
+        return authFailure();
       }
     }
 
@@ -419,6 +512,21 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
      *
      * Routing is based on the trusted database profile.
      */
+    const doctorProfile = Array.isArray(profile.doctor_profiles)
+      ? profile.doctor_profiles[0]
+      : profile.doctor_profiles;
+
+    const laboratoryProfile = Array.isArray(profile.laboratory_profiles)
+      ? profile.laboratory_profiles[0]
+      : profile.laboratory_profiles;
+
+    /**
+     * Important:
+     *
+     * Patient onboarding was already handled above.
+     * Therefore reaching this section for a patient means that
+     * patient_profiles exists and onboarding is complete.
+     */
     const redirectTo = await getPostLoginRedirect({
       id: profile.id,
       role: profile.role,
@@ -426,17 +534,13 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
       phone: profile.phone,
       avatar_url: profile.avatar_url,
 
-      is_verified: Array.isArray(profile.doctor_profiles)
-        ? (profile.doctor_profiles[0]?.is_verified ?? null)
-        : (profile.doctor_profiles?.is_verified ?? null),
+      is_verified: doctorProfile?.is_verified ?? null,
 
-      specialty: Array.isArray(profile.doctor_profiles)
-        ? (profile.doctor_profiles[0]?.specialty ?? null)
-        : (profile.doctor_profiles?.specialty ?? null),
+      specialty: doctorProfile?.specialty ?? null,
 
-      organization_id: Array.isArray(profile.laboratory_profiles)
-        ? (profile.laboratory_profiles[0]?.organization_id ?? null)
-        : (profile.laboratory_profiles?.organization_id ?? null),
+      organization_id: laboratoryProfile?.organization_id ?? null,
+
+      patient_profile_completed: role === "patient" ? true : null,
     });
 
     return {
@@ -446,6 +550,20 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
     };
   } catch (error) {
     console.error("[verifyLoginOtp]", error);
+
+    /**
+     * If OTP had already established a session,
+     * make sure the failure cannot leave that session behind.
+     *
+     * We cannot access authFailure here because it is scoped
+     * inside the try block, so cleanup directly.
+     */
+    try {
+      const supabase = await createClient();
+      await clearCurrentSession(supabase);
+    } catch {
+      // Best-effort cleanup only.
+    }
 
     return {
       ok: false,

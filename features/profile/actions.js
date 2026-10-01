@@ -2,15 +2,50 @@
 
 import { createClient } from "@/lib/supabase/server";
 
-const SEX_VALUES = new Set(["male", "female", "other"]);
-
-const BLOOD_TYPES = new Set(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]);
+const SUPPORTED_FIELDS = new Set([
+  "full_name",
+  "avatar_url",
+  "date_of_birth",
+  "sex",
+  "blood_type",
+  "emergency_contact_name",
+  "emergency_contact_phone",
+]);
 
 function invalidInput() {
   return {
     ok: false,
     code: "INVALID_INPUT",
   };
+}
+
+function isValidDate(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const today = new Date();
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day &&
+    date <= today
+  );
+}
+
+function requiredString(value, maxLength = 255) {
+  if (typeof value !== "string") return null;
+
+  const result = value.trim();
+
+  if (!result || result.length > maxLength) {
+    return null;
+  }
+
+  return result;
 }
 
 function optionalString(value, maxLength = 255) {
@@ -31,80 +66,28 @@ function optionalString(value, maxLength = 255) {
   return result;
 }
 
-function requiredString(value, maxLength = 255) {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const result = value.trim();
-
-  if (!result || result.length > maxLength) {
-    return null;
-  }
-
-  return result;
-}
-
-function isValidDate(value) {
-  if (typeof value !== "string") {
-    return false;
-  }
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
-
-  const date = new Date(`${value}T00:00:00Z`);
-
-  return !Number.isNaN(date.getTime());
-}
-
+/**
+ * Updates the authenticated user's own profile.
+ *
+ * IMPORTANT:
+ * - user id is never accepted from the caller
+ * - phone is not editable here
+ * - authorization is enforced by the DB RPC
+ * - profiles + patient_profiles are updated atomically
+ */
 export async function updateOwnProfile(input = {}) {
   try {
     if (!input || typeof input !== "object" || Array.isArray(input)) {
       return invalidInput();
     }
 
-    const supabase = await createClient();
+    const keys = Object.keys(input);
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return {
-        ok: false,
-        code: "SERVER_ERROR",
-      };
+    if (keys.length === 0 || keys.some((key) => !SUPPORTED_FIELDS.has(key))) {
+      return invalidInput();
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, role")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError || !profile) {
-      return {
-        ok: false,
-        code: "SERVER_ERROR",
-      };
-    }
-
-    /*
-     * profiles
-     *
-     * Editable:
-     *   full_name
-     *   phone
-     *   avatar_url
-     *
-     * NOT editable here:
-     *   role
-     *   national_id
-     */
-    const profilePatch = {};
+    const payload = {};
 
     if ("full_name" in input) {
       const fullName = requiredString(input.full_name, 150);
@@ -113,17 +96,7 @@ export async function updateOwnProfile(input = {}) {
         return invalidInput();
       }
 
-      profilePatch.full_name = fullName;
-    }
-
-    if ("phone" in input) {
-      const phone = requiredString(input.phone, 30);
-
-      if (!phone || !/^\+[1-9]\d{7,14}$/.test(phone)) {
-        return invalidInput();
-      }
-
-      profilePatch.phone = phone;
+      payload.full_name = fullName;
     }
 
     if ("avatar_url" in input) {
@@ -133,164 +106,94 @@ export async function updateOwnProfile(input = {}) {
         return invalidInput();
       }
 
-      profilePatch.avatar_url = avatarUrl;
+      payload.avatar_url = avatarUrl;
     }
 
-    if (Object.keys(profilePatch).length > 0) {
-      const { error } = await supabase
-        .from("profiles")
-        .update(profilePatch)
-        .eq("id", user.id);
-
-      if (error) {
-        return {
-          ok: false,
-          code: "SERVER_ERROR",
-        };
+    if ("date_of_birth" in input) {
+      if (!isValidDate(input.date_of_birth)) {
+        return invalidInput();
       }
+
+      payload.date_of_birth = input.date_of_birth;
     }
 
-    /*
-     * Patient-only profile.
-     */
-    if (profile.role === "patient") {
-      const patientFieldsPresent =
-        "date_of_birth" in input ||
-        "sex" in input ||
-        "blood_type" in input ||
-        "emergency_contact_name" in input ||
-        "emergency_contact_phone" in input;
-
-      if (patientFieldsPresent) {
-        const patientPatch = {};
-
-        /*
-         * Required fields for patient_profiles.
-         *
-         * If this is the first completion request,
-         * date_of_birth and sex must be supplied.
-         */
-        if ("date_of_birth" in input) {
-          if (!isValidDate(input.date_of_birth)) {
-            return invalidInput();
-          }
-
-          patientPatch.date_of_birth = input.date_of_birth;
-        }
-
-        if ("sex" in input) {
-          if (typeof input.sex !== "string" || !SEX_VALUES.has(input.sex)) {
-            return invalidInput();
-          }
-
-          patientPatch.sex = input.sex;
-        }
-
-        if ("blood_type" in input) {
-          if (
-            input.blood_type !== null &&
-            input.blood_type !== "" &&
-            !BLOOD_TYPES.has(input.blood_type)
-          ) {
-            return invalidInput();
-          }
-
-          patientPatch.blood_type = input.blood_type || null;
-        }
-
-        if ("emergency_contact_name" in input) {
-          const value = optionalString(input.emergency_contact_name, 150);
-
-          if (value === undefined) {
-            return invalidInput();
-          }
-
-          patientPatch.emergency_contact_name = value;
-        }
-
-        if ("emergency_contact_phone" in input) {
-          const value = optionalString(input.emergency_contact_phone, 30);
-
-          if (value === undefined) {
-            return invalidInput();
-          }
-
-          if (value !== null && !/^\+[1-9]\d{7,14}$/.test(value)) {
-            return invalidInput();
-          }
-
-          patientPatch.emergency_contact_phone = value;
-        }
-
-        /*
-         * Check whether patient_profiles already exists.
-         */
-        const { data: existingPatient, error: patientLookupError } =
-          await supabase
-            .from("patient_profiles")
-            .select("id, date_of_birth, sex")
-            .eq("id", user.id)
-            .maybeSingle();
-
-        if (patientLookupError) {
-          return {
-            ok: false,
-            code: "SERVER_ERROR",
-          };
-        }
-
-        /*
-         * First completion:
-         * both DB-required fields must be supplied.
-         */
-        if (!existingPatient) {
-          if (!patientPatch.date_of_birth || !patientPatch.sex) {
-            return invalidInput();
-          }
-
-          const { error } = await supabase.from("patient_profiles").insert({
-            id: user.id,
-            ...patientPatch,
-          });
-
-          if (error) {
-            return {
-              ok: false,
-              code: "SERVER_ERROR",
-            };
-          }
-        } else {
-          const { error } = await supabase
-            .from("patient_profiles")
-            .update(patientPatch)
-            .eq("id", user.id);
-
-          if (error) {
-            return {
-              ok: false,
-              code: "SERVER_ERROR",
-            };
-          }
-        }
+    if ("sex" in input) {
+      if (input.sex !== "male" && input.sex !== "female") {
+        return invalidInput();
       }
+
+      payload.sex = input.sex;
     }
 
-    /*
-     * Doctor:
-     * only profiles.full_name / phone / avatar_url
-     * can be changed here.
-     *
-     * laboratory:
-     * same.
-     *
-     * license, organization and verification fields
-     * are deliberately not accepted.
-     */
+    if ("blood_type" in input) {
+      if (
+        input.blood_type !== null &&
+        input.blood_type !== "" &&
+        typeof input.blood_type !== "string"
+      ) {
+        return invalidInput();
+      }
+
+      payload.blood_type = input.blood_type || null;
+    }
+
+    if ("emergency_contact_name" in input) {
+      const value = optionalString(input.emergency_contact_name, 150);
+
+      if (value === undefined) {
+        return invalidInput();
+      }
+
+      payload.emergency_contact_name = value;
+    }
+
+    if ("emergency_contact_phone" in input) {
+      const value = optionalString(input.emergency_contact_phone, 30);
+
+      if (value === undefined) {
+        return invalidInput();
+      }
+
+      if (value !== null && !/^\+[1-9]\d{7,14}$/.test(value)) {
+        return invalidInput();
+      }
+
+      payload.emergency_contact_phone = value;
+    }
+
+    const supabase = await createClient();
+
+    const { error } = await supabase.rpc("update_own_profile", {
+      p_input: payload,
+    });
+
+    if (error) {
+      const code = String(error.code || "");
+      const message = String(error.message || "").toLowerCase();
+
+      if (
+        code === "22023" ||
+        code === "42501" ||
+        message.includes("invalid") ||
+        message.includes("required")
+      ) {
+        return invalidInput();
+      }
+
+      console.error("[updateOwnProfile]", error);
+
+      return {
+        ok: false,
+        code: "SERVER_ERROR",
+      };
+    }
 
     return {
       ok: true,
     };
-  } catch {
+  } catch (error) {
+    console.error("[updateOwnProfile]", error);
+
     return {
       ok: false,
       code: "SERVER_ERROR",

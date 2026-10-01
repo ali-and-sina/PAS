@@ -4,8 +4,8 @@ import {
 } from "@/lib/utils/validation";
 
 /**
- * OTP timing shown in the UI. These MUST match the Supabase dashboard
- * (Auth → Phone provider) of this project. Verify before release.
+ * OTP timing shown in the UI.
+ * These MUST match the Supabase dashboard.
  */
 export const OTP_LENGTH = 6;
 export const OTP_EXPIRY_SECONDS = 120;
@@ -25,6 +25,7 @@ export const LOGIN_ROLE_CONFIG = {
       validate: isValidIranianNationalId,
     },
   },
+
   doctor: {
     role: "doctor",
     label: "پزشک",
@@ -38,6 +39,7 @@ export const LOGIN_ROLE_CONFIG = {
       validate: isValidLicenseIdentifier,
     },
   },
+
   laboratory: {
     role: "laboratory",
     label: "آزمایشگاه",
@@ -51,13 +53,30 @@ export const LOGIN_ROLE_CONFIG = {
       validate: isValidLicenseIdentifier,
     },
   },
+
+  admin: {
+    role: "admin",
+    label: "مدیر سیستم",
+    description: "مدیریت کاربران و تنظیمات سامانه",
+    identifier: {
+      label: "کد پرسنلی",
+      placeholder: "ADM-0001",
+      inputMode: "text",
+      requiredMessage: "کد پرسنلی را وارد کنید.",
+      invalidMessage: "کد پرسنلی معتبر نیست.",
+      validate: isValidLicenseIdentifier,
+    },
+  },
 };
 
-/** Display order on the role picker. */
+/**
+ * Display order on the role picker.
+ */
 export const LOGIN_ROLES = [
   LOGIN_ROLE_CONFIG.patient,
   LOGIN_ROLE_CONFIG.doctor,
   LOGIN_ROLE_CONFIG.laboratory,
+  LOGIN_ROLE_CONFIG.admin,
 ];
 
 export const PHONE_MESSAGES = {
@@ -67,16 +86,25 @@ export const PHONE_MESSAGES = {
 
 /**
  * Server error code → user-facing message.
- * USER_NOT_FOUND is deliberately mapped to the same text as INVALID_INPUT
- * so the UI never reveals whether an identity exists.
+ *
+ * USER_NOT_FOUND intentionally uses the same generic message
+ * so the UI does not reveal whether an account exists.
  */
 const AUTH_ERROR_MESSAGES = {
-  INVALID_INPUT: "مشخصات واردشده معتبر نیست. اطلاعات را بررسی و دوباره تلاش کنید.",
-  USER_NOT_FOUND: "مشخصات واردشده معتبر نیست. اطلاعات را بررسی و دوباره تلاش کنید.",
+  INVALID_INPUT:
+    "مشخصات واردشده معتبر نیست. اطلاعات را بررسی و دوباره تلاش کنید.",
+
+  USER_NOT_FOUND:
+    "مشخصات واردشده معتبر نیست. اطلاعات را بررسی و دوباره تلاش کنید.",
+
   WRONG_OTP: "کد واردشده صحیح نیست.",
+
   EXPIRED_OTP: "کد منقضی شده است. کد جدید دریافت کنید.",
+
   NOT_VERIFIED: "دسترسی شما برای این بخش تأیید نشده است.",
+
   RATE_LIMITED: "تعداد تلاش‌ها زیاد بود. کمی بعد دوباره تلاش کنید.",
+
   SERVER_ERROR: "ورود با مشکل مواجه شد. لطفاً دوباره تلاش کنید.",
 };
 

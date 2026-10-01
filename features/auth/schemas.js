@@ -8,11 +8,22 @@ import { LOGIN_ROLE_CONFIG, OTP_LENGTH, PHONE_MESSAGES } from "./config";
 
 /**
  * Identity step schema for a given role.
- * Output is already canonical: { identifier: "0123456789", phone: "+989121234567" }.
+ *
+ * Output:
+ * {
+ *   identifier: "...",
+ *   phone: "989121234567"
+ * }
+ *
+ * Phone is intentionally kept without the leading "+".
  */
 export function buildLoginIdentitySchema(role) {
   const roleConfig = LOGIN_ROLE_CONFIG[role];
-  if (!roleConfig) throw new Error(`Unknown login role: ${role}`);
+
+  if (!roleConfig) {
+    throw new Error(`Unknown login role: ${role}`);
+  }
+
   const { identifier } = roleConfig;
 
   return z.object({
@@ -23,11 +34,18 @@ export function buildLoginIdentitySchema(role) {
         message: identifier.invalidMessage,
       })
       .transform(cleanIdentifier),
+
     phone: z
       .string()
       .min(1, { message: PHONE_MESSAGES.required })
-      .refine(isValidIranianMobile, { message: PHONE_MESSAGES.invalid })
-      .transform(normalizeIranianMobile),
+      .refine(isValidIranianMobile, {
+        message: PHONE_MESSAGES.invalid,
+      })
+      .transform((value) => {
+        const normalized = normalizeIranianMobile(value);
+
+        return normalized ? normalized.replace(/^\+/, "") : "";
+      }),
   });
 }
 

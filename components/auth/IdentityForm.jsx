@@ -8,7 +8,15 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import FormError from "@/components/shared/FormError";
 
-function TextField({ id, label, error, hint, inputRef, ...inputProps }) {
+function TextField({
+  id,
+  label,
+  error,
+  hint,
+  inputRef,
+  className,
+  ...inputProps
+}) {
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
   const describedBy =
@@ -23,7 +31,11 @@ function TextField({ id, label, error, hint, inputRef, ...inputProps }) {
         dir="ltr"
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={cn("h-11 tabular-nums", error && "border-destructive")}
+        className={cn(
+          "h-11 tabular-nums",
+          className,
+          error && "border-destructive",
+        )}
         {...inputProps}
       />
       {error && (
@@ -86,17 +98,19 @@ export default function IdentityForm({
       aria-labelledby={labelledBy}
       className="space-y-5"
     >
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={onBack}
-        disabled={pending}
-        className="-ms-2 text-muted-foreground"
-      >
-        <ArrowRight aria-hidden="true" />
-        تغییر نقش
-      </Button>
+      {onBack && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          disabled={pending}
+          className="-ms-2 text-muted-foreground"
+        >
+          <ArrowRight aria-hidden="true" />
+          تغییر نقش
+        </Button>
+      )}
 
       <FormError>{formError}</FormError>
 

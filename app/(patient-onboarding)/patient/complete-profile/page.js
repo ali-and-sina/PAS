@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+
 import { getSessionUser } from "@/lib/auth/server";
 import { LOGIN_PATH, ROLES, getRoleHome } from "@/lib/auth";
+
 import ProfileCompletionForm from "@/features/profile/components/ProfileCompletionForm";
 
 export const metadata = {
@@ -10,11 +12,23 @@ export const metadata = {
 export default async function CompleteProfilePage() {
   const user = await getSessionUser();
 
-  if (!user) redirect(LOGIN_PATH);
-  if (user.role !== ROLES.PATIENT) redirect(getRoleHome(user.role));
+  if (!user) {
+    redirect(LOGIN_PATH);
+  }
+
+  if (user.role !== ROLES.PATIENT) {
+    redirect(getRoleHome(user.role));
+  }
 
   const home = getRoleHome(ROLES.PATIENT);
-  if (user.full_name?.trim()) redirect(home);
+
+  /*
+   * The existence of patient_profiles is the only
+   * source of truth for onboarding completion.
+   */
+  if (user.patient_profile_completed === true) {
+    redirect(home);
+  }
 
   return (
     <main

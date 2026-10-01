@@ -12,7 +12,7 @@ import UserMenu from "./UserMenu";
 /** @param {{ mobileOpen: boolean, onMobileOpenChange: (open: boolean) => void }} props */
 export default function Header({ mobileOpen, onMobileOpenChange }) {
   const user = useSessionUser();
-  const notificationsHref = NOTIFICATIONS_HREF_BY_ROLE[user?.role] ?? "#";
+  const notificationsHref = NOTIFICATIONS_HREF_BY_ROLE[user?.role];
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6">
@@ -37,7 +37,7 @@ export default function Header({ mobileOpen, onMobileOpenChange }) {
       </span>
 
       <div className="ms-auto flex items-center gap-1.5">
-        <NotificationBell href={notificationsHref} />
+        {notificationsHref && <NotificationBell href={notificationsHref} />}
         <UserMenu user={user} />
       </div>
     </header>
