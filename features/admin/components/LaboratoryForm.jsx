@@ -89,7 +89,7 @@ export default function LaboratoryForm() {
 
       if (result?.ok) {
         toast.success("آزمایشگاه با موفقیت ثبت شد.");
-        router.push("/admin/laboratories");
+        router.push(`/admin/laboratories/${result.laboratoryId}`);
         router.refresh();
         return;
       }

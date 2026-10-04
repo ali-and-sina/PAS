@@ -1,62 +1,39 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { FlaskConical } from "lucide-react";
-import { getSessionUser } from "@/lib/auth/server";
-import { LOGIN_PATH, ROLES } from "@/lib/auth";
+import { Building2, Plus } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
-import LaboratoryTable from "@/features/admin/components/LaboratoryTable";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getAdminLaboratories } from "@/features/admin/queries";
 
 export const metadata = { title: "آزمایشگاه‌ها" };
 
 export default async function AdminLaboratoriesPage() {
-  const user = await getSessionUser();
-
-  if (!user || user.role !== ROLES.ADMIN) {
-    redirect(LOGIN_PATH);
-  }
-
-  /*
-    اینجا باید لیست آزمایشگاه‌ها خوانده شود.
-    کامپوننت مورد انتظار: getAdminLaboratories()
-    منبع: features/admin/queries.js (هنوز ساخته نشده — Backend contract)
-
-    خروجی مورد انتظار: آرایه‌ای از
-    { id, organization_name, phone, license_number, organization_type,
-      created_at_display }
-  */
-  const laboratories = [];
-
-  const addLabButton = (
-    <Button asChild size="sm">
-      <Link href="/admin/laboratories/new">
-        <FlaskConical aria-hidden="true" />
-        افزودن آزمایشگاه
-      </Link>
-    </Button>
-  );
+  const laboratories = await getAdminLaboratories();
 
   return (
-    <>
-      <PageHeader
-        title="آزمایشگاه‌ها"
-        description="لیست آزمایشگاه‌های ثبت‌شده در سامانه."
-        actions={addLabButton}
-      />
-
+    <div className="space-y-6">
+      <PageHeader title="آزمایشگاه‌ها" description="حساب‌ها و سازمان‌های آزمایشگاهی تعریف‌شده در سامانه." actions={<Button asChild><Link href="/admin/laboratories/new"><Plus aria-hidden="true" />ایجاد آزمایشگاه</Link></Button>} />
       {laboratories.length === 0 ? (
-        <EmptyState
-          title="هنوز آزمایشگاهی ثبت نشده است."
-          description="با افزودن آزمایشگاه، حساب آن در این لیست نمایش داده می‌شود."
-          action={{
-            label: "افزودن آزمایشگاه",
-            href: "/admin/laboratories/new",
-          }}
-        />
+        <EmptyState icon={Building2} title="هنوز آزمایشگاهی ثبت نشده است" description="از مسیر ایجاد آزمایشگاه، اولین حساب سازمانی را بسازید." action={{ href: "/admin/laboratories/new", label: "ایجاد آزمایشگاه" }} />
       ) : (
-        <LaboratoryTable laboratories={laboratories} />
+        <Card>
+          <Table>
+            <TableHeader><TableRow><TableHead>نام آزمایشگاه</TableHead><TableHead>مسئول حساب</TableHead><TableHead>شماره مجوز</TableHead><TableHead>وضعیت سازمان</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {laboratories.map((laboratory) => (
+                <TableRow key={laboratory.id}>
+                  <TableCell><div className="space-y-1"><Link className="font-medium hover:underline" href={`/admin/laboratories/${laboratory.id}`}>{laboratory.organization?.name || "بدون سازمان"}</Link><p className="text-xs text-muted-foreground">{laboratory.organization?.type === "laboratory" ? "آزمایشگاه" : "—"}</p></div></TableCell>
+                  <TableCell><div className="space-y-1"><p>{laboratory.full_name || "بدون نام"}</p><p dir="ltr" className="text-right text-xs text-muted-foreground">{laboratory.phone || "—"}</p></div></TableCell>
+                  <TableCell dir="ltr" className="text-right">{laboratory.license_number}</TableCell>
+                  <TableCell>فعال</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       )}
-    </>
+    </div>
   );
 }

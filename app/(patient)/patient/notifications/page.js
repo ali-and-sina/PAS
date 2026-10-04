@@ -1,43 +1,36 @@
 import { redirect } from "next/navigation";
-import { Bell } from "lucide-react";
 
-import { getSessionUser } from "@/lib/auth/server";
-import { LOGIN_PATH, ROLES } from "@/lib/auth";
 import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
+import PatientNotificationList from "@/features/notifications/components/PatientNotificationList";
+import { getPatientNotifications } from "@/features/notifications/queries";
+import { getSessionUser } from "@/lib/auth/server";
 
-export const metadata = {
-  title: "اعلان‌ها",
-};
+export const dynamic = "force-dynamic";
 
-export default async function NotificationsPage() {
-  const user = await getSessionUser();
+export default async function PatientNotificationsPage() {
+  const sessionUser = await getSessionUser();
+  const patientId = sessionUser?.id ?? sessionUser?.user?.id;
 
-  if (!user || user.role !== ROLES.PATIENT) {
-    redirect(LOGIN_PATH);
-  }
+  if (!patientId) redirect("/login");
+
+  const notifications = await getPatientNotifications(patientId);
 
   return (
-    <div className="space-y-6">
+    <div>
       <PageHeader
         title="اعلان‌ها"
-        description="اطلاع‌رسانی‌های مربوط به نتایج، تفسیرها و نسخه‌های شما."
+        description="پیام‌ها و رویدادهای مرتبط با پرونده شما."
       />
 
-      {/*
-        اینجا لیست اعلان‌ها قرار می‌گیرد.
-        کامپوننت مورد انتظار: <NotificationsList userId={user.id} />
-        داده از جدول: notifications
-        فیلتر: recipient_id = user.id
-        مرتب‌سازی: created_at DESC
-        قابلیت: mark as read
-        Polling: 45s از Provider سراسری
-      */}
-      <EmptyState
-        title="اعلان جدیدی وجود ندارد"
-        description="هر اعلان جدیدی که مرتبط با نتایج، تفسیرها یا نسخه‌های شما باشد، در این بخش نمایش داده می‌شود."
-        icon={Bell}
-      />
+      {notifications.length === 0 ? (
+        <EmptyState
+          title="اعلان جدیدی ندارید"
+          description="هر زمان رویداد مهمی برای پرونده شما ایجاد شود، اینجا نمایش داده خواهد شد."
+        />
+      ) : (
+        <PatientNotificationList notifications={notifications} />
+      )}
     </div>
   );
 }

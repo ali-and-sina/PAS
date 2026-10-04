@@ -1,59 +1,48 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { UserPlus } from "lucide-react";
-import { getSessionUser } from "@/lib/auth/server";
-import { LOGIN_PATH, ROLES } from "@/lib/auth";
 import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
-import DoctorTable from "@/features/admin/components/DoctorTable";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getAdminDoctors } from "@/features/admin/queries";
+import DoctorVerificationActions from "@/components/admin/DoctorVerificationActions";
 
 export const metadata = { title: "پزشکان" };
 
-export default async function AdminDoctorsPage() {
-  const user = await getSessionUser();
-
-  if (!user || user.role !== ROLES.ADMIN) {
-    redirect(LOGIN_PATH);
-  }
-
-  /*
-    اینجا باید لیست پزشکان خوانده شود.
-    کامپوننت مورد انتظار: getAdminDoctors()
-    منبع: features/admin/queries.js (هنوز ساخته نشده — Backend contract)
-
-    خروجی مورد انتظار: آرایه‌ای از
-    { id, full_name, phone, medical_license_number, specialty,
-      is_verified, created_at_display }
-  */
-  const doctors = [];
-
-  const addDoctorButton = (
-    <Button asChild size="sm">
-      <Link href="/admin/doctors/new">
-        <UserPlus aria-hidden="true" />
-        افزودن پزشک
-      </Link>
-    </Button>
-  );
+export default async function AdminDoctorsPage({ searchParams }) {
+  const params = await searchParams;
+  const status = params?.status ?? "all";
+  const doctors = await getAdminDoctors({ status });
 
   return (
-    <>
-      <PageHeader
-        title="پزشکان"
-        description="لیست پزشکان ثبت‌شده در سامانه."
-        actions={addDoctorButton}
-      />
-
+    <div className="space-y-6">
+      <PageHeader title="پزشکان" description="پزشکان ایجادشده توسط مدیر و وضعیت تأیید آن‌ها." actions={<Button asChild><Link href="/admin/doctors/new"><UserPlus aria-hidden="true" />ایجاد پزشک</Link></Button>} />
+      <div className="flex flex-wrap gap-2" aria-label="فیلتر وضعیت پزشکان">
+        <Button asChild size="sm" variant={status === "all" ? "default" : "outline"}><Link href="/admin/doctors">همه</Link></Button>
+        <Button asChild size="sm" variant={status === "pending" ? "default" : "outline"}><Link href="/admin/doctors?status=pending">در انتظار تأیید</Link></Button>
+        <Button asChild size="sm" variant={status === "verified" ? "default" : "outline"}><Link href="/admin/doctors?status=verified">تأییدشده</Link></Button>
+      </div>
       {doctors.length === 0 ? (
-        <EmptyState
-          title="هنوز پزشکی ثبت نشده است."
-          description="با افزودن پزشک، حساب او در این لیست نمایش داده می‌شود."
-          action={{ label: "افزودن پزشک", href: "/admin/doctors/new" }}
-        />
+        <EmptyState title="پزشکی پیدا نشد" description="برای این وضعیت هنوز حساب پزشکی وجود ندارد." />
       ) : (
-        <DoctorTable doctors={doctors} />
+        <Card>
+          <Table>
+            <TableHeader><TableRow><TableHead>پزشک</TableHead><TableHead>شماره نظام پزشکی</TableHead><TableHead>تخصص</TableHead><TableHead>وضعیت</TableHead><TableHead className="w-px">عملیات</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {doctors.map((doctor) => (
+                <TableRow key={doctor.id}>
+                  <TableCell><div className="space-y-1"><Link className="font-medium hover:underline" href={`/admin/doctors/${doctor.id}`}>{doctor.full_name || "بدون نام"}</Link><p dir="ltr" className="text-right text-xs text-muted-foreground">{doctor.phone || "—"}</p></div></TableCell>
+                  <TableCell dir="ltr" className="text-right">{doctor.medical_license_number}</TableCell>
+                  <TableCell>{doctor.specialty || "—"}</TableCell>
+                  <TableCell>{doctor.is_verified ? "تأییدشده" : "در انتظار تأیید"}</TableCell>
+                  <TableCell><DoctorVerificationActions doctorId={doctor.id} isVerified={doctor.is_verified} /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       )}
-    </>
+    </div>
   );
 }

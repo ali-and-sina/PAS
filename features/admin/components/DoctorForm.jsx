@@ -89,7 +89,7 @@ export default function DoctorForm() {
 
       if (result?.ok) {
         toast.success("پزشک با موفقیت ثبت شد.");
-        router.push("/admin/doctors");
+        router.push(`/admin/doctors/${result.doctorId}`);
         router.refresh();
         return;
       }

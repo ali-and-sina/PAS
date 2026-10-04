@@ -1,151 +1,175 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, FileText } from "lucide-react";
+import { notFound, redirect } from "next/navigation";
 
-import { getSessionUser } from "@/lib/auth/server";
-import { LOGIN_PATH, ROLES } from "@/lib/auth";
 import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
-import { Button } from "@/components/ui/button";
-import StatusBadge from "@/components/shared/StatusBadge";
-import { Separator } from "@/components/ui/separator";
+import { getPatientObservations, getPatientReport } from "@/features/lab-results/queries";
+import { getSessionUser } from "@/lib/auth/server";
 
-export const metadata = {
-  title: "جزئیات نتیجه",
-};
+export const dynamic = "force-dynamic";
 
-export default async function ResultDetailPage({ params }) {
+function formatDate(value) {
+  if (!value) return "—";
+
+  return new Intl.DateTimeFormat("fa-IR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function getValue(observation) {
+  if (observation.value_numeric != null) {
+    return observation.value_numeric;
+  }
+
+  if (observation.value_text != null) {
+    return observation.value_text;
+  }
+
+  if (observation.value_boolean != null) {
+    return observation.value_boolean ? "مثبت" : "منفی";
+  }
+
+  return "—";
+}
+
+function flagLabel(flag) {
+  const labels = {
+    normal: "طبیعی",
+    low: "پایین",
+    high: "بالا",
+    critical_low: "بحرانی: پایین",
+    critical_high: "بحرانی: بالا",
+  };
+
+  return labels[flag] || "—";
+}
+
+export default async function PatientReportPage({ params }) {
+  const sessionUser = await getSessionUser();
+  const patientId = sessionUser?.id ?? sessionUser?.user?.id;
+
+  if (!patientId) redirect("/login");
+
   const { reportId } = await params;
-  const user = await getSessionUser();
+  const report = await getPatientReport(reportId, patientId);
 
-  if (!user || user.role !== ROLES.PATIENT) {
-    redirect(LOGIN_PATH);
-  }
+  if (!report) notFound();
 
-  /*
-    اینجا باید یک Server Query برای دریافت diagnostic_reports زده شود.
-    کامپوننت مورد انتظار: getDiagnosticReportForPatient({ reportId, patientId: user.id })
-    منبع: features/lab-results/queries.js
-
-    خروجی مورد انتظار:
-    {
-      id, observed_at, laboratory_name, superseded_at, supersedes_report_id,
-      observations: [{ test_name, test_name_fa, value_numeric, unit, reference_min, reference_max, flag, is_superseded }],
-      interpretation: { content, doctor_name, created_at } | null,
-      has_pdf: boolean,
-    }
-
-    اگر Backend آماده نیست، فعلاً null برمی‌گردانیم.
-  */
-  const report = null;
-
-  if (!report) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="نتیجه یافت نشد"
-          description="این نتیجه وجود ندارد یا به آن دسترسی ندارید."
-          actions={
-            <Button asChild variant="outline" size="sm">
-              <Link href="/patient/results">
-                <ArrowRight className="size-4" />
-                بازگشت به نتایج
-              </Link>
-            </Button>
-          }
-        />
-        <EmptyState
-          title="نتیجه‌ای برای نمایش وجود ندارد"
-          description="ممکن است این نتیجه حذف شده باشد یا هنوز برای شما ثبت نشده باشد."
-          icon={FileText}
-        />
-      </div>
-    );
-  }
+  const observations = await getPatientObservations(
+    patientId,
+    reportId,
+  );
 
   return (
-    <div className="space-y-6">
-      {/* ─── Header ──────────────────────────────────────── */}
+    <div>
       <PageHeader
-        title={report.title ?? "نتیجه آزمایش"}
-        description={report.observed_at_display}
+        title="گزارش آزمایش"
+        description={`تاریخ ثبت: ${formatDate(report.created_at)}`}
         actions={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/patient/results">
-              <ArrowRight className="size-4" />
-              بازگشت به نتایج
-            </Link>
-          </Button>
+          <Link
+            href="/patient/results"
+            className="text-sm text-muted-foreground hover:underline"
+          >
+            بازگشت به نتایج
+          </Link>
         }
       />
 
-      {/* ─── Meta Bar ────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        {report.laboratory_name && (
-          <span>آزمایشگاه: {report.laboratory_name}</span>
-        )}
-        {report.superseded_at && (
-          <StatusBadge variant="superseded" label="اصلاح‌شده" />
-        )}
-      </div>
-
-      {report.superseded_at && (
-        <p className="rounded-lg border border-dashed bg-muted/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
-          این نتیجه بعداً اصلاح شده است. نتیجه فعلی معتبر است.
-        </p>
-      )}
-
-      {/* ─── Results Table ───────────────────────────────── */}
-      <section className="rounded-lg border">
-        {/*
-          کامپوننت مورد انتظار: <LabResultTable results={report.observations} />
-          جدول با ستون‌های: Test | Value | Unit | Reference Range | Status
-          Status با FlagBadge: normal / low / high / critical_low / critical_high
-        */}
-        <div className="border-b bg-muted/40 px-4 py-3">
-          <h2 className="font-medium">نتایج آزمایش</h2>
-        </div>
-        <div className="p-4">
-          <EmptyState
-            title="نتیجه‌ای برای نمایش وجود ندارد"
-            description="اطلاعات این گزارش در دسترس نیست."
-            icon={FileText}
-          />
-        </div>
-      </section>
-
-      {/* ─── Doctor Interpretation ───────────────────────── */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium">تفسیر پزشک</h2>
-        <Separator />
-        {report.interpretation ? (
-          <div className="rounded-lg border bg-card p-4">
-            {/*
-              کامپوننت مورد انتظار: <DoctorInterpretationCard interpretation={report.interpretation} />
-              نمایش: نام پزشک + تاریخ + متن
-              در بلوک بصری متمایز از داده خام
-            */}
+      <section className="mb-5 rounded-xl border bg-card p-5">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <p className="text-xs text-muted-foreground">وضعیت</p>
+            <p className="mt-1 text-sm font-medium">
+              {report.status === "amended"
+                ? "اصلاح‌شده"
+                : "نهایی"}
+            </p>
           </div>
-        ) : (
-          <EmptyState
-            title="هنوز تفسیری ثبت نشده است"
-            description="پس از بررسی این نتیجه توسط پزشک، تفسیر در همین بخش نمایش داده می‌شود."
-          />
-        )}
+
+          <div>
+            <p className="text-xs text-muted-foreground">تاریخ نهایی‌سازی</p>
+            <p className="mt-1 text-sm font-medium">
+              {formatDate(report.finalized_at)}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-muted-foreground">تاریخ سفارش</p>
+            <p className="mt-1 text-sm font-medium">
+              {formatDate(report.lab_orders?.ordered_at)}
+            </p>
+          </div>
+        </div>
       </section>
 
-      {/* ─── PDF Attachment (only if exists) ────────────── */}
-      {report.has_pdf && (
-        <section className="space-y-3">
-          <Separator />
-          <Button asChild variant="outline" size="sm">
-            <a href={report.pdf_url} target="_blank" rel="noopener noreferrer">
-              <FileText className="size-4" />
-              مشاهده PDF اصلی گزارش
-            </a>
-          </Button>
+      {observations.length === 0 ? (
+        <EmptyState
+          title="نتیجه‌ای در این گزارش وجود ندارد"
+          description="این گزارش نهایی شده، اما در حال حاضر نتیجه‌ای برای نمایش در آن ثبت نشده است."
+        />
+      ) : (
+        <section className="overflow-hidden rounded-xl border bg-card">
+          <div className="border-b px-5 py-4">
+            <h2 className="font-semibold">نتایج ثبت‌شده</h2>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-right">
+              <thead className="bg-muted/40">
+                <tr>
+                  <th className="px-4 py-3 text-sm font-medium">آزمایش</th>
+                  <th className="px-4 py-3 text-sm font-medium">مقدار</th>
+                  <th className="px-4 py-3 text-sm font-medium">واحد</th>
+                  <th className="px-4 py-3 text-sm font-medium">محدوده مرجع</th>
+                  <th className="px-4 py-3 text-sm font-medium">وضعیت</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {observations.map((observation) => {
+                  const reference =
+                    observation.reference_text ||
+                    (observation.reference_min != null ||
+                    observation.reference_max != null
+                      ? `${observation.reference_min ?? "—"} تا ${observation.reference_max ?? "—"}`
+                      : "—");
+
+                  return (
+                    <tr key={observation.id} className="border-t">
+                      <td className="px-4 py-4 text-sm font-medium">
+                        {observation.test?.name_fa ||
+                          observation.test?.name ||
+                          "آزمایش"}
+                      </td>
+                      <td className="px-4 py-4 text-sm font-semibold">
+                        {getValue(observation)}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-muted-foreground">
+                        {observation.unit ||
+                          observation.test?.default_unit ||
+                          "—"}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-muted-foreground">
+                        {reference}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-muted-foreground">
+                        {flagLabel(observation.flag)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
+
+      <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <p className="text-sm leading-6 text-amber-900">
+          خارج بودن یک مقدار از محدوده مرجع به‌تنهایی به معنی تشخیص بیماری نیست. تفسیر بالینی نتایج توسط پزشک انجام می‌شود.
+        </p>
+      </div>
     </div>
   );
 }

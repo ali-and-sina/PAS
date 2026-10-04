@@ -2,26 +2,19 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
-import DoctorForm from "@/features/admin/components/DoctorForm";
+import { Card, CardContent } from "@/components/ui/card";
+import { createDoctor } from "@/features/admin/actions";
+import { DoctorForm, FormIntro, SecondaryNote } from "@/components/admin/AdminForm";
 
-export const metadata = { title: "افزودن پزشک" };
+export const metadata = { title: "ایجاد پزشک" };
 
 export default function NewDoctorPage() {
   return (
-    <>
-      <PageHeader
-        title="افزودن پزشک"
-        description="یک حساب پزشک جدید در سامانه ثبت کنید."
-        actions={
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/admin/doctors">
-              <ArrowRight aria-hidden="true" />
-              بازگشت به لیست
-            </Link>
-          </Button>
-        }
-      />
-      <DoctorForm />
-    </>
+    <div className="space-y-6">
+      <PageHeader title="ایجاد پزشک" description="حساب پزشک را از مسیر مدیریتی ایجاد کنید." actions={<Button asChild variant="ghost"><Link href="/admin/doctors"><ArrowRight aria-hidden="true" />بازگشت</Link></Button>} />
+      <FormIntro type="doctor" />
+      <Card><CardContent className="p-6"><DoctorForm action={createDoctor} /></CardContent></Card>
+      <SecondaryNote>حساب جدید با وضعیت «در انتظار تأیید» ساخته می‌شود.</SecondaryNote>
+    </div>
   );
 }

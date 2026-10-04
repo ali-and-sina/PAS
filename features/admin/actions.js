@@ -1,826 +1,440 @@
 "use server";
 
-import { requireAdmin, isAdminAuthorizationError } from "@/lib/auth/admin";
+import { revalidatePath } from "next/cache";
 
-import {
-  createAdminSchema,
-  createDoctorSchema,
-  createLaboratorySchema,
-} from "./schemas";
+import { requireAdmin } from "@/lib/auth/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createDoctorSchema, createLaboratorySchema } from "@/features/admin/schemas";
 
-import { writeAdminAuditLog } from "./server";
-
-function invalidInput() {
-  return {
-    ok: false,
-    code: "INVALID_INPUT",
-  };
+function normalize(value, max = 255) {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
-function mapAuthorizationError(error) {
-  if (!isAdminAuthorizationError(error)) {
-    return null;
+function invalid(message) {
+  return { ok: false, code: "INVALID_INPUT", message };
+}
+
+function failure(message = "عملیات انجام نشد.") {
+  return { ok: false, code: "SERVER_ERROR", message };
+}
+
+function success(data = {}) {
+  return { ok: true, ...data };
+}
+
+function getActionInput(input) {
+  if (input instanceof FormData) {
+    return Object.fromEntries(input.entries());
   }
 
-  return {
-    ok: false,
-    code: error.code === "UNAUTHENTICATED" ? "UNAUTHENTICATED" : "FORBIDDEN",
-  };
+  return input ?? {};
 }
 
-function mapDatabaseError(error, fallback = "SERVER_ERROR") {
-  const message = String(error?.message ?? "").toLowerCase();
-
-  const details = String(error?.details ?? "").toLowerCase();
-
-  const combined = `${message} ${details}`;
-
-  if (error?.code === "23505") {
-    if (combined.includes("medical_license_number")) {
-      return "DUPLICATE_MEDICAL_LICENSE";
-    }
-
-    if (combined.includes("license_number")) {
-      return "DUPLICATE_LICENSE";
-    }
-
-    if (combined.includes("phone")) {
-      return "DUPLICATE_PHONE";
-    }
-
-    return "DUPLICATE";
-  }
-
-  return fallback;
+function schemaErrorMessage(parsed, fallback) {
+  return parsed.error?.issues?.[0]?.message || fallback;
 }
 
-async function rollbackCreatedAuthUser(adminClient, userId) {
-  if (!userId) {
-    return;
+async function writeAuditLog(
+  supabase,
+  actorId,
+  action,
+  entityType,
+  entityId,
+  metadata = {},
+) {
+  const { error } = await supabase.from("audit_logs").insert({
+    actor_id: actorId,
+    action,
+    entity_type: entityType,
+    entity_id: entityId,
+    metadata,
+  });
+
+  if (error) throw error;
+}
+
+async function updateProfileRole(supabase, id, role) {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ role })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+async function rollbackAuthUser(supabase, authUserId, tableName) {
+  if (!authUserId) return;
+
+  const { error: profileRollbackError } = await supabase
+    .from(tableName)
+    .delete()
+    .eq("id", authUserId);
+
+  if (profileRollbackError) {
+    console.error(`[admin:rollback:${tableName}]`, profileRollbackError);
   }
 
   try {
-    const { error } = await adminClient.auth.admin.deleteUser(userId);
-
-    if (error) {
-      console.error("[admin:rollbackAuthUser]", error);
-    }
+    await supabase.auth.admin.deleteUser(authUserId);
   } catch (error) {
-    console.error("[admin:rollbackAuthUser]", error);
+    console.error("[admin:rollback:auth]", error);
   }
 }
 
-export async function createAdmin(input = {}) {
-  let createdUserId = null;
+export async function createDoctor(input) {
+  const admin = await requireAdmin();
+  const raw = getActionInput(input);
+  const parsed = createDoctorSchema.safeParse(raw);
 
-  try {
-    const parsed = createAdminSchema.safeParse(input);
+  if (!parsed.success) {
+    return invalid(schemaErrorMessage(parsed, "اطلاعات پزشک معتبر نیست."));
+  }
 
-    if (!parsed.success) {
-      return invalidInput();
-    }
+  const { full_name: fullName, phone, medical_license_number: license, specialty } =
+    parsed.data;
 
-    const payload = parsed.data;
+  const supabase = createAdminClient();
 
-    const { user: actor, adminClient } = await requireAdmin();
+  const { data: duplicateDoctor, error: duplicateError } = await supabase
+    .from("doctor_profiles")
+    .select("id")
+    .eq("medical_license_number", license)
+    .maybeSingle();
 
-    const { data: existingPersonnel, error: existingPersonnelError } =
-      await adminClient
-        .from("admin_profiles")
-        .select("id")
-        .eq("personnel_code", payload.personnel_code)
-        .maybeSingle();
+  if (duplicateError) {
+    console.error("[createDoctor:duplicate]", duplicateError);
+    return failure();
+  }
 
-    if (existingPersonnelError) {
-      console.error("[createAdmin:personnelCheck]", existingPersonnelError);
-
-      return {
-        ok: false,
-        code: "SERVER_ERROR",
-      };
-    }
-
-    if (existingPersonnel) {
-      return {
-        ok: false,
-        code: "DUPLICATE_PERSONNEL_CODE",
-      };
-    }
-
-    const { data: authData, error: authError } =
-      await adminClient.auth.admin.createUser({
-        phone: payload.phone,
-        phone_confirm: true,
-        user_metadata: {
-          full_name: payload.full_name,
-        },
-      });
-
-    if (authError || !authData?.user) {
-      console.error("[createAdmin:auth]", authError);
-
-      const authMessage = String(authError?.message ?? "").toLowerCase();
-      const authCode = String(authError?.code ?? "").toLowerCase();
-
-      return {
-        ok: false,
-        code:
-          authCode === "phone_exists" ||
-          (authMessage.includes("phone") && authMessage.includes("already"))
-            ? "DUPLICATE_PHONE"
-            : "SERVER_ERROR",
-      };
-    }
-
-    createdUserId = authData.user.id;
-
-    const { error: profileError } = await adminClient
-      .from("profiles")
-      .update({
-        role: "admin",
-        full_name: payload.full_name,
-        phone: payload.phone,
-      })
-      .eq("id", createdUserId);
-
-    if (profileError) {
-      console.error("[createAdmin:profile]", profileError);
-      throw profileError;
-    }
-
-    const { error: adminProfileError } = await adminClient
-      .from("admin_profiles")
-      .insert({
-        id: createdUserId,
-        personnel_code: payload.personnel_code,
-      });
-
-    if (adminProfileError) {
-      console.error("[createAdmin:adminProfile]", adminProfileError);
-      throw adminProfileError;
-    }
-
-    await writeAdminAuditLog({
-      adminClient,
-      actorId: actor.id,
-      action: "create_admin",
-      entityType: "admin",
-      entityId: createdUserId,
-      metadata: {
-        personnel_code: payload.personnel_code,
-      },
-    });
-
-    return {
-      ok: true,
-      data: {
-        id: createdUserId,
-        role: "admin",
-        full_name: payload.full_name,
-        phone: payload.phone,
-        personnel_code: payload.personnel_code,
-      },
-    };
-  } catch (error) {
-    const authorizationError = mapAuthorizationError(error);
-
-    if (authorizationError) {
-      return authorizationError;
-    }
-
-    if (createdUserId) {
-      try {
-        const { adminClient } = await requireAdmin();
-        await rollbackCreatedAuthUser(adminClient, createdUserId);
-      } catch (rollbackError) {
-        console.error("[createAdmin:rollback]", rollbackError);
-      }
-    }
-
-    console.error("[createAdmin]", error);
-
+  if (duplicateDoctor) {
     return {
       ok: false,
-      code: mapDatabaseError(error),
+      code: "DUPLICATE_LICENSE",
+      message: "این شماره نظام پزشکی قبلاً ثبت شده است.",
     };
   }
-}
 
-export async function createDoctor(input = {}) {
-  let createdUserId = null;
+  let authUserId;
 
   try {
-    const parsed = createDoctorSchema.safeParse(input);
-
-    if (!parsed.success) {
-      return invalidInput();
-    }
-
-    const payload = parsed.data;
-
-    const { user: actor, adminClient } = await requireAdmin();
-
-    const { data: existingDoctor, error: existingDoctorError } =
-      await adminClient
-        .from("doctor_profiles")
-        .select("id")
-        .eq("medical_license_number", payload.medical_license_number)
-        .maybeSingle();
-
-    if (existingDoctorError) {
-      console.error("[createDoctor:licenseCheck]", existingDoctorError);
-
-      return {
-        ok: false,
-        code: "SERVER_ERROR",
-      };
-    }
-
-    if (existingDoctor) {
-      return {
-        ok: false,
-        code: "DUPLICATE_MEDICAL_LICENSE",
-      };
-    }
-
-    const { data: authData, error: authError } =
-      await adminClient.auth.admin.createUser({
-        phone: payload.phone,
-
-        phone_confirm: true,
-
-        user_metadata: {
-          full_name: payload.full_name,
-        },
+    const { data, error: authError } =
+      await supabase.auth.admin.createUser({
+        phone,
+        phone_confirm: false,
+        user_metadata: { full_name: fullName },
       });
 
-    if (authError || !authData?.user) {
+    if (authError || !data?.user) {
       console.error("[createDoctor:auth]", authError);
-
-      const authMessage = String(authError?.message ?? "").toLowerCase();
-
-      const authCode = String(authError?.code ?? "").toLowerCase();
-
-      return {
-        ok: false,
-
-        code:
-          authCode === "phone_exists" ||
-          (authMessage.includes("phone") && authMessage.includes("already"))
-            ? "DUPLICATE_PHONE"
-            : "SERVER_ERROR",
-      };
+      return failure("ساخت حساب کاربری انجام نشد.");
     }
 
-    createdUserId = authData.user.id;
+    authUserId = data.user.id;
+    await updateProfileRole(supabase, authUserId, "doctor");
 
-    /*
-     * handle_new_user() creates the initial
-     * profile with role=patient.
-     *
-     * Admin provisioning converts that row
-     * into the intended role.
-     */
-    const { error: profileError } = await adminClient
-      .from("profiles")
-      .update({
-        role: "doctor",
-
-        full_name: payload.full_name,
-
-        phone: payload.phone,
-      })
-      .eq("id", createdUserId);
-
-    if (profileError) {
-      console.error("[createDoctor:profile]", profileError);
-
-      throw profileError;
-    }
-
-    const { error: doctorProfileError } = await adminClient
+    const { error: doctorError } = await supabase
       .from("doctor_profiles")
       .insert({
-        id: createdUserId,
-
-        medical_license_number: payload.medical_license_number,
-
-        specialty: payload.specialty,
-
+        id: authUserId,
+        medical_license_number: license,
+        specialty: specialty || null,
         is_verified: false,
+        verified_at: null,
+        verified_by: null,
       });
 
-    if (doctorProfileError) {
-      console.error("[createDoctor:doctorProfile]", doctorProfileError);
+    if (doctorError) throw doctorError;
 
-      throw doctorProfileError;
-    }
+    await writeAuditLog(
+      supabase,
+      admin.id,
+      "create_doctor",
+      "doctor",
+      authUserId,
+      { medical_license_number: license, specialty: specialty || null },
+    );
 
-    await writeAdminAuditLog({
-      adminClient,
+    revalidatePath("/admin");
+    revalidatePath("/admin/users");
+    revalidatePath("/admin/doctors");
+    revalidatePath(`/admin/doctors/${authUserId}`);
 
-      actorId: actor.id,
-
-      action: "create_doctor",
-
-      entityType: "doctor",
-
-      entityId: createdUserId,
-
-      metadata: {
-        specialty: payload.specialty,
-      },
-    });
-
-    return {
-      ok: true,
-
-      data: {
-        id: createdUserId,
-
-        role: "doctor",
-
-        full_name: payload.full_name,
-
-        phone: payload.phone,
-
-        medical_license_number: payload.medical_license_number,
-
-        specialty: payload.specialty,
-
-        is_verified: false,
-      },
-    };
+    return success({ doctorId: authUserId });
   } catch (error) {
-    const authorizationError = mapAuthorizationError(error);
-
-    if (authorizationError) {
-      return authorizationError;
-    }
-
-    if (createdUserId) {
-      try {
-        const { adminClient } = await requireAdmin();
-
-        await rollbackCreatedAuthUser(adminClient, createdUserId);
-      } catch (rollbackError) {
-        console.error("[createDoctor:rollback]", rollbackError);
-      }
-    }
-
     console.error("[createDoctor]", error);
 
-    return {
-      ok: false,
-      code: mapDatabaseError(error),
-    };
+    await rollbackAuthUser(supabase, authUserId, "doctor_profiles");
+
+    return failure("ساخت پزشک کامل نشد.");
   }
 }
 
-export async function createLaboratory(input = {}) {
-  let createdUserId = null;
-  let createdOrganizationId = null;
+export async function createLaboratory(input) {
+  const admin = await requireAdmin();
+  const raw = getActionInput(input);
+  const parsed = createLaboratorySchema.safeParse(raw);
+
+  if (!parsed.success) {
+    return invalid(schemaErrorMessage(parsed, "اطلاعات آزمایشگاه معتبر نیست."));
+  }
+
+  const {
+    organization_name: labName,
+    phone,
+    license_number: license,
+  } = parsed.data;
+
+  const supabase = createAdminClient();
+
+  const { data: duplicateLab, error: duplicateError } = await supabase
+    .from("laboratory_profiles")
+    .select("id")
+    .eq("license_number", license)
+    .maybeSingle();
+
+  if (duplicateError) {
+    console.error("[createLaboratory:duplicate]", duplicateError);
+    return failure();
+  }
+
+  if (duplicateLab) {
+    return {
+      ok: false,
+      code: "DUPLICATE_LICENSE",
+      message: "این شماره مجوز آزمایشگاه قبلاً ثبت شده است.",
+    };
+  }
+
+  let authUserId;
+  let organizationId;
 
   try {
-    const parsed = createLaboratorySchema.safeParse(input);
-
-    if (!parsed.success) {
-      return invalidInput();
-    }
-
-    const payload = parsed.data;
-
-    const { user: actor, adminClient } = await requireAdmin();
-
-    const { data: existingLaboratory, error: existingLaboratoryError } =
-      await adminClient
-        .from("laboratory_profiles")
-        .select("id")
-        .eq("license_number", payload.license_number)
-        .maybeSingle();
-
-    if (existingLaboratoryError) {
-      console.error("[createLaboratory:licenseCheck]", existingLaboratoryError);
-
-      return {
-        ok: false,
-        code: "SERVER_ERROR",
-      };
-    }
-
-    if (existingLaboratory) {
-      return {
-        ok: false,
-        code: "DUPLICATE_LICENSE",
-      };
-    }
-
-    const { data: authData, error: authError } =
-      await adminClient.auth.admin.createUser({
-        phone: payload.phone,
-
-        phone_confirm: true,
-
-        user_metadata: {
-          full_name: payload.contact_name,
-        },
+    const { data, error: authError } =
+      await supabase.auth.admin.createUser({
+        phone,
+        phone_confirm: false,
+        user_metadata: { full_name: labName },
       });
 
-    if (authError || !authData?.user) {
+    if (authError || !data?.user) {
       console.error("[createLaboratory:auth]", authError);
-
-      const authMessage = String(authError?.message ?? "").toLowerCase();
-
-      const authCode = String(authError?.code ?? "").toLowerCase();
-
-      return {
-        ok: false,
-
-        code:
-          authCode === "phone_exists" ||
-          (authMessage.includes("phone") && authMessage.includes("already"))
-            ? "DUPLICATE_PHONE"
-            : "SERVER_ERROR",
-      };
+      return failure("ساخت حساب کاربری انجام نشد.");
     }
 
-    createdUserId = authData.user.id;
+    authUserId = data.user.id;
+    await updateProfileRole(supabase, authUserId, "laboratory");
 
-    const { error: profileError } = await adminClient
-      .from("profiles")
-      .update({
-        role: "laboratory",
+    const { data: organization, error: organizationError } =
+      await supabase
+        .from("organizations")
+        .insert({
+          name: labName,
+          type: "laboratory",
+          license_number: license,
+        })
+        .select("id")
+        .single();
 
-        full_name: payload.contact_name,
+    if (organizationError || !organization) throw organizationError;
+    organizationId = organization.id;
 
-        phone: payload.phone,
-      })
-      .eq("id", createdUserId);
-
-    if (profileError) {
-      console.error("[createLaboratory:profile]", profileError);
-
-      throw profileError;
-    }
-
-    const { data: organization, error: organizationError } = await adminClient
-      .from("organizations")
-      .insert({
-        name: payload.organization_name,
-
-        type: payload.organization_type,
-
-        license_number: payload.license_number,
-
-        address: payload.address || null,
-      })
-      .select("id")
-      .single();
-
-    if (organizationError || !organization) {
-      console.error("[createLaboratory:organization]", organizationError);
-
-      throw organizationError ?? new Error("Organization creation failed");
-    }
-
-    createdOrganizationId = organization.id;
-
-    const { error: laboratoryProfileError } = await adminClient
+    const { error: laboratoryError } = await supabase
       .from("laboratory_profiles")
       .insert({
-        id: createdUserId,
-
-        organization_id: createdOrganizationId,
-
-        license_number: payload.license_number,
+        id: authUserId,
+        organization_id: organizationId,
+        license_number: license,
       });
 
-    if (laboratoryProfileError) {
-      console.error(
-        "[createLaboratory:laboratoryProfile]",
-        laboratoryProfileError,
-      );
+    if (laboratoryError) throw laboratoryError;
 
-      throw laboratoryProfileError;
-    }
+    await writeAuditLog(
+      supabase,
+      admin.id,
+      "create_laboratory",
+      "laboratory",
+      authUserId,
+      { organization_id: organizationId, license_number: license },
+    );
 
-    const { error: memberError } = await adminClient
-      .from("organization_members")
-      .insert({
-        organization_id: createdOrganizationId,
+    revalidatePath("/admin");
+    revalidatePath("/admin/users");
+    revalidatePath("/admin/laboratories");
+    revalidatePath(`/admin/laboratories/${authUserId}`);
 
-        profile_id: createdUserId,
-
-        role_in_org: "member",
-      });
-
-    if (memberError) {
-      console.error("[createLaboratory:member]", memberError);
-
-      throw memberError;
-    }
-
-    await writeAdminAuditLog({
-      adminClient,
-
-      actorId: actor.id,
-
-      action: "create_laboratory",
-
-      entityType: "laboratory",
-
-      entityId: createdUserId,
-
-      metadata: {
-        organization_id: createdOrganizationId,
-
-        organization_name: payload.organization_name,
-
-        organization_type: payload.organization_type,
-      },
-    });
-
-    return {
-      ok: true,
-
-      data: {
-        id: createdUserId,
-
-        role: "laboratory",
-
-        contact_name: payload.contact_name,
-
-        phone: payload.phone,
-
-        license_number: payload.license_number,
-
-        organization_id: createdOrganizationId,
-
-        organization_name: payload.organization_name,
-
-        organization_type: payload.organization_type,
-      },
-    };
+    return success({ laboratoryId: authUserId });
   } catch (error) {
-    const authorizationError = mapAuthorizationError(error);
+    console.error("[createLaboratory]", error);
 
-    if (authorizationError) {
-      return authorizationError;
-    }
-
-    if (createdUserId) {
+    // organization_id is NO ACTION, so the child lab profile must be removed
+    // before its organization can be deleted. Then the Auth user is deleted.
+    if (authUserId) {
       try {
-        const { adminClient } = await requireAdmin();
-
-        await rollbackCreatedAuthUser(adminClient, createdUserId);
-
-        if (createdOrganizationId) {
-          const { error: organizationCleanupError } = await adminClient
-            .from("organizations")
-            .delete()
-            .eq("id", createdOrganizationId);
-
-          if (organizationCleanupError) {
-            console.error(
-              "[createLaboratory:rollbackOrganization]",
-              organizationCleanupError,
-            );
-          }
-        }
+        await supabase
+          .from("laboratory_profiles")
+          .delete()
+          .eq("id", authUserId);
       } catch (rollbackError) {
-        console.error("[createLaboratory:rollback]", rollbackError);
+        console.error("[createLaboratory:laboratory-rollback]", rollbackError);
       }
     }
 
-    console.error("[createLaboratory]", error);
+    if (organizationId) {
+      try {
+        const { error: organizationRollbackError } = await supabase
+          .from("organizations")
+          .delete()
+          .eq("id", organizationId);
+        if (organizationRollbackError) {
+          console.error(
+            "[createLaboratory:organization-rollback]",
+            organizationRollbackError,
+          );
+        }
+      } catch (rollbackError) {
+        console.error("[createLaboratory:organization-rollback]", rollbackError);
+      }
+    }
 
-    return {
-      ok: false,
-      code: mapDatabaseError(error),
-    };
+    if (authUserId) {
+      try {
+        await supabase.auth.admin.deleteUser(authUserId);
+      } catch (rollbackError) {
+        console.error("[createLaboratory:auth-rollback]", rollbackError);
+      }
+    }
+
+    return failure("ساخت آزمایشگاه کامل نشد.");
   }
 }
 
 export async function verifyDoctor(doctorId) {
-  try {
-    if (typeof doctorId !== "string" || !/^[0-9a-f-]{36}$/i.test(doctorId)) {
-      return invalidInput();
-    }
+  const admin = await requireAdmin();
+  const id = normalize(doctorId, 60);
+  if (!id) return invalid("شناسه پزشک معتبر نیست.");
 
-    const { user: actor, adminClient } = await requireAdmin();
+  const supabase = createAdminClient();
+  const { data: doctor, error: doctorError } = await supabase
+    .from("doctor_profiles")
+.select("id, is_verified, verified_at, verified_by")
+    .eq("id", id)
+    .maybeSingle();
 
-    const { data: doctor, error: doctorError } = await adminClient
-      .from("doctor_profiles")
-      .select(
-        `
-          id,
-          is_verified,
-          medical_license_number,
-          verified_at,
-          verified_by
-          `,
-      )
-      .eq("id", doctorId)
-      .maybeSingle();
+  if (doctorError) {
+    console.error("[verifyDoctor:lookup]", doctorError);
+    return failure();
+  }
 
-    if (doctorError) {
-      console.error("[verifyDoctor:load]", doctorError);
+  if (!doctor) return invalid("پزشک پیدا نشد.");
 
-      return {
-        ok: false,
-        code: "SERVER_ERROR",
-      };
-    }
+  const verificationChanged = !doctor.is_verified;
 
-    if (!doctor) {
-      return {
-        ok: false,
-        code: "NOT_FOUND",
-      };
-    }
-
-    if (doctor.is_verified === true) {
-      return {
-        ok: true,
-        alreadyVerified: true,
-      };
-    }
-
-    const { error: updateError } = await adminClient
+  if (verificationChanged) {
+    const { error } = await supabase
       .from("doctor_profiles")
       .update({
         is_verified: true,
-
         verified_at: new Date().toISOString(),
-
-        verified_by: actor.id,
+        verified_by: admin.id,
       })
-      .eq("id", doctorId);
+      .eq("id", id);
 
-    if (updateError) {
-      console.error("[verifyDoctor:update]", updateError);
-
-      throw updateError;
+    if (error) {
+      console.error("[verifyDoctor]", error);
+      return failure();
     }
+  }
 
-    try {
-      await writeAdminAuditLog({
-        adminClient,
+  try {
+    await writeAuditLog(supabase, admin.id, "verify_doctor", "doctor", id);
+  } catch (auditError) {
+    console.error("[verifyDoctor:audit]", auditError);
 
-        actorId: actor.id,
-
-        action: "verify_doctor",
-
-        entityType: "doctor",
-
-        entityId: doctorId,
-
-        metadata: {
-          medical_license_number: doctor.medical_license_number,
-        },
-      });
-    } catch (auditError) {
-      await adminClient
+    if (verificationChanged) {
+      const { error: rollbackError } = await supabase
         .from("doctor_profiles")
         .update({
           is_verified: doctor.is_verified,
-
           verified_at: doctor.verified_at,
-
           verified_by: doctor.verified_by,
         })
-        .eq("id", doctorId);
+        .eq("id", id);
 
-      throw auditError;
+      if (rollbackError) {
+        console.error("[verifyDoctor:audit-rollback]", rollbackError);
+      }
     }
 
-    return {
-      ok: true,
-    };
-  } catch (error) {
-    const authorizationError = mapAuthorizationError(error);
-
-    if (authorizationError) {
-      return authorizationError;
-    }
-
-    console.error("[verifyDoctor]", error);
-
-    return {
-      ok: false,
-      code: mapDatabaseError(error),
-    };
+    return failure("تأیید پزشک کامل نشد.");
   }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/users");
+  revalidatePath("/admin/doctors");
+  revalidatePath(`/admin/doctors/${id}`);
+
+  return success({ doctorId: id, isVerified: true });
 }
 
 export async function revokeDoctorVerification(doctorId) {
+  const admin = await requireAdmin();
+  const id = normalize(doctorId, 60);
+  if (!id) return invalid("شناسه پزشک معتبر نیست.");
+
+  const supabase = createAdminClient();
+  const { data: doctor, error: doctorError } = await supabase
+    .from("doctor_profiles")
+.select("id, is_verified, verified_at, verified_by")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (doctorError) {
+    console.error("[revokeDoctorVerification:lookup]", doctorError);
+    return failure();
+  }
+
+  if (!doctor) return invalid("پزشک پیدا نشد.");
+  if (!doctor.is_verified) return success({ doctorId: id, isVerified: false });
+
+  const { error } = await supabase
+    .from("doctor_profiles")
+    .update({
+      is_verified: false,
+      verified_at: null,
+      verified_by: null,
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("[revokeDoctorVerification]", error);
+    return failure();
+  }
+
   try {
-    if (typeof doctorId !== "string" || !/^[0-9a-f-]{36}$/i.test(doctorId)) {
-      return invalidInput();
-    }
+    await writeAuditLog(supabase, admin.id, "unverify_doctor", "doctor", id);
+  } catch (auditError) {
+    console.error("[revokeDoctorVerification:audit]", auditError);
 
-    const { user: actor, adminClient } = await requireAdmin();
-
-    const { data: doctor, error: doctorError } = await adminClient
-      .from("doctor_profiles")
-      .select(
-        `
-          id,
-          is_verified,
-          medical_license_number,
-          verified_at,
-          verified_by
-          `,
-      )
-      .eq("id", doctorId)
-      .maybeSingle();
-
-    if (doctorError) {
-      console.error("[revokeDoctorVerification:load]", doctorError);
-
-      return {
-        ok: false,
-        code: "SERVER_ERROR",
-      };
-    }
-
-    if (!doctor) {
-      return {
-        ok: false,
-        code: "NOT_FOUND",
-      };
-    }
-
-    if (doctor.is_verified === false) {
-      return {
-        ok: true,
-        alreadyRevoked: true,
-      };
-    }
-
-    const { error: updateError } = await adminClient
+    const { error: rollbackError } = await supabase
       .from("doctor_profiles")
       .update({
-        is_verified: false,
-
-        verified_at: null,
-
-        verified_by: null,
+        is_verified: doctor.is_verified,
+        verified_at: doctor.verified_at,
+        verified_by: doctor.verified_by,
       })
-      .eq("id", doctorId);
+      .eq("id", id);
 
-    if (updateError) {
-      console.error("[revokeDoctorVerification:update]", updateError);
-
-      throw updateError;
+    if (rollbackError) {
+      console.error("[revokeDoctorVerification:audit-rollback]", rollbackError);
     }
 
-    try {
-      await writeAdminAuditLog({
-        adminClient,
-
-        actorId: actor.id,
-
-        action: "revoke_doctor",
-
-        entityType: "doctor",
-
-        entityId: doctorId,
-
-        metadata: {
-          medical_license_number: doctor.medical_license_number,
-        },
-      });
-    } catch (auditError) {
-      await adminClient
-        .from("doctor_profiles")
-        .update({
-          is_verified: doctor.is_verified,
-
-          verified_at: doctor.verified_at,
-
-          verified_by: doctor.verified_by,
-        })
-        .eq("id", doctorId);
-
-      throw auditError;
-    }
-
-    return {
-      ok: true,
-    };
-  } catch (error) {
-    const authorizationError = mapAuthorizationError(error);
-
-    if (authorizationError) {
-      return authorizationError;
-    }
-
-    console.error("[revokeDoctorVerification]", error);
-
-    return {
-      ok: false,
-      code: mapDatabaseError(error),
-    };
+    return failure("لغو تأیید پزشک کامل نشد.");
   }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/users");
+  revalidatePath("/admin/doctors");
+  revalidatePath(`/admin/doctors/${id}`);
+
+  return success({ doctorId: id, isVerified: false });
 }

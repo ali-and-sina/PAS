@@ -130,9 +130,7 @@ export default function LoginCard({
 
     if (!parsed.success) {
       setFieldErrors(getFieldErrors(parsed.error));
-
       setFocusRequest((n) => n + 1);
-
       return;
     }
 
@@ -199,7 +197,18 @@ export default function LoginCard({
 
     if (!identifier || !password) {
       setTestError("شناسه و رمز ورود تست را وارد کنید.");
+      return;
+    }
 
+    // ادمین نباید از لاگین عمومی وارد شود.
+    if (fixedRole !== "admin" && identifier.toLowerCase() === "admin") {
+      setTestError("ورود مدیر فقط از صفحه اختصاصی مدیریت امکان‌پذیر است.");
+      return;
+    }
+
+    // اگر این LoginCard برای مدیر است، فقط شناسه مدیر مجاز است.
+    if (fixedRole === "admin" && identifier.toLowerCase() !== "admin") {
+      setTestError("شناسه ورود مدیر نادرست است.");
       return;
     }
 
@@ -210,6 +219,7 @@ export default function LoginCard({
       const result = await auth.loginTestUser({
         identifier,
         password,
+        loginContext: fixedRole === "admin" ? "admin" : "public",
       });
 
       if (result?.ok) {
@@ -399,25 +409,32 @@ export default function LoginCard({
 
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        ["بیمار", "1272511677"],
-                        ["پزشک", "12345"],
-                        ["آزمایشگاه", "LAB-1234"],
-                        ["مدیر", "admin"],
-                      ].map(([label, identifier]) => (
-                        <button
-                          key={identifier}
-                          type="button"
-                          className="rounded-md border px-2 py-2 text-xs hover:bg-accent"
-                          onClick={() => {
-                            setTestIdentifier(identifier);
+                        ["بیمار", "1272511677", "patient"],
+                        ["پزشک", "12345", "doctor"],
+                        ["آزمایشگاه", "LAB-1234", "laboratory"],
+                        ["مدیر", "admin", "admin"],
+                      ]
+                        .filter(([, , itemRole]) => {
+                          if (fixedRole === "admin") {
+                            return itemRole === "admin";
+                          }
 
-                            setTestError("");
-                          }}
-                          disabled={testPending}
-                        >
-                          {label}
-                        </button>
-                      ))}
+                          return itemRole !== "admin";
+                        })
+                        .map(([label, identifier]) => (
+                          <button
+                            key={identifier}
+                            type="button"
+                            className="rounded-md border px-2 py-2 text-xs hover:bg-accent"
+                            onClick={() => {
+                              setTestIdentifier(identifier);
+                              setTestError("");
+                            }}
+                            disabled={testPending}
+                          >
+                            {label}
+                          </button>
+                        ))}
                     </div>
 
                     <div className="space-y-2">
@@ -426,7 +443,6 @@ export default function LoginCard({
                         value={testIdentifier}
                         onChange={(event) => {
                           setTestIdentifier(event.target.value);
-
                           setTestError("");
                         }}
                         placeholder="شناسه تست"
@@ -441,7 +457,6 @@ export default function LoginCard({
                         value={testPassword}
                         onChange={(event) => {
                           setTestPassword(event.target.value);
-
                           setTestError("");
                         }}
                         placeholder="رمز عبور تست"
@@ -469,7 +484,6 @@ export default function LoginCard({
                           className="h-10 rounded-md border px-3 text-sm hover:bg-accent"
                           onClick={() => {
                             setShowTestLogin(false);
-
                             setTestError("");
                           }}
                           disabled={testPending}

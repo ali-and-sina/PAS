@@ -1,10 +1,21 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getPostLoginRedirect } from "@/lib/auth";
-import { normalizeIranianMobile } from "@/lib/utils/validation";
+import {
+  isValidIranianNationalId,
+  normalizeDigits,
+  normalizeIranianMobile,
+} from "@/lib/utils/validation";
 
-const ROLES = new Set(["patient", "doctor", "laboratory"]);
+const ROLES = new Set(["patient", "doctor", "laboratory", "admin"]);
+
+function normalizeString(value, max = 255) {
+  return typeof value === "string"
+    ? normalizeDigits(value).trim().slice(0, max)
+    : "";
+}
 
 function normalizePhone(value) {
   const normalized = normalizeIranianMobile(value) ?? "";
@@ -17,13 +28,9 @@ function isValidPhone(phone) {
 
 /**
  * Iranian national ID.
- *
- * At this layer we only require 10 Latin digits.
- * Full checksum validation is handled by the shared
- * validation helper before registration.
  */
 function isValidNationalId(value) {
-  return /^\d{10}$/.test(value);
+  return isValidIranianNationalId(value);
 }
 
 /**
@@ -282,7 +289,7 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
      * Supabase SSR stores the resulting session through
      * the cookie adapter in lib/supabase/server.js.
      */
-    // const authPhone = `+${phone}`;
+    const authPhone = `+${phone}`;
 
     const { data: verifyData, error: verifyError } =
       await supabase.auth.verifyOtp({
@@ -384,6 +391,25 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
      * Step 5:
      * Verify role-specific identifier and domain profile.
      */
+    if (role === "admin") {
+      const adminClient = createAdminClient();
+      const { data: adminProfile, error: adminProfileError } =
+        await adminClient
+          .from("admin_profiles")
+          .select("id, personnel_code")
+          .eq("id", user.id)
+          .maybeSingle();
+
+      if (adminProfileError) {
+        console.error("[verifyLoginOtp:admin_profile]", adminProfileError);
+        return authFailure("SERVER_ERROR");
+      }
+
+      if (!adminProfile || adminProfile.personnel_code !== identifier) {
+        return authFailure();
+      }
+    }
+
     if (role === "patient") {
       /**
        * Patient identity:
@@ -485,23 +511,6 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
        * to match the trusted domain profile.
        */
       if (laboratoryProfile.license_number !== identifier) {
-        return authFailure();
-      }
-    }
-
-    if (role === "admin") {
-      const { data: adminProfile, error: adminProfileError } = await supabase
-        .from("admin_profiles")
-        .select("personnel_code")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (adminProfileError) {
-        console.error("[verifyLoginOtp:adminProfile]", adminProfileError);
-        return authFailure("SERVER_ERROR");
-      }
-
-      if (!adminProfile || adminProfile.personnel_code !== identifier) {
         return authFailure();
       }
     }

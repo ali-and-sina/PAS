@@ -1,7 +1,6 @@
 import {
   ChevronLeft,
   FlaskConical,
-  ShieldCheck,
   Stethoscope,
   User,
 } from "lucide-react";
@@ -12,7 +11,6 @@ const ROLE_ICONS = {
   patient: User,
   doctor: Stethoscope,
   laboratory: FlaskConical,
-  admin: ShieldCheck,
 };
 
 export default function RoleSelector({ onSelect }) {

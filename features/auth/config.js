@@ -76,7 +76,6 @@ export const LOGIN_ROLES = [
   LOGIN_ROLE_CONFIG.patient,
   LOGIN_ROLE_CONFIG.doctor,
   LOGIN_ROLE_CONFIG.laboratory,
-  LOGIN_ROLE_CONFIG.admin,
 ];
 
 export const PHONE_MESSAGES = {
