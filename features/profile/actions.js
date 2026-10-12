@@ -1,6 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requirePatient } from "@/features/patient/auth";
+import { recordPatientAudit } from "@/features/patient/audit";
 
 const SUPPORTED_FIELDS = new Set([
   "full_name",
@@ -161,6 +164,8 @@ export async function updateOwnProfile(input = {}) {
       payload.emergency_contact_phone = value;
     }
 
+    const context = await requirePatient();
+
     const supabase = await createClient();
 
     const { error } = await supabase.rpc("update_own_profile", {
@@ -187,6 +192,21 @@ export async function updateOwnProfile(input = {}) {
         code: "SERVER_ERROR",
       };
     }
+
+    // Profile fields are rendered in several authenticated patient routes.
+    // Keep these route snapshots fresh without introducing a cross-user cache.
+    revalidatePath("/patient/profile");
+    revalidatePath("/patient/dashboard");
+    revalidatePath("/patient/health-record");
+
+    await recordPatientAudit({
+      actorId: context.user_id,
+      action: "profile_updated",
+      entityType: "patient_profile",
+      entityId: context.patient_id,
+      metadata: { changed_fields: keys.sort() },
+    });
+
 
     return {
       ok: true,

@@ -1,143 +1,203 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { ArrowRight, BarChart3, LineChart } from "lucide-react";
 
 import PageHeader from "@/components/shared/PageHeader";
-import { getSessionUser } from "@/lib/auth/server";
-import { getPatientTrend } from "@/features/trends/queries";
+import StatusBadge from "@/components/shared/StatusBadge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  getPatientResultComparison,
+  getPatientTrend,
+} from "@/features/patient/queries";
 import TrendChart from "@/features/trends/components/TrendChart";
+import { getTestDisplayName } from "@/lib/medical/test-name";
+import { formatReferenceRange } from "@/features/lab-results/reference-format";
 
 export const dynamic = "force-dynamic";
 
+const dateFormatter = new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium" });
+
 function formatDate(value) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("fa-IR", {
-    dateStyle: "medium",
-  }).format(new Date(value));
+  return value ? dateFormatter.format(new Date(value)) : "—";
 }
 
-function getValue(row) {
-  if (row.value_numeric != null) return row.value_numeric;
-  if (row.value_text != null) return row.value_text;
-  if (row.value_boolean != null) {
-    return row.value_boolean ? "مثبت" : "منفی";
+function getTest(observation) {
+  return Array.isArray(observation?.test_definitions)
+    ? observation.test_definitions[0]
+    : observation?.test_definitions;
+}
+
+function getValue(observation) {
+  if (observation?.value_numeric !== null && observation?.value_numeric !== undefined) {
+    return observation.value_numeric;
   }
-  return "—";
+  if (observation?.value_boolean !== null && observation?.value_boolean !== undefined) {
+    return observation.value_boolean ? "مثبت" : "منفی";
+  }
+  return observation?.value_text ?? "—";
 }
 
 export default async function PatientTrendDetailPage({ params }) {
-  const sessionUser = await getSessionUser();
-  const patientId = sessionUser?.id ?? sessionUser?.user?.id;
-
-  if (!patientId) redirect("/login");
-
   const { testDefinitionId } = await params;
-  const rows = await getPatientTrend(
-    patientId,
-    testDefinitionId,
+  const history = await getPatientTrend(testDefinitionId);
+  const comparison = await getPatientResultComparison({ testDefinitionId });
+
+  const test = history.length ? getTest(history[history.length - 1]) : null;
+  const unit = history.find((item) => item.unit)?.unit ?? test?.default_unit ?? null;
+  const numericHistory = history.every(
+    (item) => item.value_numeric !== null && item.value_numeric !== undefined,
   );
-
-  if (!rows.length) {
-    notFound();
-  }
-
-  const test = rows[0]?.test;
-  const values = rows.map((row) => getValue(row));
-  const numericValues = rows
-    .map((row) => row.value_numeric)
-    .filter((value) => value != null);
-
-  const min = numericValues.length
-    ? Math.min(...numericValues)
-    : null;
-  const max = numericValues.length
-    ? Math.max(...numericValues)
-    : null;
+  const chartData = numericHistory
+    ? history.map((item) => ({
+        date: formatDate(item.observed_at ?? item.finalized_at),
+        value: Number(item.value_numeric),
+      }))
+    : [];
 
   return (
-    <div>
+    <div className="space-y-6">
+      <Link
+        href="/patient/trends"
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowRight aria-hidden="true" />
+        بازگشت به روندها
+      </Link>
+
       <PageHeader
-        title={`روند ${test?.name_fa || test?.name || "آزمایش"}`}
-        description="نتایج نهایی ثبت‌شده این آزمایش در طول زمان."
-        actions={
-          <Link
-            href="/patient/trends"
-            className="text-sm text-muted-foreground hover:underline"
-          >
-            بازگشت به روندها
-          </Link>
+        title={getTestDisplayName(test)}
+        description={
+          unit
+            ? `مقایسه نتایج ثبت‌شده بر حسب ${unit}`
+            : "مقایسه نتایج ثبت‌شده در طول زمان"
         }
       />
 
-      {numericValues.length >= 2 ? (
-        <section className="rounded-xl border bg-card p-5">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <p className="text-sm text-muted-foreground">تعداد نتایج</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {numericValues.length}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">کمترین مقدار</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {min}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">بیشترین مقدار</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {max}
-              </p>
-            </div>
-          </div>
-        </section>
-      ) : null}
+      {!history.length ? (
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-sm text-muted-foreground">نتیجه‌ای برای این آزمایش پیدا نشد.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {comparison && (
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">آخرین مقدار</p>
+                    <div className="mt-1 flex items-end gap-2">
+                      <span className="text-3xl font-semibold tabular-nums">
+                        {comparison.currentValue}
+                      </span>
+                      {unit && <span className="pb-1 text-sm text-muted-foreground">{unit}</span>}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatDate(comparison.current?.observed_at)}
+                    </p>
+                  </div>
 
-      {numericValues.length >= 2 ? (
-        <section className="mt-5 rounded-xl border bg-card p-5">
-          <h2 className="mb-4 font-semibold">نمودار تغییرات</h2>
-          <TrendChart data={rows} />
-        </section>
-      ) : null}
+                  <div className="rounded-xl border bg-muted/30 px-4 py-3">
+                    <p className="text-xs text-muted-foreground">تغییر نسبت به نتیجه قبلی</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <StatusBadge
+                        label={
+                          comparison.direction === "up"
+                            ? "افزایش"
+                            : comparison.direction === "down"
+                              ? "کاهش"
+                              : comparison.direction === "new"
+                                ? "اولین نتیجه"
+                                : "بدون تغییر"
+                        }
+                        variant="neutral"
+                      />
+                      {comparison.difference !== null && (
+                        <span className="text-sm font-medium tabular-nums">
+                          {comparison.difference > 0 ? "+" : ""}{comparison.difference}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-      <section className="mt-5 overflow-hidden rounded-xl border bg-card">
-        <div className="border-b px-5 py-4">
-          <h2 className="font-semibold">سوابق نتیجه</h2>
-        </div>
+          {numericHistory ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <LineChart className="size-5 text-primary" aria-hidden="true" />
+                  نمودار تغییرات
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TrendChart data={chartData} unit={unit} />
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="size-5 text-primary" aria-hidden="true" />
+                  سوابق ثبت‌شده
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  این آزمایش عددی نیست؛ بنابراین روند به‌شکل زمانی نمایش داده می‌شود.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-right">
-            <thead className="bg-muted/40">
-              <tr>
-                <th className="px-4 py-3 text-sm font-medium">تاریخ</th>
-                <th className="px-4 py-3 text-sm font-medium">نتیجه</th>
-                <th className="px-4 py-3 text-sm font-medium">واحد</th>
-                <th className="px-4 py-3 text-sm font-medium">وضعیت</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className="border-t">
-                  <td className="px-4 py-4 text-sm">
-                    {formatDate(row.observed_at)}
-                  </td>
-                  <td className="px-4 py-4 text-sm font-medium">
-                    {getValue(row)}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-muted-foreground">
-                    {row.unit || test?.default_unit || "—"}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-muted-foreground">
-                    {row.status === "corrected"
-                      ? "اصلاح‌شده"
-                      : "نهایی"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+          <Card>
+            <CardHeader>
+              <CardTitle>سوابق نتایج</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-right text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="px-3 py-3 font-medium">تاریخ</th>
+                      <th className="px-3 py-3 font-medium">نتیجه</th>
+                      <th className="px-3 py-3 font-medium">محدوده مرجع</th>
+                      <th className="px-3 py-3 font-medium">وضعیت</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map((item) => (
+                      <tr key={item.id} className="border-b last:border-0">
+                        <td className="px-3 py-3">{formatDate(item.observed_at)}</td>
+                        <td className="px-3 py-3 font-medium tabular-nums">{getValue(item)}</td>
+                        <td className="px-3 py-3 text-muted-foreground">
+                          {formatReferenceRange(item) || "محدوده مرجع ثبت نشده"}
+                        </td>
+                        <td className="px-3 py-3">
+                          <StatusBadge
+                            label={item.flag === "high" ? "بالا" : item.flag === "low" ? "پایین" : item.flag === "critical" ? "بحرانی" : "ثبت‌شده"}
+                            variant={
+                              item.flag === "critical"
+                                ? "critical"
+                                : item.flag === "high"
+                                  ? "high"
+                                  : item.flag === "low"
+                                    ? "low"
+                                    : "neutral"
+                            }
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

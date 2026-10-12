@@ -1,253 +1,140 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { ClipboardList, FileText, Pill, UserRound } from "lucide-react";
+import {
+  Activity,
+  ArrowLeft,
+  ClipboardList,
+  FileText,
+  LineChart,
+  NotebookPen,
+  Pill,
+  ShieldCheck,
+  Stethoscope,
+} from "lucide-react";
 
-import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { getPatientHealthRecord } from "@/features/patient/queries";
-import { getSessionUser } from "@/lib/auth/server";
+import PageHeader from "@/components/shared/PageHeader";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getPatientTimeline } from "@/features/patient/queries";
 
 export const dynamic = "force-dynamic";
 
-function formatDate(value) {
-  if (!value) return "—";
+const dateTimeFormatter = new Intl.DateTimeFormat("fa-IR", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
 
-  return new Intl.DateTimeFormat("fa-IR", {
-    dateStyle: "medium",
-  }).format(new Date(value));
-}
-
-const sexLabels = {
-  male: "مرد",
-  female: "زن",
+const EVENT_META = {
+  visit: { label: "ویزیت", icon: Stethoscope },
+  lab_order: { label: "درخواست آزمایش", icon: ClipboardList },
+  lab_result: { label: "نتیجه آزمایش", icon: FileText },
+  doctor_explanation: { label: "توضیحات پزشک", icon: NotebookPen },
+  prescription: { label: "نسخه", icon: Pill },
+  follow_up: { label: "پیگیری", icon: Activity },
+  notification: { label: "اعلان", icon: Activity },
 };
 
+function formatDate(value) {
+  return value ? dateTimeFormatter.format(new Date(value)) : "—";
+}
+
 export default async function PatientHealthRecordPage() {
-  const sessionUser = await getSessionUser();
-  if (!sessionUser) redirect("/login");
+  const timeline = await getPatientTimeline({ limit: 100 });
 
-  const record = await getPatientHealthRecord();
-  if (!record) redirect("/login");
-
-  const profile = record.patientProfile;
+  const shortcuts = [
+    { href: "/patient/results", label: "نتایج آزمایش", icon: FileText },
+    { href: "/patient/trends", label: "روند نتایج", icon: LineChart },
+    { href: "/patient/interpretations", label: "توضیحات پزشک", icon: NotebookPen },
+    { href: "/patient/prescriptions", label: "نسخه‌ها", icon: Pill },
+    { href: "/patient/access", label: "دسترسی به پرونده", icon: ShieldCheck },
+  ];
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
-        title="سوابق سلامت"
-        description="اطلاعات پایه، پزشکان مرتبط و خلاصه سوابق ثبت‌شده شما."
-        actions={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/patient/trends">روند آزمایش‌ها</Link>
-          </Button>
-        }
+        title="پرونده سلامت"
+        description="یک مسیر زمانی از رویدادهای واقعی سلامت شما."
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="flex items-center gap-2 font-semibold">
-              <UserRound className="size-4" aria-hidden="true" />
-              اطلاعات پایه
-            </h2>
-
-            <dl className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div>
-                <dt className="text-xs text-muted-foreground">نام و نام خانوادگی</dt>
-                <dd className="mt-1 text-sm font-medium">
-                  {record.profile.full_name || "—"}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-xs text-muted-foreground">کد ملی</dt>
-                <dd className="mt-1 text-sm font-medium" dir="ltr">
-                  {record.profile.national_id || "—"}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-xs text-muted-foreground">موبایل</dt>
-                <dd className="mt-1 text-sm font-medium" dir="ltr">
-                  {record.profile.phone || "—"}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-xs text-muted-foreground">تاریخ تولد</dt>
-                <dd className="mt-1 text-sm font-medium">
-                  {profile?.date_of_birth || "—"}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-xs text-muted-foreground">جنسیت</dt>
-                <dd className="mt-1 text-sm font-medium">
-                  {sexLabels[profile?.sex] || profile?.sex || "—"}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-xs text-muted-foreground">گروه خونی</dt>
-                <dd className="mt-1 text-sm font-medium">
-                  {profile?.blood_type || "—"}
-                </dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="flex items-center gap-2 font-semibold">
-              <UserRound className="size-4" aria-hidden="true" />
-              پزشکان مرتبط
-            </h2>
-
-            {record.doctors.length === 0 ? (
-              <div className="mt-5">
-                <EmptyState
-                  icon={UserRound}
-                  title="پزشک مرتبطی وجود ندارد"
-                  description="هنوز رابطه فعالی با پزشک برای شما ثبت نشده است."
-                />
-              </div>
-            ) : (
-              <div className="mt-5 space-y-3">
-                {record.doctors.map((doctor) => (
-                  <div
-                    key={doctor.id}
-                    className="rounded-lg border p-4"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium">{doctor.doctor_name}</p>
-                      <span className="text-xs text-muted-foreground">
-                        {doctor.status === "active"
-                          ? "فعال"
-                          : "در انتظار تأیید"}
-                      </span>
-                    </div>
-
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {doctor.relationship_type === "primary_care"
-                        ? "پزشک اصلی"
-                        : doctor.relationship_type === "consulting"
-                          ? "پزشک مشاور"
-                          : "ارتباط موردی"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="flex items-center gap-2 font-semibold">
-              <FileText className="size-4" aria-hidden="true" />
-              آخرین نتایج
-            </h2>
-
-            {record.recentReports.length === 0 ? (
-              <div className="mt-5">
-                <EmptyState
-                  icon={FileText}
-                  title="نتیجه‌ای ندارید"
-                  description="نتایج نهایی آزمایش‌ها بعد از ثبت در این بخش نمایش داده می‌شوند."
-                  action={{
-                    label: "مشاهده آزمایش‌ها",
-                    href: "/patient/results",
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="mt-5 space-y-3">
-                {record.recentReports.map((report) => (
-                  <Link
-                    key={report.id}
-                    href={`/patient/results/${report.id}`}
-                    className="block rounded-lg border p-4 hover:bg-muted/30"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium">گزارش آزمایش</p>
-                      <span className="text-xs text-muted-foreground">
-                        {report.status === "amended" ? "اصلاح‌شده" : "نهایی"}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDate(report.created_at)} · {report.doctor_name}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="flex items-center gap-2 font-semibold">
-              <Pill className="size-4" aria-hidden="true" />
-              آخرین نسخه‌ها
-            </h2>
-
-            {record.recentPrescriptions.length === 0 ? (
-              <div className="mt-5">
-                <EmptyState
-                  icon={Pill}
-                  title="نسخه‌ای ندارید"
-                  description="نسخه‌های ثبت‌شده توسط پزشکان در این بخش نمایش داده می‌شوند."
-                  action={{
-                    label: "مشاهده نسخه‌ها",
-                    href: "/patient/prescriptions",
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="mt-5 space-y-3">
-                {record.recentPrescriptions.map((prescription) => (
-                  <Link
-                    key={prescription.id}
-                    href="/patient/prescriptions"
-                    className="block rounded-lg border p-4 hover:bg-muted/30"
-                  >
-                    <p className="font-medium">
-                      {prescription.doctor_name}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDate(prescription.issued_at)}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {shortcuts.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="rounded-xl border bg-card p-4 transition hover:border-primary/30 hover:bg-accent/30"
+          >
+            <Icon className="size-5 text-primary" aria-hidden="true" />
+            <p className="mt-3 text-sm font-medium">{label}</p>
+          </Link>
+        ))}
       </div>
 
-      {profile?.emergency_contact_name ? (
-        <Card className="mt-4">
-          <CardContent className="pt-6">
-            <h2 className="flex items-center gap-2 font-semibold">
-              <ClipboardList className="size-4" aria-hidden="true" />
-              تماس اضطراری
-            </h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <p className="text-sm">
-                <span className="text-muted-foreground">نام: </span>
-                {profile.emergency_contact_name}
-              </p>
-              <p className="text-sm" dir="ltr">
-                <span className="text-muted-foreground">موبایل: </span>
-                {profile.emergency_contact_phone || "—"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+      <Card>
+        <CardHeader>
+          <CardTitle>روند سلامت</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {timeline.length === 0 ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="پرونده شما هنوز رویداد قابل نمایش ندارد"
+              description="ویزیت‌ها، نتایج، نسخه‌ها و پیگیری‌ها پس از ثبت در سیستم در اینجا کنار هم قرار می‌گیرند."
+            />
+          ) : (
+            <ol className="relative space-y-5 border-s-2 ps-6">
+              {timeline.map((event) => {
+                const meta = EVENT_META[event.type] ?? EVENT_META.notification;
+                const Icon = meta.icon;
+
+                return (
+                  <li key={event.id} className="relative">
+                    <span className="absolute -start-[39px] top-1 flex size-7 items-center justify-center rounded-full border bg-card text-primary shadow-sm">
+                      <Icon className="size-3.5" aria-hidden="true" />
+                    </span>
+
+                    <div className="rounded-2xl border p-4 sm:p-5">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground">{meta.label}</p>
+                          <h2 className="mt-1 font-semibold">{event.title}</h2>
+                        </div>
+                        <time className="text-xs text-muted-foreground">
+                          {formatDate(event.date)}
+                        </time>
+                      </div>
+
+                      {event.summary && (
+                        <p className="mt-3 whitespace-pre-line text-sm leading-7 text-muted-foreground">
+                          {event.summary}
+                        </p>
+                      )}
+
+                      {event.type === "lab_result" && event.resource_id && (
+                        <Link
+                          href={`/patient/results/${event.resource_id}`}
+                          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                        >
+                          مشاهده نتیجه
+                          <ArrowLeft className="size-4" aria-hidden="true" />
+                        </Link>
+                      )}
+
+                      {event.type === "follow_up" && (
+                        <Link
+                          href="/patient/follow-ups"
+                          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                        >
+                          مشاهده پیگیری‌ها
+                          <ArrowLeft className="size-4" aria-hidden="true" />
+                        </Link>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/server";
 import { getPostLoginRedirect, ROLES, sanitizeNext } from "@/lib/auth";
-import LoginCard from "@/components/auth/LoginCard";
+import AdminLoginCard from "@/components/auth/AdminLoginCard";
+import AuthPageShell from "@/components/auth/AuthPageShell";
+import { isTestLoginEnabled } from "@/lib/auth/test-session";
 
 export const metadata = {
   title: "ورود مدیر",
@@ -22,15 +24,11 @@ export default async function AdminLoginPage({ searchParams }) {
   const { next } = await searchParams;
 
   return (
-    <main
-      id="main-content"
-      className="flex min-h-screen items-center justify-center px-4 py-12"
-    >
-      <LoginCard
-        fixedRole={ROLES.ADMIN}
+    <AuthPageShell variant="admin">
+      <AdminLoginCard
         next={sanitizeNext(next)}
-        isDevelopmentAuth={process.env.NODE_ENV !== "production"}
+        isTestLoginEnabled={isTestLoginEnabled()}
       />
-    </main>
+    </AuthPageShell>
   );
 }

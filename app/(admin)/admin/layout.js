@@ -5,8 +5,8 @@ import { ROLES, getRoleHome } from "@/lib/auth";
 
 export const metadata = {
   title: {
-    default: "مدیریت | پزشک‌یار",
-    template: "%s | پزشک‌یار",
+    default: "مدیریت | پاس",
+    template: "%s | پاس",
   },
 };
 

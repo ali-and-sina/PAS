@@ -54,10 +54,10 @@ export default function LaboratoryForm() {
   const router = useRouter();
 
   const [values, setValues] = useState({
-    organization_name: "",
+    full_name: "",
     phone: "",
+    organization_name: "",
     license_number: "",
-    organization_type: "",
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState(null);
@@ -89,8 +89,7 @@ export default function LaboratoryForm() {
 
       if (result?.ok) {
         toast.success("آزمایشگاه با موفقیت ثبت شد.");
-        router.push(`/admin/laboratories/${result.laboratoryId}`);
-        router.refresh();
+        router.push("/admin/laboratories");
         return;
       }
 
@@ -107,12 +106,13 @@ export default function LaboratoryForm() {
       <FormError>{formError}</FormError>
 
       <Field
-        id="organization_name"
-        label="نام آزمایشگاه / سازمان"
+        id="full_name"
+        label="نام و نام خانوادگی مسئول"
         dir="auto"
-        value={values.organization_name}
-        onChange={(e) => handleChange("organization_name", e.target.value)}
-        error={fieldErrors.organization_name}
+        autoComplete="name"
+        value={values.full_name}
+        onChange={(e) => handleChange("full_name", e.target.value)}
+        error={fieldErrors.full_name}
       />
 
       <Field
@@ -129,6 +129,15 @@ export default function LaboratoryForm() {
       />
 
       <Field
+        id="organization_name"
+        label="نام آزمایشگاه"
+        dir="auto"
+        value={values.organization_name}
+        onChange={(e) => handleChange("organization_name", e.target.value)}
+        error={fieldErrors.organization_name}
+      />
+
+      <Field
         id="license_number"
         label="شماره مجوز"
         dir="ltr"
@@ -136,16 +145,6 @@ export default function LaboratoryForm() {
         value={values.license_number}
         onChange={(e) => handleChange("license_number", e.target.value)}
         error={fieldErrors.license_number}
-      />
-
-      <Field
-        id="organization_type"
-        label="نوع سازمان"
-        dir="auto"
-        placeholder="مثلاً آزمایشگاه تشخیص طبی"
-        value={values.organization_type}
-        onChange={(e) => handleChange("organization_type", e.target.value)}
-        error={fieldErrors.organization_type}
       />
 
       <Button

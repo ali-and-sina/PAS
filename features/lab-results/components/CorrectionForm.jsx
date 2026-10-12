@@ -6,6 +6,8 @@ import { correctLabResult } from "@/features/lab-results/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getTestDisplayName } from "@/lib/medical/test-name";
+import { getTestDisplayName } from "@/lib/medical/test-name";
 
 const initialState = {
   ok: false,
@@ -36,7 +38,7 @@ export default function CorrectionForm({ reportId, observation }) {
 
   const current = getCurrentValue(observation);
 
-  const label = observation.test?.name_fa || observation.test?.name || "آزمایش";
+  const label = getTestDisplayName(observation.test);
 
   const isBoolean = observation.test?.value_type === "boolean";
 

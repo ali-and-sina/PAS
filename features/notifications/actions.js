@@ -11,62 +11,60 @@ const notificationPathByRole = {
 };
 
 export async function markNotificationRead(formData) {
-  try {
-    if (!(formData instanceof FormData)) return { ok: false };
+  const user = await getSessionUser();
+  if (!user?.id) return { ok: false };
+  const id = String(formData.get("id") || "").trim();
+  if (!id) return { ok: false };
 
-    const user = await getSessionUser();
-    if (!user?.id) return { ok: false };
+  const supabase = await createClient();
+  const { data: updated, error } = await supabase
+    .from("notifications")
+    .update({ status: "read", is_read: true })
+    .eq("id", id)
+    .eq("recipient_id", user.id)
+    .eq("is_read", false)
+    .select("id");
 
-    const id = String(formData.get("id") || "").trim();
-    if (!id) return { ok: false };
+  if (error) throw error;
 
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("id", id)
-      .eq("recipient_id", user.id);
+  if (notificationPathByRole[user.role]) revalidatePath(notificationPathByRole[user.role]);
+  return { ok: true, changed: Boolean(updated?.length) };
+}
 
-    if (error) {
-      console.error("[markNotificationRead]", error);
-      return { ok: false };
-    }
+export async function markNotificationReviewed(formData) {
+  const user = await getSessionUser();
+  if (!user?.id) return { ok: false };
+  const id = String(formData.get("id") || "").trim();
+  if (!id) return { ok: false };
 
-    if (notificationPathByRole[user.role]) {
-      revalidatePath(notificationPathByRole[user.role]);
-    }
+  const supabase = await createClient();
+  const { data: updated, error } = await supabase
+    .from("notifications")
+    .update({ status: "reviewed" })
+    .eq("id", id)
+    .eq("recipient_id", user.id)
+    .neq("status", "reviewed")
+    .select("id");
+  if (error) throw error;
 
-    return { ok: true };
-  } catch (error) {
-    console.error("[markNotificationRead]", error);
-    return { ok: false };
-  }
+  if (notificationPathByRole[user.role]) revalidatePath(notificationPathByRole[user.role]);
+  return { ok: true, changed: Boolean(updated?.length) };
 }
 
 export async function markAllNotificationsRead() {
-  try {
-    const user = await getSessionUser();
-    if (!user?.id) return { ok: false };
+  const user = await getSessionUser();
+  if (!user?.id) return { ok: false };
 
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("recipient_id", user.id)
-      .eq("is_read", false);
+  const supabase = await createClient();
+  const { data: updated, error } = await supabase
+    .from("notifications")
+    .update({ status: "read", is_read: true })
+    .eq("recipient_id", user.id)
+    .eq("is_read", false)
+    .select("id");
 
-    if (error) {
-      console.error("[markAllNotificationsRead]", error);
-      return { ok: false };
-    }
+  if (error) throw error;
 
-    if (notificationPathByRole[user.role]) {
-      revalidatePath(notificationPathByRole[user.role]);
-    }
-
-    return { ok: true };
-  } catch (error) {
-    console.error("[markAllNotificationsRead]", error);
-    return { ok: false };
-  }
+  if (notificationPathByRole[user.role]) revalidatePath(notificationPathByRole[user.role]);
+  return { ok: true, changed: Boolean(updated?.length), count: updated?.length ?? 0 };
 }

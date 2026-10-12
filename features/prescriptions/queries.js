@@ -1,115 +1,115 @@
 import "server-only";
 
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { requirePatient } from "@/features/patient/auth";
+import {
+  DEFAULT_PAGE_SIZE,
+  getPageBounds,
+  makePagination,
+  normalizePage,
+  normalizePageSize,
+} from "@/lib/pagination";
 
-async function getDoctorNames(ids) {
-  const uniqueIds = [...new Set((ids || []).filter(Boolean))];
-  if (!uniqueIds.length) return new Map();
+const PRESCRIPTION_FIELDS =
+  "id, patient_id, doctor_id, diagnostic_report_id, status, issued_at, created_at";
+const PRESCRIPTION_ITEM_FIELDS =
+  "id, prescription_id, medication_name, dosage, frequency, duration, instructions";
 
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("profiles")
-    .select("id, full_name")
-    .in("id", uniqueIds);
-
-  if (error) throw error;
-  return new Map((data || []).map((row) => [row.id, row.full_name]));
-}
-
-export async function getDoctorPrescriptions(doctorId) {
-  if (!doctorId) return [];
+async function getPrescriptionPage({ ownerColumn, ownerId, patientId = null, page = 1, pageSize = DEFAULT_PAGE_SIZE, peopleColumn }) {
+  const safePageSize = normalizePageSize(pageSize);
+  let safePage = normalizePage(page);
+  if (!ownerId) {
+    return {
+      items: [],
+      pagination: makePagination({ page: 1, pageSize: safePageSize, totalCount: 0 }),
+    };
+  }
 
   const supabase = await createClient();
-  const { data: prescriptions, error } = await supabase
-    .from("prescriptions")
-    .select(
-      "id, patient_id, doctor_id, diagnostic_report_id, status, issued_at, created_at",
-    )
-    .eq("doctor_id", doctorId)
-    .order("issued_at", { ascending: false });
+  const makeQuery = () => {
+    let query = supabase
+      .from("prescriptions")
+      .select(PRESCRIPTION_FIELDS, { count: "exact" })
+      .eq(ownerColumn, ownerId);
+    if (patientId) query = query.eq("patient_id", patientId);
+    return query.order("issued_at", { ascending: false }).order("id", { ascending: false });
+  };
 
-  if (error) throw error;
-  if (!prescriptions?.length) return [];
+  const bounds = getPageBounds(safePage, safePageSize);
+  let result = await makeQuery().range(bounds.from, bounds.to);
+  if (result.error) throw result.error;
 
-  const patientIds = [
-    ...new Set(prescriptions.map((row) => row.patient_id)),
-  ];
+  const totalCount = result.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
+  if (safePage > totalPages) {
+    safePage = totalPages;
+    const corrected = getPageBounds(safePage, safePageSize);
+    result = await makeQuery().range(corrected.from, corrected.to);
+    if (result.error) throw result.error;
+  }
+
+  const prescriptions = result.data || [];
+  const pagination = makePagination({ page: safePage, pageSize: safePageSize, totalCount });
+  if (!prescriptions.length) return { items: [], pagination };
+
+  const personIds = [...new Set(prescriptions.map((row) => row[peopleColumn]).filter(Boolean))];
   const prescriptionIds = prescriptions.map((row) => row.id);
 
-  const [patientsResult, itemsResult] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, full_name")
-      .in("id", patientIds),
-    supabase
-      .from("prescription_items")
-      .select(
-        "id, prescription_id, medication_name, dosage, frequency, duration, instructions",
-      )
-      .in("prescription_id", prescriptionIds),
+  const [peopleResult, itemsResult] = await Promise.all([
+    personIds.length
+      ? supabase.from("profiles").select("id, full_name").in("id", personIds)
+      : Promise.resolve({ data: [], error: null }),
+    supabase.from("prescription_items").select(PRESCRIPTION_ITEM_FIELDS).in("prescription_id", prescriptionIds),
   ]);
-
-  if (patientsResult.error) throw patientsResult.error;
+  if (peopleResult.error) throw peopleResult.error;
   if (itemsResult.error) throw itemsResult.error;
 
-  const patients = new Map(
-    (patientsResult.data || []).map((row) => [row.id, row.full_name]),
-  );
+  const peopleById = new Map((peopleResult.data || []).map((person) => [person.id, person]));
+  const itemsByPrescription = new Map();
+  for (const item of itemsResult.data || []) {
+    const rows = itemsByPrescription.get(item.prescription_id) || [];
+    rows.push(item);
+    itemsByPrescription.set(item.prescription_id, rows);
+  }
 
-  return prescriptions.map((prescription) => ({
-    ...prescription,
-    patient_name:
-      patients.get(prescription.patient_id) || "بیمار",
-    items: (itemsResult.data || []).filter(
-      (item) => item.prescription_id === prescription.id,
-    ),
-  }));
+  return {
+    items: prescriptions.map((prescription) => ({
+      ...prescription,
+      ...(peopleColumn === "patient_id"
+        ? { patient_name: peopleById.get(prescription.patient_id)?.full_name || "بیمار", items: itemsByPrescription.get(prescription.id) || [] }
+        : { doctor_profiles: peopleById.get(prescription.doctor_id) || null, prescription_items: itemsByPrescription.get(prescription.id) || [] }),
+    })),
+    pagination,
+  };
 }
 
-export async function getDoctorPatientPrescriptions(doctorId, patientId) {
-  const prescriptions = await getDoctorPrescriptions(doctorId);
-  return prescriptions.filter(
-    (item) => item.patient_id === patientId,
-  );
+export async function getDoctorPrescriptions(doctorId, options = {}) {
+  return getPrescriptionPage({
+    ...options,
+    ownerColumn: "doctor_id",
+    ownerId: doctorId,
+    peopleColumn: "patient_id",
+  });
 }
 
-export async function getPatientPrescriptions(patientId) {
-  if (!patientId) return [];
+export async function getDoctorPatientPrescriptions(doctorId, patientId, options = {}) {
+  const result = await getPrescriptionPage({
+    ownerColumn: "doctor_id",
+    ownerId: doctorId,
+    patientId,
+    peopleColumn: "patient_id",
+    ...options,
+  });
+  return result.items;
+}
 
-  const supabase = await createClient();
-  const { data: prescriptions, error } = await supabase
-    .from("prescriptions")
-    .select(
-      "id, patient_id, doctor_id, diagnostic_report_id, status, issued_at, created_at",
-    )
-    .eq("patient_id", patientId)
-    .order("issued_at", { ascending: false });
-
-  if (error) throw error;
-  if (!prescriptions?.length) return [];
-
-  const prescriptionIds = prescriptions.map((row) => row.id);
-
-  const { data: items, error: itemsError } = await supabase
-    .from("prescription_items")
-    .select(
-      "id, prescription_id, medication_name, dosage, frequency, duration, instructions, created_at",
-    )
-    .in("prescription_id", prescriptionIds);
-
-  if (itemsError) throw itemsError;
-
-  const doctorNames = await getDoctorNames(
-    prescriptions.map((row) => row.doctor_id),
-  );
-
-  return prescriptions.map((prescription) => ({
-    ...prescription,
-    doctor_name:
-      doctorNames.get(prescription.doctor_id) || "پزشک",
-    items: (items || []).filter(
-      (item) => item.prescription_id === prescription.id,
-    ),
-  }));
+export async function getPatientPrescriptions({ page = 1, pageSize = DEFAULT_PAGE_SIZE } = {}) {
+  const context = await requirePatient();
+  return getPrescriptionPage({
+    ownerColumn: "patient_id",
+    ownerId: context.patient_id,
+    peopleColumn: "doctor_id",
+    page,
+    pageSize,
+  });
 }

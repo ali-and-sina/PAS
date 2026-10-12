@@ -32,7 +32,7 @@ function TextField({
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         className={cn(
-          "h-11 tabular-nums",
+          "h-12 rounded-xl bg-background/70 tabular-nums transition-[border-color,box-shadow,background-color] duration-200 focus-visible:bg-background motion-reduce:transition-none",
           className,
           error && "border-destructive",
         )}
@@ -105,7 +105,7 @@ export default function IdentityForm({
           size="sm"
           onClick={onBack}
           disabled={pending}
-          className="-ms-2 text-muted-foreground"
+          className="-ms-2 rounded-full text-muted-foreground transition-colors duration-200 hover:bg-muted/70 motion-reduce:transition-none"
         >
           <ArrowRight aria-hidden="true" />
           تغییر نقش
@@ -145,7 +145,7 @@ export default function IdentityForm({
 
       <Button
         type="submit"
-        className="h-11 w-full"
+        className="h-12 w-full rounded-xl font-medium shadow-sm transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:translate-y-0 motion-reduce:transition-none"
         disabled={pending}
         aria-busy={pending}
       >

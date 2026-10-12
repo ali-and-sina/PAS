@@ -228,8 +228,9 @@ export async function loginTestUser({
    * authentication has been established.
    */
   if (testUser.role === "admin") {
-    const adminClient = createAdminClient();
-    const { data: adminProfile, error: adminProfileError } = await adminClient
+    // admin_profiles has no authenticated SELECT policy by design.
+    const privileged = createAdminClient();
+    const { data: adminProfile, error: adminProfileError } = await privileged
       .from("admin_profiles")
       .select("personnel_code")
       .eq("id", user.id)
@@ -238,7 +239,7 @@ export async function loginTestUser({
     if (
       adminProfileError ||
       !adminProfile ||
-      adminProfile.personnel_code !== testUser.identifier
+      String(adminProfile.personnel_code ?? "").trim().toUpperCase() !== testUser.identifier.toUpperCase()
     ) {
       console.error("[loginTestUser:adminProfile]", adminProfileError);
 

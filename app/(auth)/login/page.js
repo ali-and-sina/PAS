@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/server";
 import { getPostLoginRedirect, isValidRole, sanitizeNext } from "@/lib/auth";
 import LoginCard from "@/components/auth/LoginCard";
+import AuthPageShell from "@/components/auth/AuthPageShell";
+import { isTestLoginEnabled } from "@/lib/auth/test-session";
 
 export const metadata = {
   title: "ورود",
@@ -18,14 +20,12 @@ export default async function LoginPage({ searchParams }) {
   const { next } = await searchParams;
 
   return (
-    <main
-      id="main-content"
-      className="flex min-h-screen items-center justify-center px-4 py-12"
-    >
+    <AuthPageShell>
       <LoginCard
         next={sanitizeNext(next)}
         isDevelopmentAuth={process.env.NODE_ENV !== "production"}
+        isTestLoginEnabled={isTestLoginEnabled()}
       />
-    </main>
+    </AuthPageShell>
   );
 }

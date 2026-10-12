@@ -3,18 +3,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPostLoginRedirect } from "@/lib/auth";
-import {
-  isValidIranianNationalId,
-  normalizeDigits,
-  normalizeIranianMobile,
-} from "@/lib/utils/validation";
+import { normalizeDigits, normalizeIranianMobile } from "@/lib/utils/validation";
 
+// Admin is handled through the same OTP action, but its personnel-code/phone
+// pair is verified against the private admin directory before sending OTP.
 const ROLES = new Set(["patient", "doctor", "laboratory", "admin"]);
 
-function normalizeString(value, max = 255) {
-  return typeof value === "string"
-    ? normalizeDigits(value).trim().slice(0, max)
-    : "";
+function normalizeString(value) {
+  return typeof value === "string" ? normalizeDigits(value).trim() : "";
 }
 
 function normalizePhone(value) {
@@ -28,9 +24,13 @@ function isValidPhone(phone) {
 
 /**
  * Iranian national ID.
+ *
+ * At this layer we only require 10 Latin digits.
+ * Full checksum validation is handled by the shared
+ * validation helper before registration.
  */
 function isValidNationalId(value) {
-  return isValidIranianNationalId(value);
+  return /^\d{10}$/.test(value);
 }
 
 /**
@@ -146,6 +146,45 @@ export async function requestLoginOtp({ role, identifier, phone } = {}) {
 
     if (!isValidPhone(phone)) {
       return invalidInput();
+    }
+
+    // Do not send an admin OTP unless both the personnel code and phone
+    // belong to the same active admin record. admin_profiles intentionally
+    // has no direct SELECT grant/policy for authenticated users, so this
+    // lookup must use the server-only privileged client.
+    if (role === "admin") {
+      const privileged = createAdminClient();
+      const { data: adminRecord, error: adminRecordError } = await privileged
+        .from("admin_profiles")
+        .select("id, personnel_code")
+        .eq("personnel_code", identifier)
+        .maybeSingle();
+
+      if (adminRecordError) {
+        console.error("[requestLoginOtp:adminRecord]", adminRecordError);
+        return { ok: false, code: "SERVER_ERROR" };
+      }
+
+      if (!adminRecord) return invalidInput();
+
+      const { data: adminIdentity, error: adminIdentityError } = await privileged
+        .from("profiles")
+        .select("id, role, phone")
+        .eq("id", adminRecord.id)
+        .maybeSingle();
+
+      if (adminIdentityError) {
+        console.error("[requestLoginOtp:adminIdentity]", adminIdentityError);
+        return { ok: false, code: "SERVER_ERROR" };
+      }
+
+      if (
+        !adminIdentity ||
+        adminIdentity.role !== "admin" ||
+        normalizePhone(adminIdentity.phone) !== phone
+      ) {
+        return invalidInput();
+      }
     }
 
     const supabase = await createClient();
@@ -391,25 +430,6 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
      * Step 5:
      * Verify role-specific identifier and domain profile.
      */
-    if (role === "admin") {
-      const adminClient = createAdminClient();
-      const { data: adminProfile, error: adminProfileError } =
-        await adminClient
-          .from("admin_profiles")
-          .select("id, personnel_code")
-          .eq("id", user.id)
-          .maybeSingle();
-
-      if (adminProfileError) {
-        console.error("[verifyLoginOtp:admin_profile]", adminProfileError);
-        return authFailure("SERVER_ERROR");
-      }
-
-      if (!adminProfile || adminProfile.personnel_code !== identifier) {
-        return authFailure();
-      }
-    }
-
     if (role === "patient") {
       /**
        * Patient identity:
@@ -511,6 +531,25 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
        * to match the trusted domain profile.
        */
       if (laboratoryProfile.license_number !== identifier) {
+        return authFailure();
+      }
+    }
+
+    if (role === "admin") {
+      // admin_profiles is deliberately inaccessible to the session client.
+      const privileged = createAdminClient();
+      const { data: adminProfile, error: adminProfileError } = await privileged
+        .from("admin_profiles")
+        .select("personnel_code")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (adminProfileError) {
+        console.error("[verifyLoginOtp:adminProfile]", adminProfileError);
+        return authFailure("SERVER_ERROR");
+      }
+
+      if (!adminProfile || adminProfile.personnel_code !== identifier) {
         return authFailure();
       }
     }

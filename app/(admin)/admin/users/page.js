@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getAdminUsers } from "@/features/admin/queries";
+import Pagination from "@/components/shared/Pagination";
 
 const roleLabels = { patient: "بیمار", doctor: "پزشک", laboratory: "آزمایشگاه", admin: "مدیر" };
 const statusLabels = { verified: "تأییدشده", pending: "در انتظار تأیید", complete: "تکمیل‌شده", incomplete: "ناقص", active: "فعال" };
@@ -15,7 +16,9 @@ export default async function AdminUsersPage({ searchParams }) {
   const params = await searchParams;
   const role = params?.role ?? "all";
   const search = params?.q ?? "";
-  const users = await getAdminUsers({ role, search });
+  const page = params?.page ?? 1;
+  const result = await getAdminUsers({ role, search, page });
+  const users = result.items;
 
   return (
     <div className="space-y-6">
@@ -46,7 +49,7 @@ export default async function AdminUsersPage({ searchParams }) {
                 <TableRow key={user.id}>
                   <TableCell className="font-medium"><Link href={`/admin/users/${user.id}`} className="hover:underline">{user.full_name || "بدون نام"}</Link></TableCell>
                   <TableCell dir="ltr" className="text-right">{user.phone || "—"}</TableCell>
-                  <TableCell>{roleLabels[user.role] || user.role}</TableCell>
+                  <TableCell>{roleLabels[user.role] || "نامشخص"}</TableCell>
                   <TableCell>{statusLabels[user.status] || "—"}</TableCell>
                   <TableCell dir="ltr" className="text-right">{new Date(user.created_at).toLocaleDateString("fa-IR")}</TableCell>
                 </TableRow>
@@ -55,6 +58,7 @@ export default async function AdminUsersPage({ searchParams }) {
           </Table>
         </Card>
       )}
+      <Pagination pathname="/admin/users" page={result.pagination.page} pageSize={result.pagination.pageSize} totalCount={result.pagination.totalCount} totalPages={result.pagination.totalPages} query={{ role, q: search }} />
       <div className="flex flex-wrap gap-2">
         <Button asChild><Link href="/admin/doctors/new">ایجاد پزشک</Link></Button>
         <Button asChild variant="outline"><Link href="/admin/laboratories/new">ایجاد آزمایشگاه</Link></Button>

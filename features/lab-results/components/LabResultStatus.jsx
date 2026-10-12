@@ -34,7 +34,7 @@ const CONFIG = {
 
 export default function LabResultStatus({ status }) {
   const item = CONFIG[status] || {
-    label: status || "نامشخص",
+    label: "نامشخص",
     variant: "neutral",
   };
 

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { Button } from "@/components/ui/button";
 import ErrorState from "@/components/shared/ErrorState";
 
 export default function RouteError({ error, reset }) {

@@ -9,9 +9,7 @@ function fail(message) { return { ok: false, message }; }
 import { requireVerifiedDoctor } from "@/features/doctor/access";
 
 export async function createInterpretation(_previousState, formData) {
-  try {
-    if (!(formData instanceof FormData)) return fail("اطلاعات تفسیر معتبر نیست.");
-    const doctor = await requireVerifiedDoctor();
+  const doctor = await requireVerifiedDoctor();
   if (!doctor) return fail("دسترسی معتبر نیست.");
 
   const reportId = String(formData.get("diagnostic_report_id") || "").trim();
@@ -53,9 +51,10 @@ export async function createInterpretation(_previousState, formData) {
 
   revalidatePath("/doctor/interpretations");
   revalidatePath(`/doctor/patients/${order.patient_id}`);
-    return { ok: true, message: "تفسیر با موفقیت ثبت شد." };
-  } catch (error) {
-    console.error("[createInterpretation]", error);
-    return fail("ثبت تفسیر انجام نشد.");
+  if (visible) {
+    revalidatePath("/patient/interpretations");
+    revalidatePath("/patient/health-record");
+    revalidatePath("/patient/dashboard");
   }
+  return { ok: true, message: "تفسیر با موفقیت ثبت شد." };
 }

@@ -9,6 +9,6 @@ const CONFIG = {
 };
 
 export default function OrderStatusBadge({ status }) {
-  const item = CONFIG[status] || { label: status || "نامشخص", variant: "neutral" };
+  const item = CONFIG[status] || { label: "نامشخص", variant: "neutral" };
   return <StatusBadge label={item.label} variant={item.variant} />;
 }

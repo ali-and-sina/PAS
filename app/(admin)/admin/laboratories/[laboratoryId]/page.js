@@ -5,6 +5,7 @@ import EmptyState from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAdminLaboratory } from "@/features/admin/queries";
+import { getOrganizationTypeLabel } from "@/lib/constants/status";
 
 export const metadata = { title: "جزئیات آزمایشگاه" };
 
@@ -52,7 +53,7 @@ export default async function AdminLaboratoryDetailPage({ params }) {
           <Field label="نام مسئول حساب" value={laboratory.full_name} />
           <Field label="شماره موبایل" value={laboratory.phone} dir="ltr" />
           <Field label="شماره مجوز" value={laboratory.license_number} dir="ltr" />
-          <Field label="نوع سازمان" value={organization?.type === "laboratory" ? "آزمایشگاه" : organization?.type} />
+          <Field label="نوع سازمان" value={getOrganizationTypeLabel(organization?.type)} />
           <Field label="شناسه سازمان" value={laboratory.organization_id} dir="ltr" />
           <Field label="تاریخ ایجاد حساب" value={new Date(laboratory.created_at).toLocaleDateString("fa-IR")} />
         </CardContent>
@@ -62,7 +63,7 @@ export default async function AdminLaboratoryDetailPage({ params }) {
         <CardHeader><CardTitle>سازمان</CardTitle></CardHeader>
         <CardContent className="grid gap-6 sm:grid-cols-2">
           <Field label="نام سازمان" value={organization?.name} />
-          <Field label="نوع" value={organization?.type} />
+          <Field label="نوع" value={getOrganizationTypeLabel(organization?.type)} />
           <Field label="شماره مجوز سازمان" value={organization?.license_number} dir="ltr" />
         </CardContent>
       </Card>

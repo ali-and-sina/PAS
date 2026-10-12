@@ -12,7 +12,7 @@ export default function Sidebar() {
   return (
     <aside className="hidden w-64 shrink-0 border-e bg-card lg:flex lg:flex-col">
       <div className="flex h-16 items-center border-b px-5">
-        <span className="text-lg font-semibold text-primary">پزشک‌یار</span>
+        <span className="text-lg font-semibold text-primary">پاس</span>
       </div>
       <div className="flex-1 overflow-y-auto p-3">
         <SidebarNav items={items} />

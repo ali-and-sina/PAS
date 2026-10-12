@@ -79,7 +79,6 @@ export default function ProfileCompletionForm({ redirectTo }) {
         toast.success("مشخصات شما ذخیره شد.");
 
         router.replace(redirectTo);
-        router.refresh();
 
         return;
       }

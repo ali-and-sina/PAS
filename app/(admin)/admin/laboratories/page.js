@@ -6,15 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getAdminLaboratories } from "@/features/admin/queries";
+import Pagination from "@/components/shared/Pagination";
 
 export const metadata = { title: "آزمایشگاه‌ها" };
 
-export default async function AdminLaboratoriesPage() {
-  const laboratories = await getAdminLaboratories();
+export default async function AdminLaboratoriesPage({ searchParams }) {
+  const params = await searchParams;
+  const result = await getAdminLaboratories({ page: params?.page ?? 1 });
+  const laboratories = result.items;
 
   return (
     <div className="space-y-6">
-      <PageHeader title="آزمایشگاه‌ها" description="حساب‌ها و سازمان‌های آزمایشگاهی تعریف‌شده در سامانه." actions={<Button asChild><Link href="/admin/laboratories/new"><Plus aria-hidden="true" />ایجاد آزمایشگاه</Link></Button>} />
+      <PageHeader title="آزمایشگاه‌ها" description="حساب‌ها و سازمان‌های آزمایشگاهی تعریف‌شده در سامانه." actions={<div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link href="/admin/laboratories/branches"><Building2 aria-hidden="true" />مدیریت شعب</Link></Button><Button asChild><Link href="/admin/laboratories/new"><Plus aria-hidden="true" />ایجاد آزمایشگاه</Link></Button></div>} />
       {laboratories.length === 0 ? (
         <EmptyState icon={Building2} title="هنوز آزمایشگاهی ثبت نشده است" description="از مسیر ایجاد آزمایشگاه، اولین حساب سازمانی را بسازید." action={{ href: "/admin/laboratories/new", label: "ایجاد آزمایشگاه" }} />
       ) : (
@@ -34,6 +37,7 @@ export default async function AdminLaboratoriesPage() {
           </Table>
         </Card>
       )}
+      <Pagination pathname="/admin/laboratories" page={result.pagination.page} pageSize={result.pagination.pageSize} totalCount={result.pagination.totalCount} totalPages={result.pagination.totalPages} />
     </div>
   );
 }

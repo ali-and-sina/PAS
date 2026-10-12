@@ -5,19 +5,68 @@ import EmptyState from "@/components/shared/EmptyState";
 import LabResultStatus from "@/features/lab-results/components/LabResultStatus";
 import { getLabReports } from "@/features/lab/queries";
 import { Button } from "@/components/ui/button";
+import Pagination from "@/components/shared/Pagination";
 
 function formatDate(value) {
-  return value ? new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium" }).format(new Date(value)) : "—";
+  return value ? new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";
 }
 
-export const metadata = { title: "نتایج آزمایشگاه" };
+const FILTERS = [
+  { value: "", label: "همه" },
+  { value: "draft", label: "پیش‌نویس" },
+  { value: "ready_to_finalize", label: "آماده نهایی‌سازی" },
+  { value: "final", label: "نهایی" },
+  { value: "amended", label: "اصلاح‌شده" },
+];
 
-export default async function LabResultsPage() {
-  const reports = await getLabReports();
+export const metadata = { title: "نتایج آزمایشگاه" };
+export const dynamic = "force-dynamic";
+
+export default async function LabResultsPage({ searchParams }) {
+  const params = searchParams ? await searchParams : {};
+  const requestedStatus = typeof params?.status === "string" ? params.status : "";
+  const status = ["draft", "ready_to_finalize", "final", "amended"].includes(requestedStatus) ? requestedStatus : "";
+  const result = await getLabReports(status || null, { page: params?.page ?? 1 });
+  const reports = result.items;
+
   return (
-    <>
-      <PageHeader title="نتایج ثبت‌شده" description="پیش‌نویس‌ها، نتایج نهایی و اصلاح‌شده آزمایشگاه." />
-      {!reports.length ? <EmptyState icon={FileText} title="نتیجه‌ای ثبت نشده است" description="نتایج ثبت‌شده سفارش‌ها در این صفحه نمایش داده می‌شوند." /> : <div className="space-y-3">{reports.map((report) => <div key={report.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-card p-4"><div><p className="font-medium">{report.patient?.full_name || "بیمار"}</p><p className="mt-1 text-sm text-muted-foreground">{report.doctor?.full_name || "پزشک"} · {formatDate(report.finalized_at || report.created_at)}</p></div><div className="flex items-center gap-3"><LabResultStatus status={report.status} /><Button asChild size="sm" variant="outline"><Link href={`/lab/results/${report.id}`}>مشاهده</Link></Button></div></div>)}</div>}
-    </>
+    <div className="space-y-5">
+      <PageHeader title="نتایج ثبت‌شده" description="پیش‌نویس‌ها، نتایج آماده نهایی‌سازی، نهایی و اصلاح‌شده آزمایشگاه را بررسی کنید." />
+
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        {FILTERS.map((filter) => (
+          <Link
+            key={filter.value || "all"}
+            href={filter.value ? `/lab/results?status=${filter.value}` : "/lab/results"}
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium ${status === filter.value ? "border-primary bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-accent"}`}
+          >
+            {filter.label}
+          </Link>
+        ))}
+      </div>
+
+      {reports.length ? (
+        <div className="space-y-3">
+          {reports.map((report) => (
+            <div key={report.id} className="rounded-xl border bg-card p-4 sm:p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="font-medium">{report.patient?.full_name || "بیمار"}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{report.doctor?.full_name || "پزشک"}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{formatDate(report.finalized_at || report.created_at)}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <LabResultStatus status={report.status} />
+                  <Button asChild size="sm" variant="outline"><Link href={`/lab/results/${report.id}`}>مشاهده</Link></Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState icon={FileText} title={status ? "نتیجه‌ای در این وضعیت وجود ندارد" : "نتیجه‌ای ثبت نشده است"} description="نتایج ثبت‌شده سفارش‌ها در این صفحه نمایش داده می‌شوند." />
+      )}
+      <Pagination pathname="/lab/results" page={result.pagination.page} pageSize={result.pagination.pageSize} totalCount={result.pagination.totalCount} totalPages={result.pagination.totalPages} hasNextPage={result.pagination.hasNextPage} query={{ status }} />
+    </div>
   );
 }

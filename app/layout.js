@@ -3,12 +3,12 @@ import "./globals.css";
 
 export const metadata = {
   title: {
-    default: "پزشک‌یار",
-    template: "%s | پزشک‌یار",
+    default: "پاس",
+    template: "%s | پاس",
   },
   description:
     "پلتفرم مدیریت گردش‌کار سلامت برای پزشکان، آزمایشگاه‌ها و بیماران.",
-  applicationName: "پزشک‌یار",
+  applicationName: "پاس",
   robots: {
     index: false,
     follow: false,

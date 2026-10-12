@@ -94,7 +94,7 @@ export default function OtpForm({
         size="sm"
         onClick={onBack}
         disabled={pending}
-        className="-ms-2 text-muted-foreground"
+        className="-ms-2 rounded-full text-muted-foreground transition-colors duration-200 hover:bg-muted/70 motion-reduce:transition-none"
       >
         <ArrowRight aria-hidden="true" />
         تغییر شماره
@@ -119,13 +119,13 @@ export default function OtpForm({
         </p>
       </div>
 
-      <div className="flex items-start gap-2 rounded-md bg-accent px-3 py-2.5 text-sm text-accent-foreground">
+      <div className="flex items-start gap-2 rounded-xl border border-primary/10 bg-primary/[0.055] px-3.5 py-3 text-sm text-accent-foreground">
         <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <div className="space-y-1 leading-relaxed">
           <p>ارسال کد تأیید در نسخه نهایی فعال خواهد شد.</p>
           {isDevelopmentAuth && (
             <p className="text-xs">
-              در حالت آزمایشی، برای شماره‌های تست تعریف‌شده در Supabase همان کد
+              در حالت آزمایشی، برای شماره‌های تست تعریف‌شده در سامانه همان کد
               آزمایشی را وارد کنید.
             </p>
           )}
@@ -134,7 +134,7 @@ export default function OtpForm({
 
       <Button
         type="submit"
-        className="h-11 w-full"
+        className="h-12 w-full rounded-xl font-medium shadow-sm transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:translate-y-0 motion-reduce:transition-none"
         disabled={pending}
         aria-busy={pending}
       >

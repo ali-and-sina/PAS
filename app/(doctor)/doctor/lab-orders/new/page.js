@@ -5,20 +5,24 @@ import PageHeader from "@/components/shared/PageHeader";
 import LabOrderForm from "@/features/lab-orders/components/LabOrderForm";
 import { getSessionUser } from "@/lib/auth/server";
 import { getDoctorPatients } from "@/features/patients/queries";
-import { getLaboratories, getTestPanels } from "@/features/lab-orders/queries";
+import { getTestPanels, getTestDefinitions } from "@/features/lab-orders/queries";
 
-export const metadata = { title: "سفارش آزمایش جدید" };
+export const metadata = { title: "ثبت درخواست آزمایش" };
 
 export default async function NewLabOrderPage({ searchParams }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   const params = await searchParams;
-  const [patients, laboratories, testPanels] = await Promise.all([getDoctorPatients(user.id), getLaboratories(), getTestPanels()]);
+  const [patients, testPanels, testDefinitions] = await Promise.all([
+    getDoctorPatients(user.id),
+    getTestPanels(),
+    getTestDefinitions(),
+  ]);
 
   return (
     <>
-      <PageHeader title="سفارش آزمایش جدید" description="آزمایش را برای یکی از بیماران مرتبط با خود ثبت کنید." actions={<Link href="/doctor/lab-orders" className="text-sm text-muted-foreground hover:underline">بازگشت</Link>} />
-      {patients.length === 0 ? <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">ابتدا یک بیمار به فهرست خود اضافه کنید.</div> : laboratories.length === 0 ? <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">هیچ آزمایشگاهی برای انتخاب در سامانه موجود نیست.</div> : testPanels.length === 0 ? <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">هنوز پنل آزمایش در کاتالوگ ثبت نشده است.</div> : <div className="max-w-2xl"><LabOrderForm patients={patients} laboratories={laboratories} testPanels={testPanels} defaultPatientId={params?.patientId || ""} /></div>}
+      <PageHeader title="ثبت درخواست آزمایش" description="آزمایش‌های لازم را در پرونده بیمار ثبت کنید. بیمار آزمایشگاه مقصد را انتخاب می‌کند." actions={<Link href="/doctor/lab-orders" className="text-sm text-muted-foreground hover:underline">بازگشت به درخواست‌ها</Link>} />
+      {patients.length === 0 ? <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">ابتدا یک بیمار با رابطهٔ فعال به فهرست خود اضافه کنید.</div> : (testPanels.length === 0 && testDefinitions.length === 0) ? <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">هنوز آزمایش یا پنل فعالی در کاتالوگ ثبت نشده است.</div> : <div className="max-w-3xl"><LabOrderForm patients={patients} testPanels={testPanels} testDefinitions={testDefinitions} defaultPatientId={params?.patientId || params?.patient || ""} /></div>}
     </>
   );
 }

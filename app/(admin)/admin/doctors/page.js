@@ -7,13 +7,16 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getAdminDoctors } from "@/features/admin/queries";
 import DoctorVerificationActions from "@/components/admin/DoctorVerificationActions";
+import Pagination from "@/components/shared/Pagination";
 
 export const metadata = { title: "پزشکان" };
 
 export default async function AdminDoctorsPage({ searchParams }) {
   const params = await searchParams;
   const status = params?.status ?? "all";
-  const doctors = await getAdminDoctors({ status });
+  const page = params?.page ?? 1;
+  const result = await getAdminDoctors({ status, page });
+  const doctors = result.items;
 
   return (
     <div className="space-y-6">
@@ -43,6 +46,7 @@ export default async function AdminDoctorsPage({ searchParams }) {
           </Table>
         </Card>
       )}
+      <Pagination pathname="/admin/doctors" page={result.pagination.page} pageSize={result.pagination.pageSize} totalCount={result.pagination.totalCount} totalPages={result.pagination.totalPages} query={{ status }} />
     </div>
   );
 }

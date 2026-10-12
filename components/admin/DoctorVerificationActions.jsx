@@ -1,7 +1,6 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { CheckCircle2, ShieldOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,6 @@ import { revokeDoctorVerification, verifyDoctor } from "@/features/admin/actions
 
 export default function DoctorVerificationActions({ doctorId, isVerified }) {
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
 
   function run(action) {
     startTransition(async () => {
@@ -20,7 +18,6 @@ export default function DoctorVerificationActions({ doctorId, isVerified }) {
           return;
         }
         toast.success(isVerified ? "تأیید پزشک لغو شد." : "پزشک تأیید شد.");
-        router.refresh();
       } catch {
         toast.error("عملیات انجام نشد.");
       }

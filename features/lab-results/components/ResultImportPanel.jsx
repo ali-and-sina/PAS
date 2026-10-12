@@ -1,225 +1,210 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { FileUp, Upload } from "lucide-react";
 
-function normalizeDigits(value) {
-  return String(value ?? "")
-    .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
-    .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
+import { Button } from "@/components/ui/button";
+
+function splitLine(line) {
+  const parts = [];
+  let current = "";
+  let quoted = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+
+    if (char === '"') {
+      if (quoted && line[index + 1] === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+      continue;
+    }
+
+    if (!quoted && (char === "," || char === "\t" || char === ";")) {
+      parts.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  parts.push(current.trim());
+  return parts;
 }
 
-function normalizeText(value) {
-  return normalizeDigits(value).trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function parseClipboardText(text) {
-  return String(text ?? "")
+function parseRows(text) {
+  const lines = String(text || "")
     .split(/\r?\n/)
-    .map((line) => line.split(/\t|[,;]/).map((cell) => cell.trim()))
-    .filter((row) => row.some((cell) => cell !== ""));
-}
-
-function findTestMatch(row, tests) {
-  const candidates = row.slice(0, 4).map(normalizeText).filter(Boolean);
-
-  if (!candidates.length) {
-    return null;
-  }
-
-  return (
-    tests.find((test) => {
-      const identifiers = [
-        test.id,
-        test.internal_code,
-        test.name,
-        test.name_fa,
-        test.loinc_code,
-      ]
-        .map(normalizeText)
-        .filter(Boolean);
-
-      return candidates.some((candidate) => identifiers.includes(candidate));
-    }) || null
-  );
-}
-
-function extractValue(row) {
-  if (!row?.length) {
-    return "";
-  }
-
-  const possibleValues = row
-    .slice(1)
-    .map((value) => String(value ?? "").trim())
+    .map((line) => line.trim())
     .filter(Boolean);
 
-  return possibleValues[0] ?? "";
+  if (!lines.length) return [];
+
+  const first = splitLine(lines[0]).map((part) => part.toLowerCase());
+  const looksLikeHeader =
+    first[0] === "test_key" ||
+    first[0] === "test" ||
+    first[0] === "code" ||
+    first[0] === "کد" ||
+    first[0] === "آزمایش";
+
+  return lines.slice(looksLikeHeader ? 1 : 0).flatMap((line) => {
+    const [testKey, value] = splitLine(line);
+    if (!testKey || value == null || value === "") return [];
+    return [{ testKey, value }];
+  });
+}
+
+function normalized(value) {
+  return String(value || "")
+    .trim()
+    .toLocaleLowerCase("en-US");
 }
 
 export default function ResultImportPanel({ tests = [], onImport }) {
-  const fileInputRef = useRef(null);
-
-  const [pasteText, setPasteText] = useState("");
+  const [rawText, setRawText] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [pending, setPending] = useState(false);
+  const fileRef = useRef(null);
+
+  const testIndex = useMemo(() => {
+    const map = new Map();
+
+    for (const test of tests) {
+      const keys = [test.id, test.internal_code, test.name, test.name_fa]
+        .map(normalized)
+        .filter(Boolean);
+
+      for (const key of keys) {
+        const existing = map.get(key);
+        if (existing && existing !== test.id) {
+          map.set(key, null);
+        } else {
+          map.set(key, test.id);
+        }
+      }
+    }
+
+    return map;
+  }, [tests]);
 
   function applyRows(rows) {
-    setError("");
-    setMessage("");
-
     if (!rows.length) {
-      setError("داده‌ای برای وارد کردن پیدا نشد.");
+      setError("داده‌ای قابل ورود پیدا نشد.");
+      setMessage("");
       return;
     }
 
-    const imported = [];
-    const unknown = [];
+    const values = {};
+    const unresolved = [];
+    const duplicates = [];
 
     for (const row of rows) {
-      const test = findTestMatch(row, tests);
-      const value = extractValue(row);
+      const key = normalized(row.testKey);
+      const testId = testIndex.get(key);
 
-      if (!test) {
-        unknown.push(row);
+      if (!testId) {
+        unresolved.push(row.testKey);
         continue;
       }
 
-      if (!value) {
-        unknown.push(row);
+      if (Object.prototype.hasOwnProperty.call(values, testId)) {
+        duplicates.push(row.testKey);
         continue;
       }
 
-      imported.push({
-        testId: test.id,
-        value,
-      });
+      values[testId] = row.value;
     }
 
-    if (!imported.length) {
-      setError("هیچ آزمایش قابل شناسایی در داده واردشده پیدا نشد.");
-      return;
+    if (Object.keys(values).length) {
+      onImport(values);
     }
 
-    onImport(imported);
+    const notes = [];
+    if (Object.keys(values).length) notes.push(`${Object.keys(values).length} نتیجه آماده ورود شد.`);
+    if (unresolved.length) notes.push(`${unresolved.length} مورد با تست‌های این سفارش تطبیق پیدا نکرد.`);
+    if (duplicates.length) notes.push(`${duplicates.length} مورد تکراری نادیده گرفته شد.`);
 
-    setMessage(
-      `${imported.length} نتیجه با موفقیت شناسایی شد${
-        unknown.length ? ` و ${unknown.length} مورد شناسایی نشد.` : "."
-      }`,
-    );
+    setMessage(notes.join(" "));
+    setError("");
   }
 
-  function handlePasteImport() {
-    const rows = parseClipboardText(pasteText);
-    applyRows(rows);
+  function handleTextApply() {
+    applyRows(parseRows(rawText));
   }
 
   async function handleFileChange(event) {
     const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    setPending(true);
-    setError("");
-    setMessage("");
+    if (!file) return;
 
     try {
-      const supported = /\.(csv|tsv|txt)$/i.test(file.name);
-
-      if (!supported) {
-        setError(
-          "در این نسخه فقط فایل‌های CSV، TSV و TXT پشتیبانی می‌شوند. برای Excel می‌توانید جدول را مستقیماً Copy و Paste کنید.",
-        );
-        return;
-      }
-
       const text = await file.text();
-
-      const rows = parseClipboardText(text);
-
-      applyRows(rows);
-    } catch (importError) {
-      console.error("[ResultImportPanel:file]", importError);
-
-      setError("خواندن فایل با خطا مواجه شد.");
+      setRawText(text);
+      applyRows(parseRows(text));
+    } catch {
+      setError("خواندن فایل انجام نشد.");
+      setMessage("");
     } finally {
-      setPending(false);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      event.target.value = "";
     }
   }
 
   return (
-    <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
-      <div>
-        <h3 className="font-medium">ورود سریع نتایج</h3>
+    <details className="rounded-xl border bg-muted/10">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium">
+        <FileUp className="size-4 text-primary" aria-hidden="true" />
+        ورود گروهی نتایج
+      </summary>
 
-        <p className="mt-1 text-xs leading-6 text-muted-foreground">
-          می‌توانید نتایج را مستقیماً از Excel کپی و در کادر زیر Paste کنید، یا
-          فایل CSV، TSV یا TXT وارد کنید.
+      <div className="space-y-3 border-t p-4">
+        <p className="text-xs leading-5 text-muted-foreground">
+          هر ردیف را به شکل <span dir="ltr">کد آزمایش،مقدار</span> یا با جداکنندهٔ تب وارد کنید. تطبیق فقط با آزمایش‌های همین سفارش انجام می‌شود.
         </p>
-      </div>
 
-      <textarea
-        value={pasteText}
-        onChange={(event) => {
-          setPasteText(event.target.value);
-          setError("");
-          setMessage("");
-        }}
-        rows={5}
-        dir="ltr"
-        placeholder={`مثال:
-WBC    7.2
-HGB    14.8
-PLT    250`}
-        className="min-h-32 w-full rounded-md border bg-background p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      />
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={handlePasteImport}
-          disabled={pending || !pasteText.trim()}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          جایگذاری نتایج
-        </button>
-
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={pending}
-          className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {pending ? "در حال خواندن..." : "انتخاب فایل"}
-        </button>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"
-          onChange={handleFileChange}
-          className="hidden"
+        <textarea
+          value={rawText}
+          onChange={(event) => {
+            setRawText(event.target.value);
+            setMessage("");
+            setError("");
+          }}
+          rows={5}
+          placeholder={'کد آزمایش،مقدار\nCHEM-WBC,7.2\nCHEM-HGB,13.4'}
+          className="min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="داده‌های ورود گروهی"
         />
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={handleTextApply}>
+              <Upload className="size-4" aria-hidden="true" />
+              اعمال داده‌ها
+            </Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,.txt,text/csv,text/plain"
+              onChange={handleFileChange}
+              className="sr-only"
+              id="lab-result-import-file"
+            />
+            <Button type="button" size="sm" variant="ghost" onClick={() => fileRef.current?.click()}>
+              انتخاب فایل جدولی
+            </Button>
+          </div>
+
+          {tests.length ? (
+            <span className="text-[11px] text-muted-foreground">{tests.length} تست در این سفارش</span>
+          ) : null}
+        </div>
+
+        {message ? <p className="text-xs leading-5 text-status-normal" role="status">{message}</p> : null}
+        {error ? <p className="text-xs leading-5 text-destructive" role="alert">{error}</p> : null}
       </div>
-
-      {message ? (
-        <p className="text-sm text-status-normal" role="status">
-          {message}
-        </p>
-      ) : null}
-
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </div>
+    </details>
   );
 }

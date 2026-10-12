@@ -5,6 +5,7 @@ import EmptyState from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAdminUser } from "@/features/admin/queries";
+import { getOrganizationTypeLabel, getSexLabel } from "@/lib/constants/status";
 
 const roleLabels = {
   patient: "بیمار",
@@ -43,7 +44,7 @@ export default async function AdminUserDetailPage({ params }) {
     <div className="space-y-6">
       <PageHeader
         title={user.full_name || "کاربر بدون نام"}
-        description={`جزئیات حساب ${roleLabels[user.role] || user.role}.`}
+        description={`جزئیات حساب ${roleLabels[user.role] || "نامشخص"}.`}
         actions={
           <Button asChild variant="ghost">
             <Link href="/admin/users"><ArrowRight aria-hidden="true" />بازگشت</Link>
@@ -55,7 +56,7 @@ export default async function AdminUserDetailPage({ params }) {
         <CardHeader><CardTitle>اطلاعات پایه</CardTitle></CardHeader>
         <CardContent className="grid gap-6 sm:grid-cols-2">
           <Field label="نام و نام خانوادگی" value={user.full_name} />
-          <Field label="نقش" value={roleLabels[user.role] || user.role} />
+          <Field label="نقش" value={roleLabels[user.role] || "نامشخص"} />
           <Field label="شماره موبایل" value={user.phone} dir="ltr" />
           <Field label="شناسه کاربر" value={user.id} dir="ltr" />
           <Field label="تاریخ ایجاد" value={new Date(user.created_at).toLocaleDateString("fa-IR")} />
@@ -67,7 +68,7 @@ export default async function AdminUserDetailPage({ params }) {
           <CardHeader><CardTitle>پروفایل بیمار</CardTitle></CardHeader>
           <CardContent className="grid gap-6 sm:grid-cols-2">
             <Field label="کد ملی" value={user.national_id} dir="ltr" />
-            <Field label="جنسیت" value={user.patient?.sex} />
+            <Field label="جنسیت" value={getSexLabel(user.patient?.sex)} />
             <Field label="تاریخ تولد" value={user.patient?.date_of_birth} dir="ltr" />
             <Field label="گروه خونی" value={user.patient?.blood_type} dir="ltr" />
           </CardContent>
@@ -91,7 +92,7 @@ export default async function AdminUserDetailPage({ params }) {
           <CardContent className="grid gap-6 sm:grid-cols-2">
             <Field label="شماره مجوز" value={user.laboratory.license_number} dir="ltr" />
             <Field label="نام سازمان" value={user.laboratory.organizations?.name} />
-            <Field label="نوع سازمان" value={user.laboratory.organizations?.type} />
+            <Field label="نوع سازمان" value={getOrganizationTypeLabel(user.laboratory.organizations?.type)} />
           </CardContent>
         </Card>
       )}

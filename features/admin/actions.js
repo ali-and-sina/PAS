@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-
 import { requireAdmin } from "@/lib/auth/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDoctorSchema, createLaboratorySchema } from "@/features/admin/schemas";
@@ -10,8 +9,82 @@ function normalize(value, max = 255) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
-function invalid(message) {
-  return { ok: false, code: "INVALID_INPUT", message };
+function normalizePhone(value) {
+  const raw = normalize(value, 32).replace(/[\s()-]/g, "");
+
+  if (/^09\d{9}$/.test(raw)) return `+98${raw.slice(1)}`;
+  if (/^9\d{9}$/.test(raw)) return `+98${raw}`;
+  if (/^989\d{9}$/.test(raw)) return `+${raw}`;
+  if (/^\+989\d{9}$/.test(raw)) return raw;
+
+  return "";
+}
+
+
+const DOCTOR_FIELDS = [
+  "full_name",
+  "phone",
+  "medical_license_number",
+  "specialty",
+];
+const LABORATORY_FIELDS = [
+  "full_name",
+  "phone",
+  "organization_name",
+  "license_number",
+];
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isFormDataLike(value) {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      typeof value.get === "function" &&
+      typeof value.entries === "function",
+  );
+}
+
+function isRecord(value) {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+/**
+ * Supports both standard Next.js useActionState(previousState, FormData) and
+ * direct calls with FormData or a validated plain object. Every field is
+ * allow-listed and converted to a string before schema validation, preventing
+ * `.get is not a function` from surfacing as a runtime error.
+ */
+function readAdminActionInput(firstArgument, secondArgument, fields) {
+  const formData = isFormDataLike(secondArgument)
+    ? secondArgument
+    : isFormDataLike(firstArgument)
+      ? firstArgument
+      : null;
+
+  const source =
+    formData ??
+    (isRecord(secondArgument)
+      ? secondArgument
+      : isRecord(firstArgument)
+        ? firstArgument
+        : {});
+
+  return Object.fromEntries(
+    fields.map((field) => {
+      const value = formData ? formData.get(field) : source[field];
+      return [field, typeof value === "string" ? value : ""];
+    }),
+  );
+}
+
+function normalizeUuid(value) {
+  const id = normalize(value, 36);
+  return UUID_PATTERN.test(id) ? id : "";
+}
+
+function invalid(message, code = "INVALID_INPUT") {
+  return { ok: false, code, message };
 }
 
 function failure(message = "عملیات انجام نشد.") {
@@ -20,18 +93,6 @@ function failure(message = "عملیات انجام نشد.") {
 
 function success(data = {}) {
   return { ok: true, ...data };
-}
-
-function getActionInput(input) {
-  if (input instanceof FormData) {
-    return Object.fromEntries(input.entries());
-  }
-
-  return input ?? {};
-}
-
-function schemaErrorMessage(parsed, fallback) {
-  return parsed.error?.issues?.[0]?.message || fallback;
 }
 
 async function writeAuditLog(
@@ -54,44 +115,27 @@ async function writeAuditLog(
 }
 
 async function updateProfileRole(supabase, id, role) {
-  const { error } = await supabase
-    .from("profiles")
-    .update({ role })
-    .eq("id", id);
-
+  const { error } = await supabase.from("profiles").update({ role }).eq("id", id);
   if (error) throw error;
 }
 
-async function rollbackAuthUser(supabase, authUserId, tableName) {
-  if (!authUserId) return;
-
-  const { error: profileRollbackError } = await supabase
-    .from(tableName)
-    .delete()
-    .eq("id", authUserId);
-
-  if (profileRollbackError) {
-    console.error(`[admin:rollback:${tableName}]`, profileRollbackError);
-  }
-
-  try {
-    await supabase.auth.admin.deleteUser(authUserId);
-  } catch (error) {
-    console.error("[admin:rollback:auth]", error);
-  }
-}
-
-export async function createDoctor(input) {
+export async function createDoctor(previousStateOrInput, formData) {
   const admin = await requireAdmin();
-  const raw = getActionInput(input);
-  const parsed = createDoctorSchema.safeParse(raw);
+  const input = readAdminActionInput(previousStateOrInput, formData, DOCTOR_FIELDS);
+  const parsed = createDoctorSchema.safeParse(input);
 
   if (!parsed.success) {
-    return invalid(schemaErrorMessage(parsed, "اطلاعات پزشک معتبر نیست."));
+    return invalid(parsed.error.issues[0]?.message ?? "اطلاعات پزشک معتبر نیست.");
   }
 
-  const { full_name: fullName, phone, medical_license_number: license, specialty } =
-    parsed.data;
+  const fullName = normalize(parsed.data.full_name, 120);
+  const phone = normalizePhone(parsed.data.phone);
+  const license = normalize(parsed.data.medical_license_number, 100);
+  const specialty = normalize(parsed.data.specialty, 80);
+
+  if (!fullName || !phone || !license) {
+    return invalid("اطلاعات پزشک کامل یا معتبر نیست.");
+  }
 
   const supabase = createAdminClient();
 
@@ -107,24 +151,26 @@ export async function createDoctor(input) {
   }
 
   if (duplicateDoctor) {
-    return {
-      ok: false,
-      code: "DUPLICATE_LICENSE",
-      message: "این شماره نظام پزشکی قبلاً ثبت شده است.",
-    };
+    return invalid(
+      "این شماره نظام پزشکی قبلاً ثبت شده است.",
+      "DUPLICATE_LICENSE",
+    );
   }
 
   let authUserId;
 
   try {
-    const { data, error: authError } =
-      await supabase.auth.admin.createUser({
-        phone,
-        phone_confirm: false,
-        user_metadata: { full_name: fullName },
-      });
+    const { data, error: authError } = await supabase.auth.admin.createUser({
+      phone,
+      phone_confirm: false,
+      user_metadata: { full_name: fullName },
+    });
 
     if (authError || !data?.user) {
+      const authCode = String(authError?.code ?? "").toLowerCase();
+      if (["phone_exists", "user_already_exists"].includes(authCode)) {
+        return invalid("این شماره موبایل قبلاً ثبت شده است.", "DUPLICATE_PHONE");
+      }
       console.error("[createDoctor:auth]", authError);
       return failure("ساخت حساب کاربری انجام نشد.");
     }
@@ -132,16 +178,12 @@ export async function createDoctor(input) {
     authUserId = data.user.id;
     await updateProfileRole(supabase, authUserId, "doctor");
 
-    const { error: doctorError } = await supabase
-      .from("doctor_profiles")
-      .insert({
-        id: authUserId,
-        medical_license_number: license,
-        specialty: specialty || null,
-        is_verified: false,
-        verified_at: null,
-        verified_by: null,
-      });
+    const { error: doctorError } = await supabase.from("doctor_profiles").insert({
+      id: authUserId,
+      medical_license_number: license,
+      specialty: specialty || null,
+      is_verified: false,
+    });
 
     if (doctorError) throw doctorError;
 
@@ -151,38 +193,54 @@ export async function createDoctor(input) {
       "create_doctor",
       "doctor",
       authUserId,
-      { medical_license_number: license, specialty: specialty || null },
+      { medical_license_number: license },
     );
 
     revalidatePath("/admin");
     revalidatePath("/admin/users");
     revalidatePath("/admin/doctors");
-    revalidatePath(`/admin/doctors/${authUserId}`);
 
-    return success({ doctorId: authUserId });
+    return success({ redirectTo: "/admin/doctors" });
   } catch (error) {
     console.error("[createDoctor]", error);
 
-    await rollbackAuthUser(supabase, authUserId, "doctor_profiles");
+    if (authUserId) {
+      try {
+        const { error: rollbackError } = await supabase.auth.admin.deleteUser(authUserId);
+        if (rollbackError) console.error("[createDoctor:rollback]", rollbackError);
+      } catch (rollbackError) {
+        console.error("[createDoctor:rollback]", rollbackError);
+      }
+    }
+
+    if (error?.code === "23505" && String(error?.message ?? "").includes("medical_license_number")) {
+      return invalid(
+      "این شماره نظام پزشکی قبلاً ثبت شده است.",
+      "DUPLICATE_LICENSE",
+    );
+    }
 
     return failure("ساخت پزشک کامل نشد.");
   }
 }
 
-export async function createLaboratory(input) {
+export async function createLaboratory(previousStateOrInput, formData) {
   const admin = await requireAdmin();
-  const raw = getActionInput(input);
-  const parsed = createLaboratorySchema.safeParse(raw);
+  const input = readAdminActionInput(previousStateOrInput, formData, LABORATORY_FIELDS);
+  const parsed = createLaboratorySchema.safeParse(input);
 
   if (!parsed.success) {
-    return invalid(schemaErrorMessage(parsed, "اطلاعات آزمایشگاه معتبر نیست."));
+    return invalid(parsed.error.issues[0]?.message ?? "اطلاعات آزمایشگاه معتبر نیست.");
   }
 
-  const {
-    organization_name: labName,
-    phone,
-    license_number: license,
-  } = parsed.data;
+  const fullName = normalize(parsed.data.full_name, 120);
+  const phone = normalizePhone(parsed.data.phone);
+  const labName = normalize(parsed.data.organization_name, 160);
+  const license = normalize(parsed.data.license_number, 100);
+
+  if (!fullName || !phone || labName.length < 2 || !license) {
+    return invalid("اطلاعات آزمایشگاه کامل یا معتبر نیست.");
+  }
 
   const supabase = createAdminClient();
 
@@ -198,25 +256,27 @@ export async function createLaboratory(input) {
   }
 
   if (duplicateLab) {
-    return {
-      ok: false,
-      code: "DUPLICATE_LICENSE",
-      message: "این شماره مجوز آزمایشگاه قبلاً ثبت شده است.",
-    };
+    return invalid(
+      "این شماره مجوز آزمایشگاه قبلاً ثبت شده است.",
+      "DUPLICATE_LICENSE",
+    );
   }
 
   let authUserId;
   let organizationId;
 
   try {
-    const { data, error: authError } =
-      await supabase.auth.admin.createUser({
-        phone,
-        phone_confirm: false,
-        user_metadata: { full_name: labName },
-      });
+    const { data, error: authError } = await supabase.auth.admin.createUser({
+      phone,
+      phone_confirm: false,
+      user_metadata: { full_name: fullName },
+    });
 
     if (authError || !data?.user) {
+      const authCode = String(authError?.code ?? "").toLowerCase();
+      if (["phone_exists", "user_already_exists"].includes(authCode)) {
+        return invalid("این شماره موبایل قبلاً ثبت شده است.", "DUPLICATE_PHONE");
+      }
       console.error("[createLaboratory:auth]", authError);
       return failure("ساخت حساب کاربری انجام نشد.");
     }
@@ -224,18 +284,18 @@ export async function createLaboratory(input) {
     authUserId = data.user.id;
     await updateProfileRole(supabase, authUserId, "laboratory");
 
-    const { data: organization, error: organizationError } =
-      await supabase
-        .from("organizations")
-        .insert({
-          name: labName,
-          type: "laboratory",
-          license_number: license,
-        })
-        .select("id")
-        .single();
+    const { data: organization, error: organizationError } = await supabase
+      .from("organizations")
+      .insert({
+        name: labName,
+        type: "laboratory",
+        license_number: license,
+      })
+      .select("id")
+      .single();
 
-    if (organizationError || !organization) throw organizationError;
+    if (organizationError) throw organizationError;
+    if (!organization?.id) throw new Error("Organization was not returned after insert.");
     organizationId = organization.id;
 
     const { error: laboratoryError } = await supabase
@@ -260,35 +320,50 @@ export async function createLaboratory(input) {
     revalidatePath("/admin");
     revalidatePath("/admin/users");
     revalidatePath("/admin/laboratories");
-    revalidatePath(`/admin/laboratories/${authUserId}`);
 
-    return success({ laboratoryId: authUserId });
+    return success({ redirectTo: "/admin/laboratories" });
   } catch (error) {
     console.error("[createLaboratory]", error);
 
-    // organization_id is NO ACTION, so the child lab profile must be removed
-    // before its organization can be deleted. Then the Auth user is deleted.
+    // Remove the profile reference before deleting its organization. The live
+    // schema restricts deleting organizations while laboratory_profiles still
+    // references them; reversing this order could leave an orphan organization.
     if (authUserId) {
       try {
-        await supabase
+        const { error: profileCleanupError } = await supabase
           .from("laboratory_profiles")
           .delete()
           .eq("id", authUserId);
+        if (profileCleanupError) {
+          console.error(
+            "[createLaboratory:profile-rollback]",
+            profileCleanupError,
+          );
+        }
       } catch (rollbackError) {
-        console.error("[createLaboratory:laboratory-rollback]", rollbackError);
+        console.error("[createLaboratory:profile-rollback]", rollbackError);
+      }
+
+      try {
+        const { error: authCleanupError } = await supabase.auth.admin.deleteUser(authUserId);
+        if (authCleanupError) {
+          console.error("[createLaboratory:auth-rollback]", authCleanupError);
+        }
+      } catch (rollbackError) {
+        console.error("[createLaboratory:auth-rollback]", rollbackError);
       }
     }
 
     if (organizationId) {
       try {
-        const { error: organizationRollbackError } = await supabase
+        const { error: organizationCleanupError } = await supabase
           .from("organizations")
           .delete()
           .eq("id", organizationId);
-        if (organizationRollbackError) {
+        if (organizationCleanupError) {
           console.error(
             "[createLaboratory:organization-rollback]",
-            organizationRollbackError,
+            organizationCleanupError,
           );
         }
       } catch (rollbackError) {
@@ -296,12 +371,11 @@ export async function createLaboratory(input) {
       }
     }
 
-    if (authUserId) {
-      try {
-        await supabase.auth.admin.deleteUser(authUserId);
-      } catch (rollbackError) {
-        console.error("[createLaboratory:auth-rollback]", rollbackError);
-      }
+    if (error?.code === "23505" && String(error?.message ?? "").includes("license_number")) {
+      return invalid(
+      "این شماره مجوز آزمایشگاه قبلاً ثبت شده است.",
+      "DUPLICATE_LICENSE",
+    );
     }
 
     return failure("ساخت آزمایشگاه کامل نشد.");
@@ -310,13 +384,13 @@ export async function createLaboratory(input) {
 
 export async function verifyDoctor(doctorId) {
   const admin = await requireAdmin();
-  const id = normalize(doctorId, 60);
+  const id = normalizeUuid(doctorId);
   if (!id) return invalid("شناسه پزشک معتبر نیست.");
 
   const supabase = createAdminClient();
   const { data: doctor, error: doctorError } = await supabase
     .from("doctor_profiles")
-.select("id, is_verified, verified_at, verified_by")
+    .select("id, is_verified")
     .eq("id", id)
     .maybeSingle();
 
@@ -324,67 +398,45 @@ export async function verifyDoctor(doctorId) {
     console.error("[verifyDoctor:lookup]", doctorError);
     return failure();
   }
-
   if (!doctor) return invalid("پزشک پیدا نشد.");
+  if (doctor.is_verified) return success();
 
-  const verificationChanged = !doctor.is_verified;
+  const { error } = await supabase
+    .from("doctor_profiles")
+    .update({
+      is_verified: true,
+      verified_at: new Date().toISOString(),
+      verified_by: admin.id,
+    })
+    .eq("id", id);
 
-  if (verificationChanged) {
-    const { error } = await supabase
-      .from("doctor_profiles")
-      .update({
-        is_verified: true,
-        verified_at: new Date().toISOString(),
-        verified_by: admin.id,
-      })
-      .eq("id", id);
-
-    if (error) {
-      console.error("[verifyDoctor]", error);
-      return failure();
-    }
+  if (error) {
+    console.error("[verifyDoctor]", error);
+    return failure();
   }
 
   try {
     await writeAuditLog(supabase, admin.id, "verify_doctor", "doctor", id);
   } catch (auditError) {
     console.error("[verifyDoctor:audit]", auditError);
-
-    if (verificationChanged) {
-      const { error: rollbackError } = await supabase
-        .from("doctor_profiles")
-        .update({
-          is_verified: doctor.is_verified,
-          verified_at: doctor.verified_at,
-          verified_by: doctor.verified_by,
-        })
-        .eq("id", id);
-
-      if (rollbackError) {
-        console.error("[verifyDoctor:audit-rollback]", rollbackError);
-      }
-    }
-
-    return failure("تأیید پزشک کامل نشد.");
   }
 
   revalidatePath("/admin");
   revalidatePath("/admin/users");
   revalidatePath("/admin/doctors");
-  revalidatePath(`/admin/doctors/${id}`);
 
-  return success({ doctorId: id, isVerified: true });
+  return success();
 }
 
 export async function revokeDoctorVerification(doctorId) {
   const admin = await requireAdmin();
-  const id = normalize(doctorId, 60);
+  const id = normalizeUuid(doctorId);
   if (!id) return invalid("شناسه پزشک معتبر نیست.");
 
   const supabase = createAdminClient();
   const { data: doctor, error: doctorError } = await supabase
     .from("doctor_profiles")
-.select("id, is_verified, verified_at, verified_by")
+    .select("id, is_verified")
     .eq("id", id)
     .maybeSingle();
 
@@ -392,9 +444,8 @@ export async function revokeDoctorVerification(doctorId) {
     console.error("[revokeDoctorVerification:lookup]", doctorError);
     return failure();
   }
-
   if (!doctor) return invalid("پزشک پیدا نشد.");
-  if (!doctor.is_verified) return success({ doctorId: id, isVerified: false });
+  if (!doctor.is_verified) return success();
 
   const { error } = await supabase
     .from("doctor_profiles")
@@ -411,30 +462,14 @@ export async function revokeDoctorVerification(doctorId) {
   }
 
   try {
-    await writeAuditLog(supabase, admin.id, "unverify_doctor", "doctor", id);
+    await writeAuditLog(supabase, admin.id, "revoke_doctor", "doctor", id);
   } catch (auditError) {
     console.error("[revokeDoctorVerification:audit]", auditError);
-
-    const { error: rollbackError } = await supabase
-      .from("doctor_profiles")
-      .update({
-        is_verified: doctor.is_verified,
-        verified_at: doctor.verified_at,
-        verified_by: doctor.verified_by,
-      })
-      .eq("id", id);
-
-    if (rollbackError) {
-      console.error("[revokeDoctorVerification:audit-rollback]", rollbackError);
-    }
-
-    return failure("لغو تأیید پزشک کامل نشد.");
   }
 
   revalidatePath("/admin");
   revalidatePath("/admin/users");
   revalidatePath("/admin/doctors");
-  revalidatePath(`/admin/doctors/${id}`);
 
-  return success({ doctorId: id, isVerified: false });
+  return success();
 }

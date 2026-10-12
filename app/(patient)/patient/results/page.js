@@ -1,76 +1,86 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { FileText } from "lucide-react";
+import { FileText, LineChart } from "lucide-react";
 
-import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
-import { getPatientReports } from "@/features/lab-results/queries";
-import { getSessionUser } from "@/lib/auth/server";
+import PageHeader from "@/components/shared/PageHeader";
+import StatusBadge from "@/components/shared/StatusBadge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { getPatientResults } from "@/features/patient/queries";
+import Pagination from "@/components/shared/Pagination";
 
 export const dynamic = "force-dynamic";
 
+const dateFormatter = new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium" });
+
 function formatDate(value) {
-  if (!value) return "—";
-
-  return new Intl.DateTimeFormat("fa-IR", {
-    dateStyle: "medium",
-  }).format(new Date(value));
+  return value ? dateFormatter.format(new Date(value)) : "—";
 }
 
-function statusLabel(status) {
-  return status === "amended" ? "اصلاح‌شده" : "نهایی";
-}
-
-export default async function PatientResultsPage() {
-  const sessionUser = await getSessionUser();
-  const patientId = sessionUser?.id ?? sessionUser?.user?.id;
-
-  if (!patientId) redirect("/login");
-
-  const reports = await getPatientReports(patientId);
+export default async function PatientResultsPage({ searchParams }) {
+  const params = await searchParams;
+  const result = await getPatientResults({ page: params?.page ?? 1 });
+  const reports = result.items;
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="نتایج آزمایش‌ها"
-        description="گزارش‌های آزمایشگاهی نهایی‌شده در پرونده شما."
+        description="نتایج نهایی و اصلاح‌شده‌ای که در پرونده سلامت شما ثبت شده‌اند."
+        actions={
+          <Button asChild variant="outline">
+            <Link href="/patient/trends">
+              <LineChart aria-hidden="true" />
+              مقایسه نتایج
+            </Link>
+          </Button>
+        }
       />
 
       {reports.length === 0 ? (
-        <EmptyState
-          icon={FileText}
-          title="هنوز نتیجه‌ای ثبت نشده است"
-          description="نتایج آزمایش پس از نهایی‌شدن توسط آزمایشگاه در این بخش نمایش داده می‌شوند."
-        />
+        <Card>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={FileText}
+              title="هنوز نتیجه نهایی ثبت نشده است"
+              description="به‌محض نهایی‌شدن نتیجه آزمایش، گزارش شما در این بخش نمایش داده می‌شود."
+            />
+          </CardContent>
+        </Card>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4">
           {reports.map((report) => (
             <Link
               key={report.id}
               href={`/patient/results/${report.id}`}
-              className="rounded-xl border bg-card p-5 transition hover:shadow-sm"
+              className="group rounded-2xl border bg-card p-5 transition hover:border-primary/30 hover:bg-accent/20 focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <div className="flex items-start justify-between gap-3">
-                <FileText
-                  className="size-5 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <span className="text-xs text-muted-foreground">
-                  {statusLabel(report.status)}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="font-semibold">گزارش آزمایش</h2>
+                    <StatusBadge
+                      label={report.status === "amended" ? "اصلاح‌شده" : "نهایی"}
+                      variant={report.status === "amended" ? "neutral" : "normal"}
+                    />
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    تاریخ نهایی‌شدن: {formatDate(report.finalized_at ?? report.created_at)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    شناسه سفارش: {report.order?.id ?? "—"}
+                  </p>
+                </div>
+
+                <span className="text-sm font-medium text-primary transition group-hover:translate-x-0.5">
+                  مشاهده جواب ←
                 </span>
               </div>
-
-              <h2 className="mt-4 font-semibold">
-                گزارش آزمایش
-              </h2>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                {formatDate(report.created_at)}
-              </p>
             </Link>
           ))}
         </div>
       )}
+      <Pagination pathname="/patient/results" page={result.pagination.page} pageSize={result.pagination.pageSize} totalCount={result.pagination.totalCount} totalPages={result.pagination.totalPages} />
     </div>
   );
 }

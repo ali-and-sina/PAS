@@ -2,205 +2,362 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Bell,
+  CalendarClock,
+  CheckCircle2,
   ClipboardList,
   FileText,
-  Pill,
-  UserRound,
+  HeartPulse,
+  ListChecks,
 } from "lucide-react";
 
 import PageHeader from "@/components/shared/PageHeader";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import EmptyState from "@/components/shared/EmptyState";
-import { getPatientDashboard } from "@/features/patient/queries";
+import StatusBadge from "@/components/shared/StatusBadge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getPatientHome } from "@/features/patient/queries";
+import { getPatientContext } from "@/features/patient/auth";
 
-export const metadata = {
-  title: "داشبورد بیمار",
-};
+export const dynamic = "force-dynamic";
+
+const dateFormatter = new Intl.DateTimeFormat("fa-IR", {
+  dateStyle: "medium",
+});
 
 function formatDate(value) {
   if (!value) return "—";
-
-  return new Intl.DateTimeFormat("fa-IR", {
-    dateStyle: "medium",
-  }).format(new Date(value));
+  return dateFormatter.format(new Date(value));
 }
 
-function reportStatus(status) {
-  return status === "amended" ? "اصلاح‌شده" : "نهایی";
+function getEventLabel(type) {
+  return (
+    {
+      visit: "ویزیت",
+      lab_order: "درخواست آزمایش",
+      lab_result: "نتیجه آزمایش",
+      doctor_explanation: "توضیحات پزشک",
+      prescription: "نسخه",
+      follow_up: "پیگیری",
+      notification: "اعلان",
+    }[type] ?? "رویداد سلامت"
+  );
+}
+
+function getFollowUpVariant(status) {
+  if (status === "overdue") return "critical";
+  if (status === "completed") return "normal";
+  return "neutral";
 }
 
 export default async function PatientDashboardPage() {
-  const data = await getPatientDashboard();
+  const [context, data] = await Promise.all([
+    getPatientContext(),
+    getPatientHome(),
+  ]);
 
-  const stats = [
-    {
-      label: "اعلان‌های خوانده‌نشده",
-      value: data.unreadNotifications,
-      href: "/patient/notifications",
-      icon: Bell,
-    },
-    {
-      label: "درخواست‌های در انتظار",
-      value: data.pendingRequests,
-      href: "/patient/health-record",
-      icon: UserRound,
-    },
-    {
-      label: "نتایج اخیر",
-      value: data.recentResults.length,
-      href: "/patient/results",
-      icon: FileText,
-    },
-  ];
+  const firstName = context?.full_name?.trim()?.split(/\s+/)?.[0] ?? "";
+  const latestEvent = data?.latest_event ?? data?.latestEvent ?? null;
+  const attentionItems = Array.isArray(data?.needs_attention)
+    ? data.needs_attention
+    : Array.isArray(data?.needsAttention)
+      ? data.needsAttention
+      : [];
+  const activeFollowUps = Array.isArray(data?.active_followups)
+    ? data.active_followups
+    : Array.isArray(data?.activeFollowUps)
+      ? data.activeFollowUps
+      : [];
+  // Be tolerant of both dashboard response contracts during rolling deployments.
+  const recentResults = Array.isArray(data?.recent_results)
+    ? data.recent_results
+    : Array.isArray(data?.recentResults)
+      ? data.recentResults
+      : [];
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
-        title={`سلام${data.patient?.full_name ? `، ${data.patient.full_name}` : ""} 👋`}
-        description="خلاصه‌ای از وضعیت سلامت و فعالیت‌های اخیر شما."
+        title={firstName ? `سلام، ${firstName}` : "سلام"}
+        description="وضعیت فعلی سلامت و مهم‌ترین قدم بعدی شما، بدون شلوغی."
+        actions={
+          <Button asChild variant="outline">
+            <Link href="/patient/results">
+              <FileText aria-hidden="true" />
+              نتایج آزمایش
+            </Link>
+          </Button>
+        }
       />
 
-      <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
+      <section
+        aria-label="خلاصه وضعیت سلامت"
+        className="grid gap-4 sm:grid-cols-3"
+      >
+        <Card>
+          <CardContent className="flex items-start gap-4 p-5">
+            <div className="rounded-xl bg-accent p-2.5 text-primary">
+              <HeartPulse className="size-5" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">آخرین اتفاق</p>
+              <p className="mt-1 font-semibold">
+                {latestEvent?.title ?? "هنوز رویداد مهمی ثبت نشده"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {formatDate(latestEvent?.date)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-          return (
-            <Link key={stat.label} href={stat.href} className="group">
-              <Card className="h-full transition-shadow group-hover:shadow-sm">
-                <CardContent className="flex items-center justify-between gap-4 pt-6">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      {stat.label}
-                    </p>
-                    <p className="mt-1 text-3xl font-semibold tabular-nums">
-                      {stat.value}
-                    </p>
-                  </div>
+        <Card>
+          <CardContent className="flex items-start gap-4 p-5">
+            <div className="rounded-xl bg-accent p-2.5 text-primary">
+              <ListChecks className="size-5" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">پیگیری فعال</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">
+                {activeFollowUps.length}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                مورد نیازمند توجه یا پیگیری
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-                  <Icon
-                    className="size-5 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                </CardContent>
-              </Card>
-            </Link>
-          );
-        })}
+        <Card>
+          <CardContent className="flex items-start gap-4 p-5">
+            <div className="rounded-xl bg-accent p-2.5 text-primary">
+              <Bell className="size-5" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">اعلان خوانده‌نشده</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">
+                {data.unread_notifications}
+              </p>
+              <Link
+                href="/patient/notifications"
+                className="mt-1 inline-flex text-xs font-medium text-primary hover:underline"
+              >
+                مشاهده اعلان‌ها
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
-      <section aria-labelledby="recent-results-heading" className="mb-6">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2
-            id="recent-results-heading"
-            className="text-lg font-semibold"
-          >
-            آخرین نتایج آزمایش
-          </h2>
-
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/patient/results">
-              همه نتایج
-              <ArrowLeft className="ms-1 size-4" aria-hidden="true" />
-            </Link>
-          </Button>
-        </div>
-
-        {data.recentResults.length === 0 ? (
-          <EmptyState
-            icon={FileText}
-            title="هنوز نتیجه‌ای ثبت نشده است"
-            description="بعد از نهایی‌شدن نتیجه آزمایش، گزارش آن در این بخش نمایش داده می‌شود."
-            action={{
-              label: "مشاهده آزمایش‌ها",
-              href: "/patient/results",
-            }}
-          />
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {data.recentResults.map((report) => (
-              <Link
-                key={report.id}
-                href={`/patient/results/${report.id}`}
-                className="rounded-xl border bg-card p-4 transition hover:shadow-sm"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <FileText
-                    className="size-5 text-muted-foreground"
+      <section className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>فعالیت اخیر</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!latestEvent ? (
+              <EmptyState
+                icon={ClipboardList}
+                title="هنوز فعالیتی در پرونده شما ثبت نشده است"
+                description="با ثبت اولین ویزیت یا نتیجه آزمایش، مسیر سلامت شما اینجا شروع می‌شود."
+              />
+            ) : (
+              <div className="rounded-2xl border bg-muted/30 p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      {getEventLabel(latestEvent.type)} ·{" "}
+                      {formatDate(latestEvent.date)}
+                    </p>
+                    <h2 className="mt-2 text-lg font-semibold">
+                      {latestEvent.title}
+                    </h2>
+                    {latestEvent.summary && (
+                      <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                        {latestEvent.summary}
+                      </p>
+                    )}
+                  </div>
+                  <CheckCircle2
+                    className="size-5 shrink-0 text-status-normal"
                     aria-hidden="true"
                   />
-                  <span className="text-xs text-muted-foreground">
-                    {reportStatus(report.status)}
-                  </span>
                 </div>
 
-                <p className="mt-3 text-sm font-medium">
-                  گزارش آزمایش
-                </p>
+                {latestEvent.type === "lab_result" &&
+                  latestEvent.resource_id && (
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="mt-4"
+                    >
+                      <Link
+                        href={`/patient/results/${latestEvent.resource_id}`}
+                      >
+                        مشاهده نتیجه
+                        <ArrowLeft aria-hidden="true" />
+                      </Link>
+                    </Button>
+                  )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formatDate(report.created_at)}
-                </p>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section aria-labelledby="recent-rx-heading">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 id="recent-rx-heading" className="text-lg font-semibold">
-            نسخه‌های اخیر
-          </h2>
-
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/patient/prescriptions">
-              همه نسخه‌ها
-              <ArrowLeft className="ms-1 size-4" aria-hidden="true" />
-            </Link>
-          </Button>
-        </div>
-
-        {data.recentPrescriptions.length === 0 ? (
-          <EmptyState
-            icon={Pill}
-            title="نسخه‌ای وجود ندارد"
-            description="نسخه‌هایی که پزشک برای شما ثبت کند در این بخش نمایش داده می‌شوند."
-            action={{
-              label: "مشاهده نسخه‌ها",
-              href: "/patient/prescriptions",
-            }}
-          />
-        ) : (
-          <div className="space-y-3">
-            {data.recentPrescriptions.map((prescription) => (
-              <Link
-                key={prescription.id}
-                href="/patient/prescriptions"
-                className="block rounded-xl border bg-card p-4 transition hover:shadow-sm"
-              >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Card>
+          <CardHeader>
+            <CardTitle>الان چه چیزی نیاز به توجه دارد؟</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {attentionItems.length === 0 ? (
+              <div className="rounded-2xl border border-status-normal-border bg-status-normal-bg p-5">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2
+                    className="mt-0.5 size-5 text-status-normal"
+                    aria-hidden="true"
+                  />
                   <div>
                     <p className="font-medium">
-                      {prescription.doctor_name}
+                      فعلاً موردی برای پیگیری ندارید.
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDate(prescription.issued_at)}
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                      وقتی کاری نیاز به توجه شما داشته باشد، همین‌جا نمایش داده
+                      می‌شود.
                     </p>
                   </div>
-
-                  <span className="text-xs text-muted-foreground">
-                    {prescription.status === "active"
-                      ? "فعال"
-                      : prescription.status === "completed"
-                        ? "تکمیل‌شده"
-                        : "لغوشده"}
-                  </span>
                 </div>
-              </Link>
-            ))}
-          </div>
-        )}
+              </div>
+            ) : (
+              attentionItems.slice(0, 4).map((item, index) => (
+                <Link
+                  key={`${item.type}:${item.resource_id ?? index}`}
+                  href={
+                    item.type === "notification"
+                      ? "/patient/notifications"
+                      : "/patient/follow-ups"
+                  }
+                  className="block rounded-xl border p-4 transition hover:border-primary/30 hover:bg-accent/40"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium">{item.title}</p>
+                      {item.due_date && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          سررسید: {formatDate(item.due_date)}
+                        </p>
+                      )}
+                    </div>
+                    {item.status && item.status !== "unread" && (
+                      <StatusBadge
+                        label={
+                          item.status === "overdue" ? "عقب‌افتاده" : "در انتظار"
+                        }
+                        variant={getFollowUpVariant(item.status)}
+                      />
+                    )}
+                  </div>
+                </Link>
+              ))
+            )}
+
+            {data.next_step && (
+              <div className="rounded-xl border border-primary/15 bg-accent/50 p-4">
+                <p className="text-xs text-primary">قدم بعدی پیشنهادی</p>
+                <p className="mt-1 text-sm font-medium">
+                  {data.next_step.label}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle>آخرین نتایج</CardTitle>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/patient/results">همه نتایج</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {recentResults.length === 0 ? (
+              <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
+                هنوز نتیجه نهایی برای شما ثبت نشده است.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {recentResults.slice(0, 5).map((report) => (
+                  <Link
+                    key={report.id}
+                    href={`/patient/results/${report.id}`}
+                    className="flex items-center justify-between gap-4 rounded-xl border p-4 transition hover:border-primary/30 hover:bg-accent/40"
+                  >
+                    <div>
+                      <p className="font-medium">گزارش آزمایش</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatDate(report.finalized_at ?? report.created_at)}
+                      </p>
+                    </div>
+                    <StatusBadge
+                      label={
+                        report.status === "amended" ? "اصلاح‌شده" : "نهایی"
+                      }
+                      variant={
+                        report.status === "amended" ? "neutral" : "normal"
+                      }
+                    />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle>پیگیری‌های فعال</CardTitle>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/patient/follow-ups">مشاهده همه</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {activeFollowUps.length === 0 ? (
+              <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
+                فعلاً پیگیری فعالی ندارید.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {activeFollowUps.slice(0, 5).map((followUp) => (
+                  <div key={followUp.id} className="rounded-xl border p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{followUp.title}</p>
+                        <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <CalendarClock
+                            className="size-3.5"
+                            aria-hidden="true"
+                          />
+                          {followUp.due_date
+                            ? formatDate(followUp.due_date)
+                            : "بدون تاریخ سررسید"}
+                        </p>
+                      </div>
+                      <StatusBadge
+                        label={
+                          followUp.status === "overdue"
+                            ? "عقب‌افتاده"
+                            : "در انتظار"
+                        }
+                        variant={getFollowUpVariant(followUp.status)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </section>
     </div>
   );

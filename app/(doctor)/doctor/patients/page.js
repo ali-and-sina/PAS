@@ -5,7 +5,8 @@ import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth/server";
-import { getDoctorPatients } from "@/features/patients/queries";
+import { getDoctorPatientsPage } from "@/features/patients/queries";
+import Pagination from "@/components/shared/Pagination";
 
 export const metadata = { title: "بیماران" };
 
@@ -14,11 +15,13 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("fa-IR").format(new Date(value));
 }
 
-export default async function DoctorPatientsPage() {
+export default async function DoctorPatientsPage({ searchParams }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
 
-  const patients = await getDoctorPatients(user.id);
+  const params = await searchParams;
+  const result = await getDoctorPatientsPage(user.id, { page: params?.page ?? 1 });
+  const patients = result.items;
 
   return (
     <>
@@ -56,6 +59,13 @@ export default async function DoctorPatientsPage() {
           </div>
         </div>
       )}
+      <Pagination
+        pathname="/doctor/patients"
+        page={result.pagination.page}
+        pageSize={result.pagination.pageSize}
+        totalCount={result.pagination.totalCount}
+        totalPages={result.pagination.totalPages}
+      />
     </>
   );
 }

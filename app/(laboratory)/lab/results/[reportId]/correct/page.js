@@ -10,7 +10,7 @@ export const metadata = { title: "اصلاح نتیجه آزمایش" };
 
 export default async function CorrectLabReportPage({ params }) {
   const { reportId } = await params;
-  const report = await getLabReport(reportId);
+  const report = await getLabReport(reportId, { auditView: true });
   if (!report) notFound();
 
   const observations = report.observations.filter((item) => item.status === "final" || item.status === "corrected");

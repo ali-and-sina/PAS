@@ -2,6 +2,7 @@ import "server-only";
 
 import { requireAdmin } from "@/lib/auth/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { DEFAULT_PAGE_SIZE, makePagination, normalizePage, normalizePageSize } from "@/lib/pagination";
 
 function unwrap(row) {
   if (Array.isArray(row)) return row[0] ?? null;
@@ -48,55 +49,70 @@ export async function getAdminOverview() {
   };
 }
 
-export async function getAdminUsers({ role = "all", search = "" } = {}) {
+export async function getAdminUsers({ role = "all", search = "", page: requestedPage = 1, pageSize: requestedPageSize = DEFAULT_PAGE_SIZE } = {}) {
   await requireAdmin();
   const supabase = createAdminClient();
-
-  let query = supabase
-    .from("profiles")
-    .select(
-      `
-        id,
-        full_name,
-        phone,
-        role,
-        created_at,
-        doctor_profiles (
-          medical_license_number,
-          specialty,
-          is_verified
-        ),
-        laboratory_profiles (
-          license_number,
-          organization_id
-        ),
-        patient_profiles (
-          id
-        )
-      `,
-    )
-    .order("created_at", { ascending: false });
-
-  if (["patient", "doctor", "laboratory", "admin"].includes(role)) {
-    query = query.eq("role", role);
-  }
-
+  const pageSize = normalizePageSize(requestedPageSize);
+  let page = normalizePage(requestedPage);
   const normalizedSearch = String(search ?? "").trim();
-  if (normalizedSearch) {
-    const escaped = normalizedSearch.replace(/[%_,]/g, (char) => `\\${char}`);
-    query = query.or(
-      `full_name.ilike.%${escaped}%,phone.ilike.%${escaped}%`,
-    );
-  }
 
-  const { data, error } = await query;
+  const makeQuery = () => {
+    let query = supabase
+      .from("profiles")
+      .select(
+        `
+          id,
+          full_name,
+          phone,
+          role,
+          created_at,
+          doctor_profiles (
+            medical_license_number,
+            specialty,
+            is_verified
+          ),
+          laboratory_profiles (
+            license_number,
+            organization_id
+          ),
+          patient_profiles (
+            id
+          )
+        `,
+        { count: "exact" },
+      )
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true });
 
-  if (error) {
-    console.error("[getAdminUsers]", error);
+    if (["patient", "doctor", "laboratory", "admin"].includes(role)) {
+      query = query.eq("role", role);
+    }
+
+    if (normalizedSearch) {
+      const escaped = normalizedSearch.replace(/[%_,]/g, (char) => "\\" + char);
+      query = query.or(`full_name.ilike.%${escaped}%,phone.ilike.%${escaped}%`);
+    }
+    return query;
+  };
+
+  let result = await makeQuery().range((page - 1) * pageSize, page * pageSize - 1);
+  if (result.error) {
+    console.error("[getAdminUsers]", result.error);
     throw new Error("ADMIN_USERS_FAILED");
   }
 
-  return (data ?? []).map((row) => {
+  const totalCount = result.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  if (totalCount > 0 && page > totalPages) {
+    page = totalPages;
+    result = await makeQuery().range((page - 1) * pageSize, page * pageSize - 1);
+    if (result.error) {
+      console.error("[getAdminUsers:clamp-page]", result.error);
+      throw new Error("ADMIN_USERS_FAILED");
+    }
+  }
+
+  const items = (result.data ?? []).map((row) => {
     const doctor = unwrap(row.doctor_profiles);
     const laboratory = unwrap(row.laboratory_profiles);
     const patient = unwrap(row.patient_profiles);
@@ -123,53 +139,64 @@ export async function getAdminUsers({ role = "all", search = "" } = {}) {
               : "active",
     };
   });
+
+  return { items, pagination: makePagination({ page, pageSize, totalCount }) };
 }
 
-export async function getAdminDoctors({ status = "all" } = {}) {
+export async function getAdminDoctors({ status = "all", page: requestedPage = 1, pageSize: requestedPageSize = DEFAULT_PAGE_SIZE } = {}) {
   await requireAdmin();
   const supabase = createAdminClient();
+  const pageSize = normalizePageSize(requestedPageSize);
+  let page = normalizePage(requestedPage);
 
-  let query = supabase
-    .from("profiles")
-    .select(
-      `
-        id,
-        full_name,
-        phone,
-        created_at,
-        doctor_profiles!doctor_profiles_id_fkey (
-          medical_license_number,
-          specialty,
-          is_verified,
-          verified_at,
-          verified_by,
-          created_at
-        )
-      `,
-    )
-    .eq("role", "doctor")
-    .order("created_at", { ascending: false });
+  const makeQuery = () => {
+    let query = supabase
+      .from("profiles")
+      .select(
+        `
+          id,
+          full_name,
+          phone,
+          created_at,
+          doctor_profiles!doctor_profiles_id_fkey!inner (
+            medical_license_number,
+            specialty,
+            is_verified,
+            verified_at
+          )
+        `,
+        { count: "exact" },
+      )
+      .eq("role", "doctor")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true });
 
-  if (status === "pending") {
-    query = query.eq("doctor_profiles.is_verified", false);
-  }
+    if (status === "pending") query = query.eq("doctor_profiles.is_verified", false);
+    if (status === "verified") query = query.eq("doctor_profiles.is_verified", true);
+    return query;
+  };
 
-  if (status === "verified") {
-    query = query.eq("doctor_profiles.is_verified", true);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error("[getAdminDoctors]", error);
+  let result = await makeQuery().range((page - 1) * pageSize, page * pageSize - 1);
+  if (result.error) {
+    console.error("[getAdminDoctors]", result.error);
     throw new Error("ADMIN_DOCTORS_FAILED");
   }
 
-  return (data ?? [])
+  const totalCount = result.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  if (totalCount > 0 && page > totalPages) {
+    page = totalPages;
+    result = await makeQuery().range((page - 1) * pageSize, page * pageSize - 1);
+    if (result.error) {
+      console.error("[getAdminDoctors:clamp-page]", result.error);
+      throw new Error("ADMIN_DOCTORS_FAILED");
+    }
+  }
+
+  const items = (result.data ?? [])
     .map((row) => {
       const doctor = unwrap(row.doctor_profiles);
       if (!doctor) return null;
-
       return {
         id: row.id,
         full_name: row.full_name,
@@ -179,18 +206,20 @@ export async function getAdminDoctors({ status = "all" } = {}) {
         specialty: doctor.specialty,
         is_verified: doctor.is_verified,
         verified_at: doctor.verified_at,
-        verified_by: doctor.verified_by,
-        doctor_created_at: doctor.created_at,
       };
     })
     .filter(Boolean);
+
+  return { items, pagination: makePagination({ page, pageSize, totalCount }) };
 }
 
-export async function getAdminLaboratories() {
+export async function getAdminLaboratories({ page: requestedPage = 1, pageSize: requestedPageSize = DEFAULT_PAGE_SIZE } = {}) {
   await requireAdmin();
   const supabase = createAdminClient();
+  const pageSize = normalizePageSize(requestedPageSize);
+  let page = normalizePage(requestedPage);
 
-  const { data, error } = await supabase
+  const makeQuery = () => supabase
     .from("profiles")
     .select(
       `
@@ -201,7 +230,6 @@ export async function getAdminLaboratories() {
         laboratory_profiles (
           license_number,
           organization_id,
-          created_at,
           organizations (
             id,
             name,
@@ -210,20 +238,33 @@ export async function getAdminLaboratories() {
           )
         )
       `,
+      { count: "exact" },
     )
     .eq("role", "laboratory")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true });
 
-  if (error) {
-    console.error("[getAdminLaboratories]", error);
+  let result = await makeQuery().range((page - 1) * pageSize, page * pageSize - 1);
+  if (result.error) {
+    console.error("[getAdminLaboratories]", result.error);
     throw new Error("ADMIN_LABORATORIES_FAILED");
   }
 
-  return (data ?? [])
+  const totalCount = result.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  if (totalCount > 0 && page > totalPages) {
+    page = totalPages;
+    result = await makeQuery().range((page - 1) * pageSize, page * pageSize - 1);
+    if (result.error) {
+      console.error("[getAdminLaboratories:clamp-page]", result.error);
+      throw new Error("ADMIN_LABORATORIES_FAILED");
+    }
+  }
+
+  const items = (result.data ?? [])
     .map((row) => {
       const laboratory = unwrap(row.laboratory_profiles);
       if (!laboratory) return null;
-
       return {
         id: row.id,
         full_name: row.full_name,
@@ -231,13 +272,13 @@ export async function getAdminLaboratories() {
         created_at: row.created_at,
         license_number: laboratory.license_number,
         organization_id: laboratory.organization_id,
-        laboratory_created_at: laboratory.created_at,
         organization: unwrap(laboratory.organizations),
       };
     })
     .filter(Boolean);
-}
 
+  return { items, pagination: makePagination({ page, pageSize, totalCount }) };
+}
 
 export async function getAdminDoctor(doctorId) {
   await requireAdmin();
@@ -252,13 +293,12 @@ export async function getAdminDoctor(doctorId) {
       full_name,
       phone,
       created_at,
-      doctor_profiles!doctor_profiles_id_fkey (
+      doctor_profiles!doctor_profiles_id_fkey!inner (
         medical_license_number,
         specialty,
         is_verified,
         verified_at,
-        verified_by,
-        created_at
+        verified_by
       )
     `)
     .eq("id", id)
@@ -283,7 +323,6 @@ export async function getAdminDoctor(doctorId) {
     is_verified: doctor.is_verified,
     verified_at: doctor.verified_at,
     verified_by: doctor.verified_by,
-    doctor_created_at: doctor.created_at,
   };
 }
 
@@ -303,7 +342,6 @@ export async function getAdminLaboratory(laboratoryId) {
       laboratory_profiles (
         license_number,
         organization_id,
-        created_at,
         organizations (
           id,
           name,
@@ -331,7 +369,6 @@ export async function getAdminLaboratory(laboratoryId) {
     created_at: data.created_at,
     license_number: laboratory.license_number,
     organization_id: laboratory.organization_id,
-    laboratory_created_at: laboratory.created_at,
     organization: unwrap(laboratory.organizations),
   };
 }
@@ -361,7 +398,6 @@ export async function getAdminUser(userId) {
       laboratory_profiles (
         license_number,
         organization_id,
-        created_at,
         organizations (
           id,
           name,

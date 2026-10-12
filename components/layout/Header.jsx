@@ -33,7 +33,7 @@ export default function Header({ mobileOpen, onMobileOpenChange }) {
       </Sheet>
 
       <span className="text-base font-semibold text-primary lg:hidden">
-        پزشک‌یار
+        پاس
       </span>
 
       <div className="ms-auto flex items-center gap-1.5">

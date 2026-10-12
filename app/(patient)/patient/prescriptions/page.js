@@ -1,98 +1,96 @@
-import { redirect } from "next/navigation";
 import { Pill } from "lucide-react";
 
-import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
+import PageHeader from "@/components/shared/PageHeader";
+import StatusBadge from "@/components/shared/StatusBadge";
+import { Card, CardContent } from "@/components/ui/card";
 import { getPatientPrescriptions } from "@/features/prescriptions/queries";
-import { getSessionUser } from "@/lib/auth/server";
+import Pagination from "@/components/shared/Pagination";
 
 export const dynamic = "force-dynamic";
 
+const dateFormatter = new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium" });
+
 function formatDate(value) {
-  if (!value) return "—";
-
-  return new Intl.DateTimeFormat("fa-IR", {
-    dateStyle: "medium",
-  }).format(new Date(value));
+  return value ? dateFormatter.format(new Date(value)) : "—";
 }
 
-function statusLabel(status) {
-  if (status === "active") return "فعال";
-  if (status === "completed") return "تکمیل‌شده";
-  if (status === "cancelled") return "لغوشده";
-  return status || "نامشخص";
+function prescriptionStatus(status) {
+  const map = {
+    active: { label: "فعال", variant: "normal" },
+    completed: { label: "تکمیل‌شده", variant: "neutral" },
+    cancelled: { label: "لغوشده", variant: "critical" },
+  };
+  return map[status] ?? { label: status ?? "نامشخص", variant: "neutral" };
 }
 
-export default async function PatientPrescriptionsPage() {
-  const sessionUser = await getSessionUser();
-  const patientId = sessionUser?.id ?? sessionUser?.user?.id;
-
-  if (!patientId) redirect("/login");
-
-  const prescriptions = await getPatientPrescriptions(
-    patientId,
-  );
+export default async function PatientPrescriptionsPage({ searchParams }) {
+  const params = await searchParams;
+  const result = await getPatientPrescriptions({ page: params?.page ?? 1 });
+  const prescriptions = result.items;
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
-        title="نسخه‌های من"
+        title="نسخه‌ها"
         description="نسخه‌هایی که پزشکان برای شما ثبت کرده‌اند."
       />
 
       {prescriptions.length === 0 ? (
-        <EmptyState
-          icon={Pill}
-          title="هنوز نسخه‌ای ثبت نشده است"
-          description="هر نسخه‌ای که پزشک برای شما صادر کند، در این بخش نمایش داده می‌شود."
-        />
+        <Card>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={Pill}
+              title="نسخه‌ای ثبت نشده است"
+              description="نسخه‌های ثبت‌شده در این بخش نگهداری می‌شوند."
+            />
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {prescriptions.map((prescription) => (
-            <article
-              key={prescription.id}
-              className="rounded-xl border bg-card p-5"
-            >
-              <div className="flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="font-semibold">
-                    {prescription.doctor_name}
-                  </h2>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    تاریخ نسخه: {formatDate(prescription.issued_at)}
-                  </p>
-                </div>
+          {prescriptions.map((prescription) => {
+            const doctor = prescription.doctor_profiles;
+            const status = prescriptionStatus(prescription.status);
 
-                <span className="text-xs text-muted-foreground">
-                  {statusLabel(prescription.status)}
-                </span>
-              </div>
-
-              <div className="mt-4 divide-y">
-                {(prescription.items || []).map((item) => (
-                  <div key={item.id} className="py-4 first:pt-0 last:pb-0">
-                    <h3 className="font-medium">
-                      {item.medication_name}
-                    </h3>
-
-                    <div className="mt-2 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
-                      <span>دوز: {item.dosage}</span>
-                      <span>مصرف: {item.frequency}</span>
-                      <span>مدت: {item.duration || "—"}</span>
-                    </div>
-
-                    {item.instructions ? (
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        {item.instructions}
+            return (
+              <Card key={prescription.id}>
+                <CardContent className="p-5">
+                  <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium">
+                        {doctor?.full_name ? `دکتر ${doctor.full_name}` : "پزشک"}
                       </p>
-                    ) : null}
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        تاریخ نسخه: {formatDate(prescription.issued_at ?? prescription.created_at)}
+                      </p>
+                    </div>
+                    <StatusBadge label={status.label} variant={status.variant} />
                   </div>
-                ))}
-              </div>
-            </article>
-          ))}
+
+                  <div className="divide-y">
+                    {(prescription.prescription_items ?? []).map((item) => (
+                      <div key={item.id} className="py-4 first:pt-0 last:pb-0">
+                        <p className="font-medium">{item.medication_name}</p>
+                        <div className="mt-2 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
+                          <span>دوز: {item.dosage || "—"}</span>
+                          <span>مصرف: {item.frequency || "—"}</span>
+                          <span>مدت: {item.duration || "—"}</span>
+                        </div>
+                        {item.instructions && (
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                            توضیحات: {item.instructions}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
+      <Pagination pathname="/patient/prescriptions" page={result.pagination.page} pageSize={result.pagination.pageSize} totalCount={result.pagination.totalCount} totalPages={result.pagination.totalPages} />
     </div>
   );
 }

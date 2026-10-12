@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 
 import { LOGIN_ROLES } from "@/features/auth/config";
+import visualStyles from "./auth-card.module.css";
 
 const ROLE_ICONS = {
   patient: User,
@@ -16,7 +17,7 @@ const ROLE_ICONS = {
 export default function RoleSelector({ onSelect }) {
   return (
     <ul className="space-y-3">
-      {LOGIN_ROLES.map((item) => {
+      {LOGIN_ROLES.map((item, index) => {
         const Icon = ROLE_ICONS[item.role];
 
         return (
@@ -24,10 +25,11 @@ export default function RoleSelector({ onSelect }) {
             <button
               type="button"
               onClick={() => onSelect(item.role)}
-              className="flex min-h-16 w-full items-center gap-4 rounded-lg border bg-card p-4 text-start transition-colors hover:border-primary/40 hover:bg-accent"
+              style={{ "--auth-delay": `${index * 55}ms` }}
+              className={`${visualStyles.option} group relative flex min-h-[4.6rem] w-full items-center gap-4 rounded-2xl border border-border/80 bg-background/55 p-4 text-start transition-[transform,border-color,background-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-accent/55 hover:shadow-[0_12px_30px_-25px_hsl(var(--primary)/0.7)] active:translate-y-0 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none`}
             >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-accent text-primary">
-                <Icon className="size-5" aria-hidden="true" />
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/[0.085] text-primary ring-1 ring-primary/10 transition-transform duration-200 group-hover:scale-[1.04] motion-reduce:transition-none">
+                <Icon className="size-5" strokeWidth={1.8} aria-hidden="true" />
               </span>
 
               <span className="min-w-0 space-y-1">
@@ -41,7 +43,7 @@ export default function RoleSelector({ onSelect }) {
               </span>
 
               <ChevronLeft
-                className="ms-auto size-4 shrink-0 text-muted-foreground"
+                className="ms-auto size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:-translate-x-0.5 motion-reduce:transition-none"
                 aria-hidden="true"
               />
             </button>
