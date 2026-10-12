@@ -1,36 +1,246 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# PAS — Health Assessment Platform
 
-## Getting Started
+[فارسی](README.fa.md) · **English**
 
-First, run the development server:
+PAS (Persian: «پاس», *Platform for Health Assessment*) is a Persian-first healthcare workflow application designed to connect patients, physicians, laboratories, and platform administrators around a structured care process. The interface is right-to-left (RTL) by default and uses the Vazirmatn typeface.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+> **Project status:** Active development. The repository contains application workflows and Supabase integrations, but production readiness, clinical validation, regulatory compliance, and end-to-end security must be assessed independently before real patient data is used.
+
+## Contents
+
+- [Product scope](#product-scope)
+- [Technology](#technology)
+- [Architecture](#architecture)
+- [Key workflows](#key-workflows)
+- [Prerequisites](#prerequisites)
+- [Environment configuration](#environment-configuration)
+- [Local development](#local-development)
+- [Database and Supabase](#database-and-supabase)
+- [Security model](#security-model)
+- [Quality checks](#quality-checks)
+- [Repository conventions](#repository-conventions)
+- [Known limitations and release checklist](#known-limitations-and-release-checklist)
+- [Disclaimer](#disclaimer)
+
+## Product scope
+
+PAS is organized around four application roles:
+
+| Role | Primary responsibilities |
+|---|---|
+| **Patient** | View finalized laboratory reports, physician interpretations, prescriptions, health trends, follow-ups, profile details, and care relationships. |
+| **Physician** | Manage permitted patient relationships, visits, laboratory orders, interpretations, prescriptions, follow-ups, and supported care notes. |
+| **Laboratory** | Process assigned laboratory orders, record and finalize results, use reference ranges and result flags, handle dispatches/intake, and process supported home-collection workflows. |
+| **Administrator** | Manage platform users, review physician records, manage laboratory accounts/organizations/branches, and connect staff to branches. |
+
+The application also includes guest-facing result and onboarding routes where supported by the current deployment and its authorization rules.
+
+## Technology
+
+- **Application:** Next.js App Router, React, JavaScript, Server Components, and Server Actions.
+- **UI:** Tailwind CSS, reusable shadcn/ui-style components, Lucide icons, Sonner notifications, and Vazirmatn fonts.
+- **Backend platform:** Supabase Auth, PostgreSQL, Row-Level Security (RLS), Supabase SSR clients, and Storage where configured.
+- **Validation and utilities:** shared validation schemas/helpers, role-aware authorization helpers, date/format utilities, and server-side query/action modules.
+- **Workflow features:** laboratory reference ranges and flags, QR-assisted intake, laboratory dispatch, home collection, prescriptions, interpretations, notifications, and audit-related helpers.
+
+Exact dependency versions and available npm scripts are defined by the repository's `package.json` and lockfile. Keep those files committed so installs and builds are reproducible.
+
+## Architecture
+
+The project follows the Next.js App Router with route groups and feature-oriented modules.
+
+```text
+app/
+  (auth)/                 Public sign-in and authentication routes
+  (admin-auth)/           Separate administrator sign-in
+  (admin)/                Protected administration pages
+  (doctor)/               Physician workspace
+  (laboratory)/           Laboratory workspace
+  (patient)/              Patient workspace
+  (patient-guest)/        Supported guest-facing patient/result routes
+  (doctor-guest)/         Supported guest physician routes
+  (patient-onboarding)/   Patient onboarding flow
+components/
+  auth/                   Sign-in cards, identity and OTP forms
+  admin/                  Admin-specific UI
+  layout/                 Navigation and application shell
+  notifications/          Notification UI
+  shared/                 Reusable application components
+  ui/                     Primitive UI components
+features/
+  auth/                   Login actions, schemas, and role configuration
+  admin/                  Administration queries/actions/schemas
+  patient/                Patient profile, results, timeline, access
+  patients/               Patient lookup and relationship-related flows
+  doctor/                 Physician access and queries
+  lab-orders/             Orders and order lifecycle
+  lab-order-requests/     Patient-selected laboratory dispatch requests
+  lab-dispatch/           Laboratory dispatch lifecycle
+  lab-intake/             Laboratory intake and QR workflow
+  lab-results/            Results, schemas, flags, reference ranges
+  laboratory-directory/   Laboratory and branch directory
+  home-collection/        Home sample collection workflow
+  interpretations/         Physician interpretations
+  prescriptions/           Prescriptions
+  physician-care/          Care notes, consent, and voice-note workflows
+  notifications/           Notification queries/actions
+lib/
+  auth/                    Session, role, redirect, and authorization helpers
+  supabase/                Browser, server, proxy, and privileged clients
+  medical/                 Medical-domain helpers
+  lab/                     Laboratory helpers
+  qr/                      QR utilities
+  pagination.js            Shared pagination helpers
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Route group names wrapped in parentheses are organizational constructs in the App Router; they do not appear as URL segments. A route's presence in source does not, by itself, mean every business flow has passed end-to-end acceptance testing.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Request and data flow
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. A page or client component calls a feature query or submits a server action.
+2. The feature layer validates and normalizes input before performing mutations.
+3. Authorization helpers and Supabase session identity establish the caller context.
+4. PostgreSQL RLS and database constraints remain important enforcement boundaries; UI visibility is not an authorization control.
+5. Mutations revalidate affected routes where applicable, so server-rendered views can reflect changed data.
 
-## Learn More
+## Key workflows
 
-To learn more about Next.js, take a look at the following resources:
+### Authentication and authorization
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- The public sign-in flow is role-aware for patients, physicians, and laboratories.
+- Administrator sign-in has a separate route and uses a personnel-code-to-account lookup followed by Supabase Auth password authentication.
+- Authorization helpers enforce protected role boundaries on the server; access must also be restricted by PostgreSQL RLS.
+- Development/test sign-in is not a production authentication mechanism and must not be available on public production deployments.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Laboratory workflow
 
-## Deploy on Vercel
+The application contains modules for physician laboratory orders, patient selection of a laboratory branch, dispatch queues, laboratory intake, structured result entry, reference ranges, result flags, report finalization, QR-assisted intake, and supported home-collection states. The exact sequence available in an environment depends on the deployed application code, database schema, and migration history being in sync.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Patient–physician relationship
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Patient/physician relationships carry lifecycle state and are used by access checks. Do not bypass relationship status or consent requirements by relying on a page-level filter alone.
+
+## Prerequisites
+
+- A supported Node.js version for the Next.js version pinned in `package.json`.
+- The package manager and lockfile committed by the repository (npm, pnpm, or Yarn).
+- A Supabase project configured with the schema, functions, RLS policies, and storage policies expected by the application.
+- Test accounts and test data in a **non-production** Supabase environment for role-based acceptance testing.
+
+## Environment configuration
+
+Create `.env.local` in the repository root. Do not commit it.
+
+```dotenv
+# Supabase project URL and browser-safe publishable/anon key
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+
+# Server-only key for privileged administrative database operations.
+# Use a current Supabase secret key or the service-role key supported by your setup.
+SUPABASE_SECRET_KEY=YOUR_SERVER_ONLY_SECRET
+
+# Public application origin used when constructing absolute application links
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### Environment variable rules
+
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `NEXT_PUBLIC_APP_URL` are public configuration values.
+- `SUPABASE_SECRET_KEY` (or a deliberately configured server-only `SUPABASE_SERVICE_ROLE_KEY`) is privileged. It must only be read from server-only modules and must never be exposed to browser code, client components, logs, or committed files.
+- Never name a privileged key with a `NEXT_PUBLIC_` prefix. The current source contains a legacy fallback to `NEXT_PUBLIC_SUPABASE_SECRET_KEY` in `lib/supabase/admin.js`; remove that fallback before production/public release and configure the server-only variable above instead.
+- Do not copy real project secrets, patient data, access tokens, phone numbers, or credentials into issues, screenshots, logs, examples, or Git history.
+
+## Local development
+
+1. Clone the repository.
+2. Install dependencies using the lockfile. For npm projects with a committed `package-lock.json`, use:
+
+   ```bash
+   npm ci
+   ```
+
+   If the repository intentionally has no lockfile yet, `npm install` may be used temporarily, but commit the resulting lockfile for reproducibility.
+
+3. Configure `.env.local` with a non-production Supabase project.
+4. Confirm the database migrations and RLS policies for that environment are current.
+5. Start the development server using the script defined in `package.json` (typically):
+
+   ```bash
+   npm run dev
+   ```
+
+6. Open `http://localhost:3000` unless `PORT` or the configured application URL changes it.
+
+Typical validation commands, when present in `package.json` scripts:
+
+```bash
+npm run lint
+npm run build
+npm run start
+```
+
+Check the actual `scripts` section before relying on a command. A successful syntax check or successful compilation does not replace role-based browser tests or database authorization tests.
+
+## Database and Supabase
+
+- PostgreSQL is the authoritative persistence layer for account roles, patient/physician relationships, laboratory orders, dispatches, reports, observations, and workflow state.
+- Keep SQL migrations version-controlled under `supabase/migrations/` in the canonical repository. Apply them in order to a development/staging project first and verify the migration history before production deployment.
+- Coordinate database migrations with application releases whenever a function signature, enum, trigger, table shape, or RLS policy changes. Deploying only one side can break the live workflow.
+- Do not disable RLS or grant broad table access to work around application errors. Fix the policy/function contract and validate it with accounts for each role.
+- Use read-only schema, constraint, grant, and policy checks before modifying a live database. Back up and follow the team's release procedure for any consequential data migration.
+
+## Security model
+
+Security-sensitive code must be reviewed at both the application and database layers.
+
+- Keep the privileged Supabase client in server-only modules. Do not import it into Client Components.
+- Derive the acting user from the verified session; do not trust a client-supplied user ID or role as proof of identity.
+- Validate input at the server boundary, including identifier formats, allowed fields, role, and lifecycle state.
+- Preserve RLS, least privilege, foreign-key constraints, unique constraints, and database triggers. A disabled button is not a security control.
+- Avoid leaking auth/provider/database internals to end users. Internal logs must not contain passwords, OTPs, access tokens, or medical record contents.
+- Audit access to private medical or contact data and return only the minimum data required by a page or QR payload.
+- Treat QR tokens as bearer-like secrets: use high entropy, short validity, narrow authorization, and no confidential medical detail in public URLs.
+- Never use production patient information in test fixtures, screenshots, automated test output, or public issue reports.
+
+### Development login warning
+
+The current source enables the test-login helper whenever `NODE_ENV !== "production"` and includes fixed test-user definitions in `lib/auth/test-session.js`. Do not expose a development server or an environment incorrectly marked as production to the public Internet. Before any public test/staging deployment, move test-login enablement to an explicit server-only feature flag, use isolated test accounts, and verify the feature is disabled in production.
+
+## Quality checks
+
+Before merging a change, validate as applicable:
+
+- Syntax, imports/exports, and Next.js build.
+- Happy path and failure path for the changed role-specific workflow.
+- Concurrent requests and state transitions for mutating actions.
+- Empty, malformed, duplicate, expired, and unauthorized inputs.
+- RLS behavior using patient, physician, laboratory, and administrator accounts.
+- Pagination boundaries, stale-response behavior, and route revalidation.
+- Accessibility: keyboard operation, focus management, labels, error messages, RTL layout, and reduced-motion preferences.
+- No secret or patient information in generated artifacts, logs, or Git changes.
+
+## Repository conventions
+
+- Keep role-specific business logic in `features/<domain>/` rather than duplicating it in pages.
+- Keep pages focused on orchestration and rendering; move validation and data operations into feature modules.
+- Keep secrets in server-only modules and environment variables. Commit `.env.example` with placeholders, never `.env.local`.
+- For schema changes, include the migration, access-policy changes, verification queries, and a concise rollout/rollback note.
+- Prefer small, reviewable pull requests with explicit affected roles and acceptance criteria.
+- Do not replace the whole project with an older feature snapshot. Merge specific files against the current source and resolve conflicts intentionally.
+
+## Known limitations and release checklist
+
+PAS is under active development. A release should not be considered complete until all of the following are verified against the exact commit being deployed:
+
+- The actual `package.json` and lockfile are committed; dependency versions and npm scripts are reproducible.
+- All required SQL migrations and Supabase configuration are tracked and applied to the target environment.
+- Production build succeeds on the target Node.js/Next.js versions.
+- Admin secret-key configuration uses a server-only environment variable, with the legacy `NEXT_PUBLIC_SUPABASE_SECRET_KEY` fallback removed.
+- Test login is gated by an explicit server-only flag and disabled in production.
+- Each role's sign-in, authorization, database policies, and key workflows pass acceptance tests.
+- Backup, monitoring, retention, privacy, and incident-response procedures are established before real patient data is introduced.
+
+## Disclaimer
+
+PAS is software for managing healthcare-related workflows. It is not a substitute for professional medical judgment, clinical validation, or applicable legal/regulatory requirements. Do not rely on this repository alone as evidence of clinical safety or regulatory compliance.
