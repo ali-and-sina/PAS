@@ -338,55 +338,76 @@ export default function LoginCard({
 
   return (
     <Card
-      className={`relative w-full max-w-md overflow-hidden rounded-[1.65rem] border border-border/70 bg-card/95 shadow-[0_24px_70px_-38px_hsl(var(--primary)/0.42)] backdrop-blur-xl`}
+      dir="rtl"
+      className="relative isolate w-full max-w-md overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/90 text-slate-800 shadow-[0_24px_80px_-32px_rgba(54,115,170,0.32)] backdrop-blur-xl"
     >
+      {/* خطوط تزئینی مینیمال */}
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 500 260"
+        preserveAspectRatio="none"
+        className="pointer-events-none absolute inset-0 -z-10 h-full w-full"
+        fill="none"
+      >
+        <path
+          d="M350 -30 C350 75 450 40 530 110"
+          stroke="#C8DCFF"
+          strokeWidth="1.2"
+        />
+        <path
+          d="M-80 180 C40 100 90 250 230 235"
+          stroke="#8FD7E0"
+          strokeWidth="1.2"
+        />
+        <circle cx="450" cy="30" r="55" fill="#EAF5FB" opacity=".45" />
+      </svg>
+
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-12 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent"
+        className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-l from-transparent via-teal-400/70 to-transparent"
       />
 
-      <CardHeader className="space-y-3 px-6 pb-5 pt-8 text-center sm:px-8 sm:pt-9">
-        <div className="mb-1 flex flex-col items-center gap-3">
-          <div
-            className={`${visualStyles.brandMark} relative flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm`}
-          >
+      <CardHeader className="space-y-3 px-6 pb-6 pt-8 text-right sm:px-9 sm:pt-10">
+        <div className="mb-3 flex items-center gap-3">
+          <div className="relative flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-400 to-blue-500 text-white shadow-[0_8px_22px_-10px_rgba(20,150,170,.65)]">
             <BrandIcon
               className="size-6"
-              strokeWidth={1.8}
+              strokeWidth={1.7}
               aria-hidden="true"
             />
             <span
               aria-hidden="true"
-              className="absolute -bottom-1 -left-1 size-3 rounded-full border-2 border-card bg-emerald-400"
+              className="absolute -bottom-1 -left-1 size-3 rounded-full border-2 border-white bg-emerald-400"
             />
           </div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/[0.055] px-3 py-1 text-[11px] font-medium text-primary">
-            پلتفرم ارزیابی سلامت
-          </span>
+
+          <div className="space-y-1">
+            <div className="text-xl font-bold tracking-tight text-slate-800">
+              پاس
+            </div>
+            <div className="text-xs text-slate-500">پلتفرم ارزیابی سلامت</div>
+          </div>
         </div>
 
         <h1
           id={HEADING_ID}
-          className="text-[1.65rem] font-semibold tracking-tight sm:text-3xl"
+          className="pt-2 text-2xl font-bold tracking-tight text-slate-800 sm:text-[1.8rem]"
         >
           {header.title}
         </h1>
 
-        <CardDescription className="mx-auto max-w-xs leading-7">
+        <CardDescription className="max-w-sm text-sm leading-7 text-slate-500">
           {header.description}
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="px-6 pb-7 pt-1 sm:px-8 sm:pb-8">
+      <CardContent className="px-6 pb-8 pt-1 sm:px-9 sm:pb-10">
         {done ? (
           <div
             role="status"
-            className="flex items-center justify-center gap-2 py-6 text-sm"
+            className="flex items-center justify-center gap-2 py-8 text-sm text-slate-600"
           >
-            <CheckCircle2
-              className="size-4 text-status-normal"
-              aria-hidden="true"
-            />
+            <CheckCircle2 className="size-5 text-teal-500" aria-hidden="true" />
             ورود انجام شد. در حال انتقال...
           </div>
         ) : (
@@ -425,24 +446,34 @@ export default function LoginCard({
               )}
             </div>
 
-            <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">
-              با ورود، شرایط استفاده و سیاست حریم خصوصی را می‌پذیرید.
-            </p>
+            <div className="mt-7 flex items-start gap-2 border-t border-slate-100 pt-4">
+              <ShieldCheck
+                className="mt-0.5 size-4 shrink-0 text-teal-600"
+                aria-hidden="true"
+              />
+              <p className="text-xs leading-6 text-slate-500">
+                اطلاعات شما با رعایت اصول امنیت و حریم خصوصی پردازش می‌شود.
+              </p>
+            </div>
 
             {isTestLoginEnabled && (
-              <div className="mt-6 border-t border-border/70 pt-4">
+              <div className="mt-5 border-t border-slate-100 pt-4">
                 {!showTestLogin ? (
                   <button
                     type="button"
-                    className="mx-auto inline-flex min-h-9 items-center justify-center rounded-full px-3 text-xs text-muted-foreground transition-colors duration-200 hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
+                    className="mx-auto flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/70 px-4 text-sm font-medium text-slate-700 transition-colors hover:border-teal-300 hover:bg-teal-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 motion-reduce:transition-none"
                     onClick={() => setShowTestLogin(true)}
                   >
+                    <Activity
+                      className="size-4 text-teal-600"
+                      aria-hidden="true"
+                    />
                     ورود تست
                   </button>
                 ) : (
-                  <div className="space-y-4 rounded-2xl border border-border/70 bg-muted/25 p-4">
-                    <div className="text-center text-xs text-muted-foreground">
-                      ورود موقت برای تست داشبوردها
+                  <div className="space-y-4 rounded-2xl border border-slate-200/90 bg-slate-50/80 p-4">
+                    <div className="text-center text-xs leading-6 text-slate-500">
+                      ورود موقت برای بررسی بخش‌های مختلف سامانه
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
@@ -463,7 +494,7 @@ export default function LoginCard({
                           <button
                             key={identifier}
                             type="button"
-                            className="min-h-10 rounded-xl border border-border/80 bg-background/70 px-2 py-2 text-xs transition-[transform,border-color,background-color] duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-accent/60 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none"
+                            className="min-h-10 rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 transition-colors hover:border-teal-300 hover:bg-teal-50/60 disabled:opacity-50"
                             onClick={() => {
                               setTestIdentifier(identifier);
                               setTestError("");
@@ -485,7 +516,7 @@ export default function LoginCard({
                         }}
                         placeholder="شناسه تست"
                         autoComplete="off"
-                        className="h-11 w-full rounded-xl border border-input bg-background/80 px-3 text-sm outline-none transition-[border-color,box-shadow,background-color] duration-200 placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 motion-reduce:transition-none"
+                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100 disabled:opacity-60"
                         disabled={testPending}
                       />
 
@@ -499,18 +530,23 @@ export default function LoginCard({
                         }}
                         placeholder="رمز عبور تست: 1234"
                         autoComplete="off"
-                        className="h-11 w-full rounded-xl border border-input bg-background/80 px-3 text-sm outline-none transition-[border-color,box-shadow,background-color] duration-200 placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 motion-reduce:transition-none"
+                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100 disabled:opacity-60"
                         disabled={testPending}
                       />
 
                       {testError && (
-                        <p className="text-xs text-destructive">{testError}</p>
+                        <p
+                          role="alert"
+                          className="text-xs leading-5 text-destructive"
+                        >
+                          {testError}
+                        </p>
                       )}
 
                       <div className="flex gap-2">
                         <button
                           type="button"
-                          className="h-11 flex-1 rounded-xl bg-primary px-3 text-sm font-medium text-primary-foreground shadow-sm transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+                          className="h-11 flex-1 rounded-xl bg-gradient-to-l from-teal-500 to-teal-600 px-3 text-sm font-medium text-white shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                           onClick={handleTestLogin}
                           disabled={testPending}
                         >
@@ -519,7 +555,7 @@ export default function LoginCard({
 
                         <button
                           type="button"
-                          className="h-11 rounded-xl border border-border/80 px-4 text-sm transition-colors duration-200 hover:bg-accent/60 disabled:opacity-50 motion-reduce:transition-none"
+                          className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
                           onClick={() => {
                             setShowTestLogin(false);
                             setTestError("");
