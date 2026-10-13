@@ -341,7 +341,6 @@ export default function LoginCard({
       dir="rtl"
       className="relative isolate w-full max-w-md overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/90 text-slate-800 shadow-[0_24px_80px_-32px_rgba(54,115,170,0.32)] backdrop-blur-xl"
     >
-      {/* خطوط تزئینی مینیمال */}
       <svg
         aria-hidden="true"
         viewBox="0 0 500 260"
@@ -413,7 +412,9 @@ export default function LoginCard({
         ) : (
           <>
             <div key={step} className={visualStyles.stepEnter}>
-              {step === "role" && <RoleSelector onSelect={handleSelectRole} />}
+              {step === "role" && !showTestLogin && (
+                <RoleSelector onSelect={handleSelectRole} />
+              )}
 
               {step === "identity" && config && (
                 <IdentityForm
