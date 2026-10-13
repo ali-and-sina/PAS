@@ -39,7 +39,7 @@ const HEADING_ID = "login-heading";
 export default function LoginCard({
   next = null,
   isDevelopmentAuth = false,
-  isTestLoginEnabled = false,
+  isTestLoginEnabled = true,
   fixedRole = null,
 }) {
   const router = useRouter();
