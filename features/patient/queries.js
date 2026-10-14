@@ -919,19 +919,39 @@ export async function getPatientTimeline({
 
 export async function getPatientProfile() {
   const context = await requirePatient();
+  const supabase = await createClient();
+
+  // getSessionUser() returns a flattened session object, not context.profile.
+  // Read both profile records with the authenticated client so RLS remains in force.
+  const [profileResult, patientProfileResult] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "id, role, full_name, phone, national_id, avatar_url, created_at, updated_at",
+      )
+      .eq("id", context.patient_id)
+      .eq("role", "patient")
+      .maybeSingle(),
+
+    supabase
+      .from("patient_profiles")
+      .select(
+        "id, date_of_birth, sex, blood_type, emergency_contact_name, emergency_contact_phone, created_at",
+      )
+      .eq("id", context.patient_id)
+      .maybeSingle(),
+  ]);
+
+  if (profileResult.error) throw profileResult.error;
+  if (patientProfileResult.error) throw patientProfileResult.error;
+
+  if (!profileResult.data || !patientProfileResult.data) {
+    throw new Error("PATIENT_PROFILE_INCOMPLETE");
+  }
 
   return {
-    profile: {
-      id: context.profile.id,
-      role: context.profile.role,
-      full_name: context.profile.full_name,
-      phone: context.profile.phone,
-      national_id: context.profile.national_id,
-      avatar_url: context.profile.avatar_url,
-      created_at: context.profile.created_at,
-      updated_at: context.profile.updated_at,
-    },
-    patient_profile: context.patient_profile,
+    profile: profileResult.data,
+    patient_profile: patientProfileResult.data,
   };
 }
 
