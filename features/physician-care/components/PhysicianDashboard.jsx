@@ -59,7 +59,7 @@ export default function PhysicianDashboard({ data }) {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild><Link href="/doctor/lab-orders/new">سفارش آزمایش جدید</Link></Button>
+            <Button asChild><Link href="/doctor/lab-orders/new">ثبت درخواست آزمایش</Link></Button>
             <Button asChild variant="outline"><Link href="/doctor/patients">مشاهده بیماران</Link></Button>
           </div>
         </div>

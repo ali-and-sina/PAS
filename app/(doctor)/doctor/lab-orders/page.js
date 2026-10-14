@@ -73,10 +73,10 @@ export default async function DoctorLabOrdersPage({ searchParams }) {
       )}
       <Pagination pathname="/doctor/lab-orders" page={requestResult.pagination.page} pageSize={requestResult.pagination.pageSize} totalCount={requestResult.pagination.totalCount} totalPages={requestResult.pagination.totalPages} query={{ status: statusFilter, ordersPage: operationalResult.pagination.page }} />
       {operationalResult.pagination.totalCount > 0 && <section className="space-y-3 pt-3">
-        <div><h2 className="text-lg font-semibold">سفارش‌های عملیاتی آزمایشگاه</h2><p className="mt-1 text-sm text-muted-foreground">سفارش‌هایی که پس از پذیرش ارجاع توسط آزمایشگاه ایجاد شده‌اند، در این بخش پیگیری می‌شوند.</p></div>
+        <div><h2 className="text-lg font-semibold">آزمایش‌های ارجاع‌شده به آزمایشگاه</h2><p className="mt-1 text-sm text-muted-foreground">مواردی که پس از پذیرش درخواست در آزمایشگاه آغاز شده‌اند، در این بخش پیگیری می‌شوند.</p></div>
         <div className="grid gap-3">{operationalOrders.map((order) => <article key={order.id} className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0"><p className="font-medium">{order.patient_name || "بیمار"}</p><p className="mt-1 text-sm text-muted-foreground">{order.laboratory_name || "آزمایشگاه"} · {formatDate(order.ordered_at)}</p><p className="mt-2 text-xs text-muted-foreground">{ORDER_STATUS[order.status] || order.status} · {order.test_count || 0} آزمایش</p></div>
-          <Button asChild variant="outline" size="sm"><Link href={`/doctor/lab-orders/${order.id}`}>جزئیات سفارش</Link></Button>
+          <Button asChild variant="outline" size="sm"><Link href={`/doctor/lab-orders/${order.id}`}>جزئیات آزمایش</Link></Button>
         </article>)}</div>
         <Pagination pathname="/doctor/lab-orders" page={operationalResult.pagination.page} pageSize={operationalResult.pagination.pageSize} totalCount={operationalResult.pagination.totalCount} totalPages={operationalResult.pagination.totalPages} pageParam="ordersPage" query={{ status: statusFilter, page: requestResult.pagination.page }} />
       </section>}

@@ -19,12 +19,12 @@ export default async function LabDashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="داشبورد آزمایشگاه"
-        description="صف عملیاتی آزمایشگاه را از دریافت سفارش تا نهایی‌سازی نتیجه در یک نگاه مدیریت کنید."
+        description="فرآیند آزمایشگاه را از پذیرش درخواست تا نهایی‌سازی نتیجه در یک نگاه مدیریت کنید."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button asChild size="sm"><Link href="/lab/dispatches">درخواست‌های ارجاع‌شده</Link></Button>
             <Button asChild size="sm" variant="outline"><Link href="/lab/home-collection">نمونه‌گیری در منزل</Link></Button>
-            <Button asChild size="sm" variant="outline"><Link href="/lab/orders">سفارش‌های عملیاتی</Link></Button>
+            <Button asChild size="sm" variant="outline"><Link href="/lab/orders">صف پذیرش</Link></Button>
           </div>
         }
       />
@@ -36,11 +36,11 @@ export default async function LabDashboardPage() {
           <CardContent className="p-5 sm:p-6">
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
-                <h2 className="font-semibold">سفارش‌های اخیر</h2>
+                <h2 className="font-semibold">پذیرش‌های اخیر</h2>
                 <p className="mt-1 text-sm text-muted-foreground">مواردی که بیشترین احتمال اقدام بعدی دارند.</p>
               </div>
               <Link href="/lab/orders" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-                همه سفارش‌ها
+                همه پذیرش‌ها
                 <ArrowLeft className="size-3.5" aria-hidden="true" />
               </Link>
             </div>
@@ -50,9 +50,9 @@ export default async function LabDashboardPage() {
             ) : (
               <EmptyState
                 icon={ClipboardList}
-                title="صف سفارش‌ها خالی است"
-                description="سفارش‌های پذیرفته‌شده برای ورود نتیجه در این بخش نمایش داده می‌شوند. درخواست‌های تازه در صفحه درخواست‌های ارجاع‌شده هستند."
-                action={{ label: "مشاهده صف سفارش‌ها", href: "/lab/orders" }}
+                title="صف پذیرش خالی است"
+                description="پذیرش‌های ثبت‌شده برای ورود نتیجه در این بخش نمایش داده می‌شوند. درخواست‌های تازه در صفحه درخواست‌های ارجاع‌شده هستند."
+                action={{ label: "مشاهده صف پذیرش", href: "/lab/orders" }}
               />
             )}
           </CardContent>
@@ -67,7 +67,7 @@ export default async function LabDashboardPage() {
                 </span>
                 <div>
                   <h2 className="font-semibold">اعلان‌های آزمایشگاه</h2>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">رویدادهای مهم و سفارش‌های نیازمند اقدام.</p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">رویدادهای مهم و پذیرش‌های نیازمند اقدام.</p>
                 </div>
               </div>
               <Button asChild variant="outline" size="sm" className="mt-4 w-full">

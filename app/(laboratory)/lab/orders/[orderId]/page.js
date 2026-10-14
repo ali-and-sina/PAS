@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { updateLabOrderStatus } from "@/features/lab-results/actions";
 
-export const metadata = { title: "جزئیات سفارش آزمایش" };
+export const metadata = { title: "جزئیات پذیرش آزمایش" };
 export const dynamic = "force-dynamic";
 
 function StatusAction({ orderId, status, label, variant = "default" }) {
@@ -47,7 +47,7 @@ export default async function LabOrderDetailPage({ params }) {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="جزئیات سفارش"
+        title="جزئیات پذیرش"
         description={`بیمار: ${order.patient?.full_name || "بدون نام"}`}
         actions={<Button asChild variant="outline" size="sm"><Link href="/lab/orders"><ArrowLeft className="size-4" aria-hidden="true" /> بازگشت</Link></Button>}
       />
@@ -57,7 +57,7 @@ export default async function LabOrderDetailPage({ params }) {
       <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-4">
         <OrderStatusBadge status={order.status} />
 
-        {order.status === "pending" ? <StatusAction orderId={order.id} status="received_by_lab" label="دریافت سفارش" /> : null}
+        {order.status === "pending" ? <StatusAction orderId={order.id} status="received_by_lab" label="پذیرش آزمایش" /> : null}
         {order.status === "received_by_lab" ? <StatusAction orderId={order.id} status="in_progress" label="شروع انجام آزمایش" /> : null}
         {canEnter ? (
           <Button asChild size="sm">
@@ -67,7 +67,7 @@ export default async function LabOrderDetailPage({ params }) {
             </Link>
           </Button>
         ) : null}
-        {canCancel ? <StatusAction orderId={order.id} status="cancelled" label="لغو سفارش" variant="outline" /> : null}
+        {canCancel ? <StatusAction orderId={order.id} status="cancelled" label="لغو پذیرش" variant="outline" /> : null}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -81,7 +81,7 @@ export default async function LabOrderDetailPage({ params }) {
                 زمان‌بندی
               </div>
               <dl className="mt-4 space-y-3 text-sm">
-                <div><dt className="text-xs text-muted-foreground">ثبت سفارش</dt><dd className="mt-1">{formatDate(order.ordered_at)}</dd></div>
+                <div><dt className="text-xs text-muted-foreground">ثبت درخواست</dt><dd className="mt-1">{formatDate(order.ordered_at)}</dd></div>
                 <div><dt className="text-xs text-muted-foreground">دریافت</dt><dd className="mt-1">{formatDate(order.received_at)}</dd></div>
                 <div><dt className="text-xs text-muted-foreground">تکمیل</dt><dd className="mt-1">{formatDate(order.completed_at)}</dd></div>
               </dl>
@@ -104,7 +104,7 @@ export default async function LabOrderDetailPage({ params }) {
                   ))}
                 </div>
               ) : (
-                <p className="mt-4 text-sm text-muted-foreground">هنوز گزارشی برای این سفارش ثبت نشده است.</p>
+                <p className="mt-4 text-sm text-muted-foreground">هنوز گزارشی برای این پذیرش ثبت نشده است.</p>
               )}
             </CardContent>
           </Card>

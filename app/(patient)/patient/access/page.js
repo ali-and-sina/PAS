@@ -21,14 +21,14 @@ export default async function PatientAccessPage() {
     <div className="space-y-6">
       <PageHeader
         title="دسترسی به پرونده"
-        description="افراد و مراکزی که بر اساس روابط و سفارش‌های فعلی سیستم با پرونده شما مرتبط هستند."
+        description="افراد و مراکزی که بر اساس روابط و درخواست‌های آزمایش ثبت‌شده با پرونده شما مرتبط هستند."
       />
 
       <div className="rounded-2xl border border-primary/15 bg-accent/50 p-5">
         <div className="flex items-start gap-3">
           <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
           <p className="text-sm leading-7 text-muted-foreground">
-            دسترسی آزمایشگاه‌ها در این نسخه بر اساس سفارش‌های آزمایش موجود نمایش داده می‌شود؛ این صفحه به‌تنهایی به معنی وجود یک مدل مستقل مجوز دائمی نیست.
+            دسترسی آزمایشگاه‌ها در این نسخه بر اساس درخواست‌های آزمایش ثبت‌شده نمایش داده می‌شود؛ این صفحه به‌تنهایی به معنی وجود یک مدل مستقل مجوز دائمی نیست.
           </p>
         </div>
       </div>
@@ -73,7 +73,7 @@ export default async function PatientAccessPage() {
           </CardHeader>
           <CardContent>
             {data.laboratories.length === 0 ? (
-              <EmptyState title="آزمایشگاه مرتبطی پیدا نشد" description="هنوز سفارش آزمایش مرتبطی در پرونده شما ثبت نشده است." />
+              <EmptyState title="آزمایشگاه مرتبطی پیدا نشد" description="هنوز درخواست آزمایش مرتبطی در پرونده شما ثبت نشده است." />
             ) : (
               <div className="space-y-3">
                 {data.laboratories.map((item) => (
@@ -83,8 +83,8 @@ export default async function PatientAccessPage() {
                       <p className="mt-1 text-xs text-muted-foreground">{getOrganizationTypeLabel(item.organization.type)}</p>
                     )}
                     <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-                      <span>تعداد سفارش: {item.order_count}</span>
-                      <span>آخرین سفارش: {formatDate(item.latest_ordered_at)}</span>
+                      <span>تعداد درخواست آزمایش: {item.order_count}</span>
+                      <span>آخرین درخواست آزمایش: {formatDate(item.latest_ordered_at)}</span>
                     </div>
                   </div>
                 ))}

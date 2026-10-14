@@ -54,7 +54,10 @@ function getFlagMeta(flag) {
     low: { label: "پایین", variant: "low" },
     high: { label: "بالا", variant: "high" },
     critical: { label: "بحرانی", variant: "critical" },
+    critical_low: { label: "بحرانی (پایین)", variant: "critical" },
+    critical_high: { label: "بحرانی (بالا)", variant: "critical" },
     normal: { label: "طبیعی", variant: "normal" },
+    unknown: { label: "نامشخص؛ محدوده یا پرچم معتبر ثبت نشده", variant: "neutral" },
   };
   return flags[flag] ?? null;
 }
@@ -110,7 +113,7 @@ export default async function PatientResultDetailPage({ params }) {
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground">تاریخ سفارش</p>
+            <p className="text-xs text-muted-foreground">تاریخ ثبت درخواست آزمایش</p>
             <p className="mt-2 font-medium">{formatDate(report.order?.ordered_at)}</p>
           </CardContent>
         </Card>
@@ -138,7 +141,21 @@ export default async function PatientResultDetailPage({ params }) {
             <div className="space-y-3">
               {observations.map((observation) => {
                 const test = getNestedTest(observation);
-                const flag = getFlagMeta(observation.flag);
+                const hasNumericValue =
+                  observation.value_numeric !== null && observation.value_numeric !== undefined;
+                const hasNumericBounds =
+                  (observation.reference_min !== null && observation.reference_min !== undefined) ||
+                  (observation.reference_max !== null && observation.reference_max !== undefined);
+                const hasQualitativeValue =
+                  observation.value_text !== null && observation.value_text !== undefined ||
+                  observation.value_boolean !== null && observation.value_boolean !== undefined;
+                const effectiveFlag =
+                  !hasNumericValue && hasQualitativeValue
+                    ? "unknown"
+                    : hasNumericValue && !hasNumericBounds
+                      ? "unknown"
+                      : observation.flag;
+                const flag = getFlagMeta(effectiveFlag);
 
                 return (
                   <article key={observation.id} className="rounded-2xl border p-4 sm:p-5">

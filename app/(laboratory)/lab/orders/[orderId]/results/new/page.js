@@ -42,7 +42,7 @@ export default async function NewLabResultPage({ params }) {
         description={`بیمار: ${order.patient?.full_name || "بدون نام"}`}
         actions={
           <Link href={`/lab/orders/${order.id}`} className="text-sm text-muted-foreground hover:text-foreground hover:underline">
-            بازگشت به سفارش
+            بازگشت به پذیرش
           </Link>
         }
       />
@@ -59,7 +59,7 @@ export default async function NewLabResultPage({ params }) {
         </div>
       </div>
 
-      <SectionCard title="نتایج سفارش" description="نتایج ابتدا به‌صورت پیش‌نویس ذخیره می‌شوند و سپس در صورت تکمیل موارد الزامی می‌توانید گزارش را نهایی کنید.">
+      <SectionCard title="نتایج آزمایش" description="نتایج ابتدا به‌صورت پیش‌نویس ذخیره می‌شوند و سپس در صورت تکمیل موارد الزامی می‌توانید گزارش را نهایی کنید.">
         <ResultEntryForm orderId={order.id} reportId={draftReport?.id || null} tests={tests} defaultValues={draftValues} />
       </SectionCard>
     </div>

@@ -2,8 +2,8 @@ import { Check, CircleDot, FlaskConical, ClipboardList, FileCheck2, PencilLine }
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { key: "pending", label: "سفارش جدید", icon: ClipboardList },
-  { key: "received_by_lab", label: "دریافت‌شده", icon: Check },
+  { key: "pending", label: "پذیرش جدید", icon: ClipboardList },
+  { key: "received_by_lab", label: "پذیرفته‌شده", icon: Check },
   { key: "in_progress", label: "در حال انجام", icon: FlaskConical },
   { key: "draft", label: "پیش‌نویس نتیجه", icon: PencilLine },
   { key: "completed", label: "تکمیل‌شده", icon: FileCheck2 },
@@ -23,8 +23,8 @@ export default function LabWorkflowStrip({ status = "pending" }) {
     <div className="rounded-xl border bg-card p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold">مسیر انجام سفارش</p>
-          <p className="mt-1 text-xs text-muted-foreground">وضعیت سفارش و نتیجه را در یک نگاه دنبال کنید.</p>
+          <p className="text-sm font-semibold">روند پذیرش آزمایش</p>
+          <p className="mt-1 text-xs text-muted-foreground">وضعیت پذیرش و نتیجه آزمایش را در یک نگاه دنبال کنید.</p>
         </div>
         <CircleDot className="size-4 text-muted-foreground" aria-hidden="true" />
       </div>

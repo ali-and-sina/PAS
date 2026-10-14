@@ -313,7 +313,7 @@ export async function updateLabOrderStatus(formData) {
     const orderId = String(formData.get("order_id") || "").trim();
     const nextStatus = String(formData.get("status") || "").trim();
 
-    if (!orderId) return fail("شناسه سفارش معتبر نیست.");
+    if (!orderId) return fail("شناسه پذیرش معتبر نیست.");
 
     const allowedStatuses = new Set([
       "received_by_lab",
@@ -334,10 +334,10 @@ export async function updateLabOrderStatus(formData) {
       .maybeSingle();
 
     if (orderError) throw orderError;
-    if (!order) return fail("سفارش پیدا نشد.");
+    if (!order) return fail("پذیرش پیدا نشد.");
 
     if (nextStatus === "received_by_lab" && order.status !== "pending") {
-      return fail("فقط سفارش در انتظار را می‌توان دریافت کرد.");
+      return fail("فقط درخواست‌های در انتظار را می‌توان پذیرفت.");
     }
 
     if (
@@ -345,13 +345,13 @@ export async function updateLabOrderStatus(formData) {
       order.status !== "received_by_lab"
     ) {
       return fail(
-        "برای شروع انجام آزمایش، سفارش باید ابتدا دریافت شده باشد.",
+        "برای شروع انجام آزمایش، ابتدا پذیرش آن را ثبت کنید.",
       );
     }
 
     if (nextStatus === "completed" && order.status !== "in_progress") {
       return fail(
-        "برای تکمیل سفارش، وضعیت سفارش باید در حال انجام باشد.",
+        "برای نهایی‌کردن پذیرش، وضعیت آن باید «در حال انجام» باشد.",
       );
     }
 
@@ -361,7 +361,7 @@ export async function updateLabOrderStatus(formData) {
         "received_by_lab",
         "in_progress",
       ].includes(order.status)) {
-        return fail("این سفارش دیگر قابل لغو نیست.");
+        return fail("این پذیرش دیگر قابل لغو نیست.");
       }
     }
 
@@ -383,7 +383,7 @@ export async function updateLabOrderStatus(formData) {
       if (reportError) throw reportError;
 
       if (!finalReports?.length) {
-        return fail("سفارش بدون گزارش نهایی معتبر قابل تکمیل نیست.");
+        return fail("پذیرش بدون گزارش نهایی معتبر قابل تکمیل نیست.");
       }
 
       payload.completed_at = new Date().toISOString();
@@ -406,7 +406,7 @@ export async function updateLabOrderStatus(formData) {
 
     if (updateError) throw updateError;
     if (!updatedRows?.length) {
-      return fail("وضعیت سفارش هم‌زمان توسط کاربر دیگری تغییر کرده است. صفحه را تازه‌سازی و دوباره بررسی کنید.");
+      return fail("وضعیت پذیرش هم‌زمان توسط کاربر دیگری تغییر کرده است. صفحه را تازه‌سازی و دوباره بررسی کنید.");
     }
 
     revalidatePath("/lab/orders");
@@ -419,11 +419,11 @@ export async function updateLabOrderStatus(formData) {
     return {
       ok: true,
       status: nextStatus,
-      message: "وضعیت سفارش با موفقیت به‌روزرسانی شد.",
+      message: "وضعیت پذیرش با موفقیت به‌روزرسانی شد.",
     };
   } catch (error) {
     console.error("[updateLabOrderStatus]", error);
-    return fail(error?.message || "به‌روزرسانی وضعیت سفارش انجام نشد.");
+    return fail(error?.message || "به‌روزرسانی وضعیت پذیرش انجام نشد.");
   }
 }
 
@@ -565,7 +565,7 @@ export async function importLabResultRows(_previousState, formData) {
     const orderId = String(formData.get("order_id") || "").trim();
     const rawRows = String(formData.get("rows_json") || "").trim();
 
-    if (!orderId || !isUuid(orderId)) return fail("شناسه سفارش معتبر نیست.");
+    if (!orderId || !isUuid(orderId)) return fail("شناسه پذیرش معتبر نیست.");
     if (!rawRows) return fail("داده‌ای برای ورود گروهی ارسال نشده است.");
 
     let rows;
@@ -590,9 +590,9 @@ export async function importLabResultRows(_previousState, formData) {
       .maybeSingle();
 
     if (orderError) throw orderError;
-    if (!order) return fail("سفارش پیدا نشد.");
+    if (!order) return fail("پذیرش پیدا نشد.");
     if (order.status !== "in_progress") {
-      return fail("ورود نتیجه فقط برای سفارش در حال انجام مجاز است.");
+      return fail("ثبت نتیجه فقط برای پذیرشی که در حال انجام است مجاز است.");
     }
 
     const tests = await getLabOrderTests(order.id);
@@ -626,7 +626,7 @@ export async function importLabResultRows(_previousState, formData) {
       const test = testsById.get(key) || testsByCode.get(key) || testsByAlias.get(key);
 
       if (!test) {
-        return fail(`تست «${row.test_key}» در این سفارش وجود ندارد.`);
+        return fail(`تست «${row.test_key}» در این پذیرش وجود ندارد.`);
       }
 
       if (seen.has(test.id)) {
@@ -728,7 +728,7 @@ export async function saveLabResults(_previousState, formData) {
     const finalize =
       String(formData.get("finalize") || "false") === "true";
 
-    if (!orderId) return fail("شناسه سفارش معتبر نیست.");
+    if (!orderId) return fail("شناسه پذیرش معتبر نیست.");
 
     const { data: order, error: orderError } = await supabase
       .from("lab_orders")
@@ -738,24 +738,24 @@ export async function saveLabResults(_previousState, formData) {
       .maybeSingle();
 
     if (orderError) throw orderError;
-    if (!order) return fail("سفارش پیدا نشد.");
+    if (!order) return fail("پذیرش پیدا نشد.");
 
     if (order.status !== "in_progress") {
       return fail(
-        "برای ثبت نتیجه، سفارش باید در وضعیت «در حال انجام» باشد.",
+        "برای ثبت نتیجه، پذیرش باید در وضعیت «در حال انجام» باشد.",
       );
     }
 
     const tests = await getLabOrderTests(order.id);
 
     if (!tests.length) {
-      return fail("برای این سفارش تستی تعریف نشده است.");
+      return fail("برای این پذیرش تستی تعریف نشده است.");
     }
 
     const report = await ensureDraftReport(supabase, order.id, user.id);
 
     if (requestedReportId && requestedReportId !== report.id) {
-      return fail("گزارش انتخاب‌شده متعلق به این سفارش نیست.");
+      return fail("گزارش انتخاب‌شده متعلق به این پذیرش نیست.");
     }
 
     const admin = createAdminClient();

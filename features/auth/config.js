@@ -29,7 +29,7 @@ export const LOGIN_ROLE_CONFIG = {
   doctor: {
     role: "doctor",
     label: "پزشک",
-    description: "بیماران، سفارش آزمایش و تفسیر نتایج",
+    description: "بیماران، آزمایش‌ها و تفسیر نتایج",
     identifier: {
       label: "شماره نظام پزشکی",
       placeholder: "12345",
@@ -43,7 +43,7 @@ export const LOGIN_ROLE_CONFIG = {
   laboratory: {
     role: "laboratory",
     label: "آزمایشگاه",
-    description: "سفارش‌های دریافتی و ثبت نتایج",
+    description: "پذیرش آزمایش‌ها و ثبت نتایج",
     identifier: {
       label: "شناسه آزمایشگاه",
       placeholder: "LAB-1234",

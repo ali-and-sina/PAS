@@ -67,7 +67,7 @@ export async function createPatientDispatchQrToken(dispatchId) {
     return { ok: false, message: "فقط برای درخواست ارسال‌شده و فعال می‌توان کد پذیرش ساخت." };
   }
   if (dispatch.status === "accepted" && !dispatch.lab_order_id) {
-    return { ok: false, message: "ثبت سفارش عملیاتی هنوز کامل نشده است." };
+    return { ok: false, message: "ثبت پذیرش آزمایش هنوز کامل نشده است." };
   }
 
   const result = await issueToken({ targetType: "dispatch", dispatchId });

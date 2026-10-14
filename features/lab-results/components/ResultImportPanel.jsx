@@ -126,7 +126,7 @@ export default function ResultImportPanel({ tests = [], onImport }) {
 
     const notes = [];
     if (Object.keys(values).length) notes.push(`${Object.keys(values).length} نتیجه آماده ورود شد.`);
-    if (unresolved.length) notes.push(`${unresolved.length} مورد با تست‌های این سفارش تطبیق پیدا نکرد.`);
+    if (unresolved.length) notes.push(`${unresolved.length} مورد با تست‌های این پذیرش تطبیق پیدا نکرد.`);
     if (duplicates.length) notes.push(`${duplicates.length} مورد تکراری نادیده گرفته شد.`);
 
     setMessage(notes.join(" "));
@@ -162,7 +162,7 @@ export default function ResultImportPanel({ tests = [], onImport }) {
 
       <div className="space-y-3 border-t p-4">
         <p className="text-xs leading-5 text-muted-foreground">
-          هر ردیف را به شکل <span dir="ltr">کد آزمایش،مقدار</span> یا با جداکنندهٔ تب وارد کنید. تطبیق فقط با آزمایش‌های همین سفارش انجام می‌شود.
+          هر ردیف را به شکل <span dir="ltr">کد آزمایش،مقدار</span> یا با جداکنندهٔ تب وارد کنید. تطبیق فقط با آزمایش‌های همین پذیرش انجام می‌شود.
         </p>
 
         <textarea
@@ -198,7 +198,7 @@ export default function ResultImportPanel({ tests = [], onImport }) {
           </div>
 
           {tests.length ? (
-            <span className="text-[11px] text-muted-foreground">{tests.length} تست در این سفارش</span>
+            <span className="text-[11px] text-muted-foreground">{tests.length} تست در این پذیرش</span>
           ) : null}
         </div>
 

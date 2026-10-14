@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const ITEMS = [
   {
     key: "newOrders",
-    label: "سفارش جدید",
+    label: "پذیرش جدید",
     icon: Beaker,
     href: "/lab/orders?status=pending",
     accent: "text-primary",

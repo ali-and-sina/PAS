@@ -5,7 +5,7 @@ export default function PatientActionBar({ patientId }) {
   return (
     <div className="flex flex-wrap gap-2">
       <Button asChild size="sm">
-        <Link href={`/doctor/lab-orders/new?patient=${patientId}`}>سفارش آزمایش</Link>
+        <Link href={`/doctor/lab-orders/new?patient=${patientId}`}>درخواست آزمایش</Link>
       </Button>
       <Button asChild variant="outline" size="sm">
         <Link href={`/doctor/prescriptions?patient=${patientId}`}>نسخه جدید</Link>

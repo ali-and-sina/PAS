@@ -952,9 +952,9 @@ export async function getPhysicianPatientSnapshot(patientId) {
 
       kind: "lab_order",
 
-      title: "سفارش آزمایش ثبت شد",
+      title: "درخواست آزمایش ثبت شد",
 
-      detail: order.clinical_note || "سفارش آزمایش برای بیمار ثبت شده است.",
+      detail: order.clinical_note || "درخواست آزمایش برای بیمار ثبت شده است.",
 
       date: order.ordered_at,
     });
@@ -1030,7 +1030,7 @@ export async function getPhysicianPatientSnapshot(patientId) {
     timeline.push({
       id: `review-${notification.id}`,
       kind: "review",
-      title: report ? "گزارش آزمایش بررسی شد" : "سفارش آزمایش بررسی شد",
+      title: report ? "گزارش آزمایش بررسی شد" : "درخواست آزمایش بررسی شد",
       detail: notification.body || notification.title || "پزشک این مورد را بررسی کرده است.",
       date: notification.reviewed_at || notification.created_at,
       reportId: report?.id || null,

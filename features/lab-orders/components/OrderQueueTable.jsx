@@ -22,7 +22,7 @@ function getTestsLabel(order) {
 }
 
 function getNextAction(order) {
-  if (order.status === "pending") return "دریافت سفارش";
+  if (order.status === "pending") return "پذیرش آزمایش";
   if (order.status === "received_by_lab") return "شروع آزمایش";
   if (order.status === "in_progress") return "ثبت نتیجه";
   if (order.status === "completed") return "مشاهده";

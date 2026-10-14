@@ -64,7 +64,7 @@ export default async function LabResultsPage({ searchParams }) {
           ))}
         </div>
       ) : (
-        <EmptyState icon={FileText} title={status ? "نتیجه‌ای در این وضعیت وجود ندارد" : "نتیجه‌ای ثبت نشده است"} description="نتایج ثبت‌شده سفارش‌ها در این صفحه نمایش داده می‌شوند." />
+        <EmptyState icon={FileText} title={status ? "نتیجه‌ای در این وضعیت وجود ندارد" : "نتیجه‌ای ثبت نشده است"} description="نتایج آزمایش‌های پذیرفته‌شده در این صفحه نمایش داده می‌شوند." />
       )}
       <Pagination pathname="/lab/results" page={result.pagination.page} pageSize={result.pagination.pageSize} totalCount={result.pagination.totalCount} totalPages={result.pagination.totalPages} hasNextPage={result.pagination.hasNextPage} query={{ status }} />
     </div>

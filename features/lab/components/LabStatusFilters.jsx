@@ -2,9 +2,9 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 const FILTERS = [
-  { value: "", label: "همه سفارش‌ها" },
+  { value: "", label: "همه پذیرش‌ها" },
   { value: "pending", label: "جدید" },
-  { value: "received_by_lab", label: "دریافت‌شده" },
+  { value: "received_by_lab", label: "پذیرفته‌شده" },
   { value: "in_progress", label: "در حال انجام" },
   { value: "completed", label: "تکمیل‌شده" },
   { value: "cancelled", label: "لغوشده" },
@@ -12,7 +12,7 @@ const FILTERS = [
 
 export default function LabStatusFilters({ active = "" }) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" aria-label="فیلتر وضعیت سفارش">
+    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" aria-label="فیلتر وضعیت پذیرش">
       {FILTERS.map((filter) => {
         const href = filter.value
           ? `/lab/orders?status=${encodeURIComponent(filter.value)}`

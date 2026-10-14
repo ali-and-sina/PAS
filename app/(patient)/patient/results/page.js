@@ -68,7 +68,7 @@ export default async function PatientResultsPage({ searchParams }) {
                     تاریخ نهایی‌شدن: {formatDate(report.finalized_at ?? report.created_at)}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    شناسه سفارش: {report.order?.id ?? "—"}
+                    شناسه درخواست آزمایش: {report.order?.id ?? "—"}
                   </p>
                 </div>
 
