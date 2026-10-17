@@ -76,8 +76,8 @@ export default async function DoctorNotificationsPage({ searchParams }) {
                   <p className="mt-3 text-xs text-muted-foreground">{formatDate(item.created_at)}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <Link href={getEntityHref(item)} className="text-sm text-primary hover:underline">مشاهده مورد مرتبط</Link>
-                    {!item.is_read ? <form action={markNotificationRead}><input type="hidden" name="id" value={item.id} /><button type="submit" className="text-sm text-muted-foreground hover:text-foreground hover:underline">علامت به‌عنوان خوانده‌شده</button></form> : null}
-                    {item.status !== "reviewed" ? <form action={markNotificationReviewed}><input type="hidden" name="id" value={item.id} /><button type="submit" className="text-sm text-muted-foreground hover:text-foreground hover:underline">علامت به‌عنوان بررسی‌شده</button></form> : null}
+                    {!item.is_read ? <form action={markNotificationRead}><input type="hidden" name="id" value={item.id} /><Button type="submit" variant="ghost" size="sm" className="h-auto px-0 py-0 text-sm text-muted-foreground hover:text-foreground hover:underline">علامت به‌عنوان خوانده‌شده</Button></form> : null}
+                    {item.status !== "reviewed" ? <form action={markNotificationReviewed}><input type="hidden" name="id" value={item.id} /><Button type="submit" variant="ghost" size="sm" className="h-auto px-0 py-0 text-sm text-muted-foreground hover:text-foreground hover:underline">علامت به‌عنوان بررسی‌شده</Button></form> : null}
                   </div>
                 </div>
               </div>

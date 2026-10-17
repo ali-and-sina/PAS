@@ -20,7 +20,7 @@ export default function InterpretationForm({ reportId }) {
       </div>
       <input type="hidden" name="is_visible_to_patient" value="true" />
       {state.message ? <p className={state.ok ? "text-sm text-emerald-600" : "text-sm text-destructive"} role="alert">{state.message}</p> : null}
-      <Button type="submit" disabled={pending}>{pending ? "در حال ثبت..." : "ثبت تفسیر"}</Button>
+      <Button type="submit" disabled={pending} loading={pending}>{pending ? "در حال ثبت..." : "ثبت تفسیر"}</Button>
     </form>
   );
 }

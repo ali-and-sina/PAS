@@ -70,14 +70,14 @@ export default async function GuestResultViewPage({ params }) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">پاس</p>
-            <h1 className="mt-1 text-2xl font-semibold">جواب آزمایش</h1>
+            <h1 className="mt-1 text-2xl font-semibold">نتیجه آزمایش</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               نهایی‌شده در {formatDate(access.report.finalized_at ?? access.report.created_at)}
             </p>
           </div>
           <StatusBadge
             label={access.report.status === "amended" ? "اصلاح‌شده" : "نهایی"}
-            variant={access.report.status === "amended" ? "neutral" : "normal"}
+            variant={access.report.status === "amended" ? "amended" : "normal"}
             icon={CheckCircle2}
           />
         </div>

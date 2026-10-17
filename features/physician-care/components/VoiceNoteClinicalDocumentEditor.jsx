@@ -36,13 +36,16 @@ export default function VoiceNoteClinicalDocumentEditor({ voiceNote }) {
   const [confirmationChecked, setConfirmationChecked] = useState(false);
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
+  const [activeAction, setActiveAction] = useState(null);
   const hasSummaryContent = SUMMARY_FIELDS.some(({ key }) => summaryFields[key]?.trim());
+
 
   function updateSummaryField(key, value) {
     setSummaryFields((current) => ({ ...current, [key]: value }));
   }
 
   function saveTranscriptClick() {
+    setActiveAction("transcript");
     setMessage("");
     startTransition(async () => {
       const result = await savePhysicianTranscript({ voiceNoteId, transcriptText: transcript });
@@ -55,6 +58,7 @@ export default function VoiceNoteClinicalDocumentEditor({ voiceNote }) {
   }
 
   function saveSummaryClick() {
+    setActiveAction("draft");
     setMessage("");
     startTransition(async () => {
       const result = await savePhysicianVisitSummaryDraft({ voiceNoteId, structuredContent: summaryFields });
@@ -72,6 +76,7 @@ export default function VoiceNoteClinicalDocumentEditor({ voiceNote }) {
   }
 
   function confirmSummaryClick() {
+    setActiveAction("confirm");
     setMessage("");
     startTransition(async () => {
       if (!confirmationChecked) {
@@ -119,7 +124,7 @@ export default function VoiceNoteClinicalDocumentEditor({ voiceNote }) {
         />
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs text-muted-foreground">حداکثر ۱۰٬۰۰۰ نویسه</span>
-          <Button type="button" size="sm" variant="outline" onClick={saveTranscriptClick} disabled={pending || !transcript.trim()}>ذخیره متن</Button>
+          <Button type="button" size="sm" variant="outline" onClick={saveTranscriptClick} disabled={pending || !transcript.trim()} loading={pending && activeAction === "transcript"}>ذخیره متن</Button>
         </div>
       </section>
 
@@ -152,13 +157,13 @@ export default function VoiceNoteClinicalDocumentEditor({ voiceNote }) {
           <div className="mt-2 flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">خلاصه ذخیره‌شده تا زمان تأیید صریح، قطعی محسوب نمی‌شود.</span>
-              <Button type="button" size="sm" variant="outline" onClick={saveSummaryClick} disabled={pending || !hasSummaryContent}>ذخیره پیش‌نویس</Button>
+              <Button type="button" size="sm" variant="outline" onClick={saveSummaryClick} disabled={pending || !hasSummaryContent} loading={pending && activeAction === "draft"}>ذخیره پیش‌نویس</Button>
             </div>
             <label className="flex items-start gap-2 text-sm leading-6">
               <input type="checkbox" checked={confirmationChecked} onChange={(event) => setConfirmationChecked(event.target.checked)} className="mt-1" />
               متن خلاصه را مرور کرده‌ام و تأیید می‌کنم که این خلاصه می‌تواند به‌عنوان خلاصه تأییدشده ویزیت ثبت شود.
             </label>
-            <div><Button type="button" onClick={confirmSummaryClick} disabled={pending || !hasSummaryContent || !confirmationChecked}>تأیید نهایی خلاصه</Button></div>
+            <div><Button type="button" onClick={confirmSummaryClick} disabled={pending || !hasSummaryContent || !confirmationChecked} loading={pending && activeAction === "confirm"}>تأیید نهایی خلاصه</Button></div>
           </div>
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">خلاصه تأییدشده است. تغییر آن از این فرم مجاز نیست؛ برای اصلاح، باید گردش‌کار اصلاح/نسخه‌بندی جداگانه تعریف شود.</p>

@@ -59,7 +59,7 @@ export default async function NewLabResultPage({ params }) {
         </div>
       </div>
 
-      <SectionCard title="نتایج آزمایش" description="نتایج ابتدا به‌صورت پیش‌نویس ذخیره می‌شوند و سپس در صورت تکمیل موارد الزامی می‌توانید گزارش را نهایی کنید.">
+      <SectionCard title="نتایج آزمایش" description="نتایج ابتدا به‌صورت پیش‌نویس ذخیره می‌شوند؛ پس از تکمیل موارد الزامی می‌توانید گزارش را نهایی کنید.">
         <ResultEntryForm orderId={order.id} reportId={draftReport?.id || null} tests={tests} defaultValues={draftValues} />
       </SectionCard>
     </div>

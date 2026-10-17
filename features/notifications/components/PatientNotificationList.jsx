@@ -39,6 +39,7 @@ export default function PatientNotificationList({ notifications }) {
             variant="outline"
             size="sm"
             disabled={pending}
+            loading={pending}
             onClick={markAll}
           >
             {pending ? "در حال به‌روزرسانی..." : "خواندن همه"}
@@ -77,12 +78,14 @@ export default function PatientNotificationList({ notifications }) {
                         name="id"
                         value={notification.id}
                       />
-                      <button
+                      <Button
                         type="submit"
-                        className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto px-0 py-0 text-xs text-muted-foreground hover:text-foreground hover:underline"
                       >
                         علامت‌گذاری به‌عنوان خوانده‌شده
-                      </button>
+                      </Button>
                     </form>
                   ) : null}
                 </div>

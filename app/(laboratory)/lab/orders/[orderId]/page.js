@@ -3,8 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CalendarClock, FileText, FlaskConical } from "lucide-react";
 
 import PageHeader from "@/components/shared/PageHeader";
+import DisclosureSection from "@/components/shared/DisclosureSection";
 import OrderDetailCard from "@/features/lab-orders/components/OrderDetailCard";
 import OrderStatusBadge from "@/features/lab-orders/components/OrderStatusBadge";
+import LabResultStatus from "@/features/lab-results/components/LabResultStatus";
 import LabWorkflowStrip from "@/features/lab/components/LabWorkflowStrip";
 import { getLabOrder } from "@/features/lab/queries";
 import { getSessionUser } from "@/lib/auth/server";
@@ -70,7 +72,12 @@ export default async function LabOrderDetailPage({ params }) {
         {canCancel ? <StatusAction orderId={order.id} status="cancelled" label="لغو پذیرش" variant="outline" /> : null}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <DisclosureSection
+        title="جزئیات پذیرش و سوابق"
+        description="آزمایش‌های درخواست‌شده، یادداشت بالینی، زمان‌بندی و گزارش‌های این پذیرش"
+        meta={`${order.items.length} آزمایش`}
+      >
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <OrderDetailCard order={order} />
 
         <div className="space-y-4">
@@ -98,8 +105,7 @@ export default async function LabOrderDetailPage({ params }) {
                 <div className="mt-4 space-y-2">
                   {order.reports.map((report) => (
                     <Link key={report.id} href={`/lab/results/${report.id}`} className="flex items-center justify-between rounded-lg border p-3 text-sm hover:bg-accent/40">
-                      <span>{report.status === "draft" ? "پیش‌نویس" : report.status === "amended" ? "اصلاح‌شده" : "نهایی"}</span>
-                      <OrderStatusBadge status={report.status} />
+                      <LabResultStatus status={report.status} />
                     </Link>
                   ))}
                 </div>
@@ -109,7 +115,8 @@ export default async function LabOrderDetailPage({ params }) {
             </CardContent>
           </Card>
         </div>
-      </div>
+        </div>
+      </DisclosureSection>
     </div>
   );
 }

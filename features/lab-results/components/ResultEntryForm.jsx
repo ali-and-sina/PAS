@@ -42,7 +42,7 @@ export default function ResultEntryForm({ orderId, reportId = null, tests = [], 
               {completedRequiredCount} از {requiredCount} آزمایش الزامی تکمیل شده است.
             </p>
           </div>
-          <div className="text-xs font-medium text-muted-foreground">ذخیره به‌صورت پیش‌نویس در هر مرحله ممکن است.</div>
+          <div className="text-xs font-medium text-muted-foreground">می‌توانید نتایج را در هر مرحله به‌صورت پیش‌نویس ذخیره کنید.</div>
         </div>
       </div>
 
@@ -83,7 +83,7 @@ export default function ResultEntryForm({ orderId, reportId = null, tests = [], 
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button type="submit" name="finalize" value="false" variant="outline" disabled={pending}>
             <Save className="size-4" aria-hidden="true" />
-            {pending ? "در حال ذخیره..." : "ذخیره پیش‌نویس"}
+            {pending ? "در حال ذخیره..." : "ذخیره پیش‌نویس نتیجه"}
           </Button>
           <Button
             type="submit"

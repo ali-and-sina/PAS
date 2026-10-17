@@ -61,7 +61,7 @@ export default async function PatientResultsPage({ searchParams }) {
                     <h2 className="font-semibold">گزارش آزمایش</h2>
                     <StatusBadge
                       label={report.status === "amended" ? "اصلاح‌شده" : "نهایی"}
-                      variant={report.status === "amended" ? "neutral" : "normal"}
+                      variant={report.status === "amended" ? "amended" : "normal"}
                     />
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
@@ -73,7 +73,7 @@ export default async function PatientResultsPage({ searchParams }) {
                 </div>
 
                 <span className="text-sm font-medium text-primary transition group-hover:translate-x-0.5">
-                  مشاهده جواب ←
+                  مشاهده نتیجه ←
                 </span>
               </div>
             </Link>

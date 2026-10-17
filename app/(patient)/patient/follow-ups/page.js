@@ -19,7 +19,7 @@ const STATUS = {
   pending: { label: "انجام نشده", icon: Clock3, variant: "neutral" },
   completed: { label: "انجام شد", icon: CheckCircle2, variant: "normal" },
   overdue: { label: "عقب‌افتاده", icon: CalendarClock, variant: "critical" },
-  cancelled: { label: "لغو شده", icon: XCircle, variant: "neutral" },
+  cancelled: { label: "لغوشده", icon: XCircle, variant: "neutral" },
 };
 
 export default async function PatientFollowUpsPage({ searchParams }) {

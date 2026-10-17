@@ -54,7 +54,7 @@ export default function VoiceRecordingConsentCard({ initialGranted = false, gran
           <span className={`rounded-full px-3 py-1 text-xs ${granted ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
             {granted ? `رضایت فعال${formatDate(consentDate) ? ` · ${formatDate(consentDate)}` : ""}` : "رضایت ثبت نشده یا لغو شده"}
           </span>
-          <Button type="button" variant={granted ? "outline" : "default"} onClick={changeConsent} disabled={pending}>
+          <Button type="button" variant={granted ? "outline" : "default"} onClick={changeConsent} disabled={pending} loading={pending}>
             {pending ? "در حال ثبت..." : granted ? "لغو رضایت" : "ثبت رضایت"}
           </Button>
         </div>

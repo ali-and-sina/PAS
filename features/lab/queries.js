@@ -123,11 +123,6 @@ async function enrichOrders(supabase, orders) {
     ...(panelTests || []).map((row) => [row.id, row]),
   ]);
 
-  const panelRequiredByTest = new Map();
-  for (const item of panelItemsResult.data || []) {
-    panelRequiredByTest.set(item.test_definition_id, item.is_required !== false);
-  }
-
   const itemsByOrder = new Map();
 
   for (const item of items || []) {
@@ -219,10 +214,27 @@ async function getLabOrderTestsForDashboard(supabase, orderIds) {
   }
 
   for (const [orderId, testsForOrder] of result.entries()) {
-    result.set(
-      orderId,
-      [...new Map(testsForOrder.map((test) => [test.id, test])).values()],
-    );
+    const merged = new Map();
+    for (const test of testsForOrder) {
+      const existing = merged.get(test.id);
+      if (!existing) {
+        merged.set(test.id, { ...test, is_required: test.is_required !== false });
+        continue;
+      }
+
+      merged.set(test.id, {
+        ...existing,
+        ...test,
+        is_required: existing.is_required === true || test.is_required !== false,
+        display_order:
+          existing.display_order === undefined
+            ? test.display_order
+            : test.display_order === undefined
+              ? existing.display_order
+              : Math.min(existing.display_order, test.display_order),
+      });
+    }
+    result.set(orderId, [...merged.values()]);
   }
 
   return result;
@@ -248,24 +260,20 @@ export async function getLabDashboard() {
       supabase
         .from("lab_orders")
         .select("id", { count: "exact", head: true })
-        .eq("laboratory_id", user.id)
-        .eq("status", "pending"),
+          .eq("status", "pending"),
       supabase
         .from("lab_orders")
         .select("id", { count: "exact", head: true })
-        .eq("laboratory_id", user.id)
-        .eq("status", "in_progress"),
+          .eq("status", "in_progress"),
       supabase
         .from("lab_orders")
         .select(ORDER_SELECT)
-        .eq("laboratory_id", user.id)
-        .order("ordered_at", { ascending: false })
+          .order("ordered_at", { ascending: false })
         .limit(8),
       supabase
         .from("diagnostic_reports")
         .select("id, lab_order_id, status")
-        .eq("laboratory_id", user.id)
-        .eq("status", "draft"),
+          .eq("status", "draft"),
     ]);
 
   if (pendingResult.error) throw pendingResult.error;
@@ -284,7 +292,6 @@ export async function getLabDashboard() {
       .from("lab_orders")
       .select("id, status")
       .in("id", draftOrderIds)
-      .eq("laboratory_id", user.id);
 
     if (draftOrdersError) throw draftOrdersError;
 
@@ -361,7 +368,6 @@ export async function getLabOrders(status = null, { page: requestedPage = 1, pag
     let query = supabase
       .from("lab_orders")
       .select(ORDER_SELECT, { count: "exact" })
-      .eq("laboratory_id", user.id)
       .order("ordered_at", { ascending: false })
       .order("id", { ascending: true });
     if (status) query = query.eq("status", status);
@@ -394,7 +400,6 @@ export async function getLabOrder(orderId) {
     .from("lab_orders")
     .select(ORDER_SELECT)
     .eq("id", orderId)
-    .eq("laboratory_id", user.id)
     .maybeSingle();
 
   if (error) throw error;
@@ -406,7 +411,6 @@ export async function getLabOrder(orderId) {
     .from("diagnostic_reports")
     .select("id, status, entered_by, finalized_by, finalized_at, created_at, updated_at")
     .eq("lab_order_id", orderId)
-    .eq("laboratory_id", user.id)
     .order("created_at", { ascending: false });
 
   if (reportsError) throw reportsError;
@@ -425,9 +429,8 @@ export async function getLabOrderTests(orderId) {
 
   const { data: order, error: orderError } = await supabase
     .from("lab_orders")
-    .select("id, patient_id")
+    .select("id, patient_id, laboratory_id")
     .eq("id", orderId)
-    .eq("laboratory_id", user.id)
     .maybeSingle();
 
   if (orderError) throw orderError;
@@ -503,11 +506,31 @@ export async function getLabOrderTests(orderId) {
     }
   }
 
-  const uniqueTests = [...new Map(result.map((test) => [test.id, test])).values()];
+  const mergedTests = new Map();
+  for (const test of result) {
+    const existing = mergedTests.get(test.id);
+    if (!existing) {
+      mergedTests.set(test.id, { ...test, is_required: test.is_required !== false });
+      continue;
+    }
+
+    mergedTests.set(test.id, {
+      ...existing,
+      ...test,
+      is_required: existing.is_required === true || test.is_required !== false,
+      display_order:
+        existing.display_order === undefined
+          ? test.display_order
+          : test.display_order === undefined
+            ? existing.display_order
+            : Math.min(existing.display_order, test.display_order),
+    });
+  }
+  const uniqueTests = [...mergedTests.values()];
 
   const ranges = await resolveReferenceRanges({
     admin: createAdminClient(),
-    laboratoryId: user.id,
+    laboratoryId: order.laboratory_id,
     patientId: order.patient_id,
     testDefinitionIds: uniqueTests.map((test) => test.id),
   });
@@ -535,7 +558,7 @@ export async function getLabReportAttachments(reportId, { auditAccess = true } =
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("attachments")
-    .select("id, diagnostic_report_id, file_name, file_type, file_size_bytes, storage_path, created_at")
+    .select("id, diagnostic_report_id, uploaded_by, file_name, file_type, file_size_bytes, storage_path, created_at")
     .eq("diagnostic_report_id", reportId)
     .order("created_at", { ascending: false });
 
@@ -546,19 +569,26 @@ export async function getLabReportAttachments(reportId, { auditAccess = true } =
   const result = [];
 
   for (const attachment of data) {
+    // The row is already scoped by RLS for this report. Validate that its
+    // object path belongs to the recorded uploader and this exact report;
+    // branch members must be able to read one another's legitimate uploads.
+    if (
+      attachment.file_type !== "application/pdf" ||
+      !attachment.uploaded_by ||
+      !attachment.storage_path?.startsWith(`${attachment.uploaded_by}/${reportId}/`) ||
+      !Number.isFinite(Number(attachment.file_size_bytes)) ||
+      Number(attachment.file_size_bytes) < 1 ||
+      Number(attachment.file_size_bytes) > 10 * 1024 * 1024
+    ) {
+      continue;
+    }
+
     const { data: signed, error: signedError } = await admin.storage
       .from("pab-lab-result-attachments")
       .createSignedUrl(attachment.storage_path, 300);
 
     if (signedError) {
       console.error("[getLabReportAttachments:signedUrl]", signedError);
-      continue;
-    }
-
-    if (
-      attachment.file_type !== "application/pdf" ||
-      !attachment.storage_path.startsWith(`${user.id}/${reportId}/`)
-    ) {
       continue;
     }
 
@@ -601,7 +631,6 @@ export async function getLabReport(
     .from("diagnostic_reports")
     .select("id, lab_order_id, laboratory_id, status, entered_by, finalized_by, finalized_at, created_at, updated_at")
     .eq("id", reportId)
-    .eq("laboratory_id", user.id)
     .maybeSingle();
 
   if (error) throw error;
@@ -676,7 +705,7 @@ export async function getLabReport(
         reference_source:
           observation.reference_source ||
           (reference
-            ? reference.laboratory_id === user.id
+            ? reference.laboratory_id === order.laboratory_id
               ? "laboratory"
               : "generic"
             : null),
@@ -685,7 +714,7 @@ export async function getLabReport(
   };
 }
 
-async function getReadyToFinalizeReportsPage(supabase, laboratoryId, requestedPage, pageSize) {
+async function getReadyToFinalizeReportsPage(supabase, requestedPage, pageSize) {
   const pageSizeSafe = normalizePageSize(pageSize);
   const requested = normalizePage(requestedPage);
   const targetCount = requested * pageSizeSafe + 1;
@@ -700,7 +729,6 @@ async function getReadyToFinalizeReportsPage(supabase, laboratoryId, requestedPa
     const { data: candidates, error: candidateError } = await supabase
       .from("diagnostic_reports")
       .select("id, lab_order_id, status, finalized_at, created_at, updated_at")
-      .eq("laboratory_id", laboratoryId)
       .eq("status", "draft")
       .order("created_at", { ascending: false })
       .order("id", { ascending: true })
@@ -719,8 +747,7 @@ async function getReadyToFinalizeReportsPage(supabase, laboratoryId, requestedPa
     const { data: orders, error: ordersError } = await supabase
       .from("lab_orders")
       .select("id, patient_id, doctor_id, status, ordered_at")
-      .in("id", orderIds)
-      .eq("laboratory_id", laboratoryId);
+      .in("id", orderIds);
     if (ordersError) throw ordersError;
 
     const orderMap = new Map((orders || []).map((order) => [order.id, order]));
@@ -809,7 +836,7 @@ export async function getLabReports(status = null, { page: requestedPage = 1, pa
 
   const supabase = await createClient();
   if (status === "ready_to_finalize") {
-    return getReadyToFinalizeReportsPage(supabase, user.id, requestedPage, pageSize);
+    return getReadyToFinalizeReportsPage(supabase, requestedPage, pageSize);
   }
 
   let page = normalizePage(requestedPage);
@@ -817,7 +844,6 @@ export async function getLabReports(status = null, { page: requestedPage = 1, pa
     let query = supabase
       .from("diagnostic_reports")
       .select("id, lab_order_id, status, finalized_at, created_at, updated_at", { count: "exact" })
-      .eq("laboratory_id", user.id)
       .order("created_at", { ascending: false })
       .order("id", { ascending: true });
     if (status) query = query.eq("status", status);
@@ -844,7 +870,6 @@ export async function getLabReports(status = null, { page: requestedPage = 1, pa
     .from("lab_orders")
     .select("id, patient_id, doctor_id, status, ordered_at")
     .in("id", orderIds)
-    .eq("laboratory_id", user.id);
   if (ordersError) throw ordersError;
 
   const profiles = await mapProfiles((orders || []).flatMap((order) => [order.patient_id, order.doctor_id]));

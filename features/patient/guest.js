@@ -123,17 +123,13 @@ export async function getGuestResultByToken(token) {
     throw new Error("Unable to read guest result observations");
   }
 
-  const { data: touchedAccess, error: touchError } = await admin
-    .from("guest_result_accesses")
-    .update({
-      access_count: Number(access.access_count || 0) + 1,
-      last_accessed_at: new Date().toISOString(),
-    })
-    .eq("id", access.id)
-    .is("revoked_at", null)
-    .gt("expires_at", new Date().toISOString())
-    .select("id, access_count, last_accessed_at")
-    .maybeSingle();
+  // Use one atomic database UPDATE so concurrent views cannot lose counter
+  // increments. The RPC also rechecks expiry, revocation, and report status.
+  const { data: touchedRows, error: touchError } = await admin.rpc(
+    "touch_guest_result_access",
+    { p_access_id: access.id },
+  );
+  const touchedAccess = Array.isArray(touchedRows) ? touchedRows[0] : null;
 
   if (touchError || !touchedAccess) {
     return null;

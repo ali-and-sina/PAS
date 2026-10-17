@@ -36,7 +36,7 @@ export default function PhysicianNotificationList({ notifications }) {
     <div className="space-y-4">
       {unreadCount > 0 ? (
         <div className="flex justify-end">
-          <Button type="button" variant="outline" size="sm" onClick={markAll} disabled={pending}>
+          <Button type="button" variant="outline" size="sm" onClick={markAll} disabled={pending} loading={pending}>
             {pending ? "در حال به‌روزرسانی..." : "خواندن همه"}
           </Button>
         </div>
@@ -70,7 +70,7 @@ export default function PhysicianNotificationList({ notifications }) {
                     {!notification.is_read ? (
                       <form action={markNotificationRead}>
                         <input type="hidden" name="id" value={notification.id} />
-                        <button type="submit" className="text-xs text-muted-foreground hover:text-foreground hover:underline">علامت‌گذاری به‌عنوان خوانده‌شده</button>
+                        <Button type="submit" variant="ghost" size="sm" className="h-auto px-0 py-0 text-xs text-muted-foreground hover:text-foreground hover:underline">علامت‌گذاری به‌عنوان خوانده‌شده</Button>
                       </form>
                     ) : null}
                   </div>

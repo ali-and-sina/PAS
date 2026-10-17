@@ -200,7 +200,7 @@ export async function updateOwnProfile(input = {}) {
     revalidatePath("/patient/health-record");
 
     await recordPatientAudit({
-      actorId: context.user_id,
+      actorId: context.patient_id,
       action: "profile_updated",
       entityType: "patient_profile",
       entityId: context.patient_id,

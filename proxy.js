@@ -1,5 +1,6 @@
 import { updateSession } from "@/lib/supabase/proxy";
 
+/** Refresh the Supabase session before server-rendered routes read it. */
 export async function proxy(request) {
   const { response } = await updateSession(request);
   return response;
@@ -7,6 +8,6 @@ export async function proxy(request) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
   ],
 };

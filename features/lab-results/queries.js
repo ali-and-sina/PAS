@@ -271,7 +271,6 @@ export async function resolveTestDefinition(orderId, key) {
     .from("lab_orders")
     .select("id, laboratory_id")
     .eq("id", orderId)
-    .eq("laboratory_id", user.id)
     .maybeSingle();
 
   if (orderError) throw orderError;

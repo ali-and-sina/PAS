@@ -86,7 +86,7 @@ export default function PatientProfileForm({ initialProfile, initialPatientProfi
             <input name="emergency_contact_phone" type="tel" maxLength={30} value={form.emergency_contact_phone} onChange={(e) => setField("emergency_contact_phone", e.target.value)} placeholder="+994..." className="h-10 rounded-md border bg-background px-3" />
           </label>
           <div className="space-y-2 md:col-span-2">
-            <Button type="submit" disabled={pending}>{pending ? "در حال ذخیره..." : "ذخیره مشخصات"}</Button>
+            <Button type="submit" disabled={pending} loading={pending} aria-busy={pending}>{pending ? "در حال ذخیره..." : "ذخیره مشخصات"}</Button>
             {message ? <p role="status" aria-live="polite" className="text-sm text-muted-foreground">{message}</p> : null}
           </div>
         </form>

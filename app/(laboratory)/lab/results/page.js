@@ -6,6 +6,7 @@ import LabResultStatus from "@/features/lab-results/components/LabResultStatus";
 import { getLabReports } from "@/features/lab/queries";
 import { Button } from "@/components/ui/button";
 import Pagination from "@/components/shared/Pagination";
+import StatusFilterLinks from "@/features/lab/components/StatusFilterLinks";
 
 function formatDate(value) {
   return value ? new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";
@@ -13,7 +14,7 @@ function formatDate(value) {
 
 const FILTERS = [
   { value: "", label: "همه" },
-  { value: "draft", label: "پیش‌نویس" },
+  { value: "draft", label: "پیش‌نویس نتیجه" },
   { value: "ready_to_finalize", label: "آماده نهایی‌سازی" },
   { value: "final", label: "نهایی" },
   { value: "amended", label: "اصلاح‌شده" },
@@ -31,19 +32,14 @@ export default async function LabResultsPage({ searchParams }) {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="نتایج ثبت‌شده" description="پیش‌نویس‌ها، نتایج آماده نهایی‌سازی، نهایی و اصلاح‌شده آزمایشگاه را بررسی کنید." />
+      <PageHeader title="نتایج ثبت‌شده" description="پیش‌نویس‌ها، نتایج آماده نهایی‌سازی و نتایج نهایی یا اصلاح‌شده آزمایشگاه را بررسی کنید." />
 
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {FILTERS.map((filter) => (
-          <Link
-            key={filter.value || "all"}
-            href={filter.value ? `/lab/results?status=${filter.value}` : "/lab/results"}
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium ${status === filter.value ? "border-primary bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-accent"}`}
-          >
-            {filter.label}
-          </Link>
-        ))}
-      </div>
+      <StatusFilterLinks
+        filters={FILTERS}
+        active={status}
+        pathname="/lab/results"
+        ariaLabel="فیلتر وضعیت نتایج آزمایش"
+      />
 
       {reports.length ? (
         <div className="space-y-3">

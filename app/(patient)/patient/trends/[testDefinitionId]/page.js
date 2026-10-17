@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, BarChart3, LineChart } from "lucide-react";
 
 import PageHeader from "@/components/shared/PageHeader";
+import DisclosureSection from "@/components/shared/DisclosureSection";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -152,11 +153,7 @@ export default async function PatientTrendDetailPage({ params }) {
             </Card>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>سوابق نتایج</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <DisclosureSection title="سوابق نتایج" description="جدول کامل مقادیر قبلی و محدوده‌های مرجع" meta={`${history.length} نتیجه`}>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-right text-sm">
                   <thead>
@@ -194,8 +191,7 @@ export default async function PatientTrendDetailPage({ params }) {
                   </tbody>
                 </table>
               </div>
-            </CardContent>
-          </Card>
+          </DisclosureSection>
         </>
       )}
     </div>

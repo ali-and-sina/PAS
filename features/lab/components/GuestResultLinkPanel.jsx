@@ -94,18 +94,18 @@ export default function GuestResultLinkPanel({ reportId, patientPhone = null }) 
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Link2 className="size-5 text-primary" aria-hidden="true" />
-          لینک مشاهده جواب برای بیمار
+          لینک مشاهده نتیجه برای بیمار
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm leading-6 text-muted-foreground">
-          پس از نهایی شدن نتیجه، یک لینک امن و موقت برای مشاهده همین جواب بسازید.
+          پس از نهایی‌شدن نتیجه، یک لینک امن و موقت برای مشاهده آن بسازید.
         </p>
 
         {!link ? (
-          <Button type="button" onClick={createLink} disabled={isPending}>
+          <Button type="button" onClick={createLink} disabled={isPending} loading={isPending}>
             <Link2 className="size-4" aria-hidden="true" />
-            {isPending ? "در حال ساخت لینک…" : "ساخت لینک مشاهده جواب"}
+            {isPending ? "در حال ساخت لینک…" : "ساخت لینک مشاهده نتیجه"}
           </Button>
         ) : (
           <>

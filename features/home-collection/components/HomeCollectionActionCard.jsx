@@ -37,6 +37,7 @@ export default function HomeCollectionActionCard({ request, collectorProfileId }
   const [qr, setQr] = useState(null);
   const [timezoneOffset, setTimezoneOffset] = useState(0);
   const [busy, startTransition] = useTransition();
+  const [busyAction, setBusyAction] = useState(null);
   const requestSequenceRef = useRef(0);
   const mountedRef = useRef(false);
   const details = request.dispatch || {};
@@ -51,14 +52,17 @@ export default function HomeCollectionActionCard({ request, collectorProfileId }
     };
   }, []);
 
+
   useEffect(() => {
     requestSequenceRef.current += 1;
     setAddress(null);
     setQr(null);
     setAddressMessage("");
+    setBusyAction(null);
   }, [request.id]);
 
   async function showAddress() {
+    setBusyAction("address");
     const requestId = ++requestSequenceRef.current;
     setAddressMessage("");
     setAddress(null);
@@ -80,6 +84,7 @@ export default function HomeCollectionActionCard({ request, collectorProfileId }
   }
 
   async function makeQr() {
+    setBusyAction("qr");
     const requestId = ++requestSequenceRef.current;
     setAddressMessage("");
     setQr(null);
@@ -115,8 +120,8 @@ export default function HomeCollectionActionCard({ request, collectorProfileId }
     {request.status === "requested" && <div className="grid gap-3 sm:grid-cols-2">{details.status === "accepted" && details.lab_order_id ? <StatusForm requestId={request.id} nextStatus="approved" formAction={formAction} pending={pending} timezoneOffset={timezoneOffset}><Button type="submit" size="sm" disabled={pending}><CheckCircle2 aria-hidden="true" />تأیید درخواست</Button></StatusForm> : <p className="rounded-lg bg-muted/50 p-3 text-xs leading-5 text-muted-foreground">برای تأیید نمونه‌گیری، ابتدا درخواست آزمایش را در صف درخواست‌های ارجاع‌شده بپذیرید.</p>}<StatusForm requestId={request.id} nextStatus="rejected" formAction={formAction} pending={pending} timezoneOffset={timezoneOffset}><Button type="submit" variant="outline" size="sm" disabled={pending}>رد درخواست نمونه‌گیری</Button></StatusForm></div>}
     {request.status === "approved" && <StatusForm requestId={request.id} nextStatus="scheduled" formAction={formAction} pending={pending} collectorProfileId={collectorProfileId} timezoneOffset={timezoneOffset} showSchedule><Button type="submit" size="sm" disabled={pending || !collectorProfileId}><CalendarClock aria-hidden="true" />ثبت زمان مراجعه</Button></StatusForm>}
     {request.status === "scheduled" && <StatusForm requestId={request.id} nextStatus="dispatched" formAction={formAction} pending={pending} timezoneOffset={timezoneOffset}><Button type="submit" size="sm" disabled={pending}><Truck aria-hidden="true" />ثبت اعزام نمونه‌گیر</Button></StatusForm>}
-    {canViewAddress && <Button type="button" variant="outline" size="sm" onClick={showAddress} disabled={busy}><MapPin aria-hidden="true" />{busy ? "در حال دریافت…" : "نمایش نشانی امن"}</Button>}
-    {request.status === "dispatched" && <Button type="button" variant="outline" size="sm" onClick={makeQr} disabled={busy}><QrCode aria-hidden="true" />ساخت کد دریافت نمونه</Button>}
+    {canViewAddress && <Button type="button" variant="outline" size="sm" onClick={showAddress} disabled={busy} loading={busy && busyAction === "address"}><MapPin aria-hidden="true" />{busy ? "در حال دریافت…" : "نمایش نشانی امن"}</Button>}
+    {request.status === "dispatched" && <Button type="button" variant="outline" size="sm" onClick={makeQr} disabled={busy} loading={busy && busyAction === "qr"}><QrCode aria-hidden="true" />ساخت کد دریافت نمونه</Button>}
     {address && <div className="space-y-2 rounded-xl border border-primary/20 bg-muted/20 p-4"><div className="flex items-center justify-between gap-2"><p className="font-medium">نشانی خصوصی نمونه‌گیری</p><button type="button" className="text-xs text-muted-foreground underline" onClick={hideAddress}>پنهان‌کردن</button></div><p className="text-sm">{address.city}، {address.address}{address.address_line2 ? `، ${address.address_line2}` : ""}</p><p className="text-sm">شماره تماس: <span dir="ltr">{address.contact_phone}</span></p>{address.postal_code && <p className="text-sm">کد پستی: <span dir="ltr">{address.postal_code}</span></p>}{address.access_instructions && <p className="text-sm leading-6">راهنمای دسترسی: {address.access_instructions}</p>}{address.preferred_window && <p className="text-sm">زمان ترجیحی: {address.preferred_window}</p>}</div>}
     {qr && <div className="grid gap-3 rounded-xl border p-4 sm:grid-cols-[auto_1fr] sm:items-center"><QRCodeSvg value={qr.url} title="کد دریافت نمونه در منزل" /><div><p className="font-medium">کد دریافت نمونه</p><p className="mt-1 text-sm text-muted-foreground">اعتبار تا {formatDate(qr.expiresAt)}</p><Input className="mt-2 text-xs" value={qr.url} readOnly dir="ltr" aria-label="نشانی کد دریافت نمونه" /></div></div>}
     {(state.message || addressMessage) && <p role={state.ok ? "status" : "alert"} className={`text-sm leading-6 ${state.ok ? "text-status-normal" : "text-destructive"}`}>{state.message || addressMessage}</p>}

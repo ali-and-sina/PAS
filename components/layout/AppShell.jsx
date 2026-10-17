@@ -20,10 +20,10 @@ export default function AppShell({ user, children }) {
     <SessionProvider user={user}>
       <div className="flex min-h-screen">
         <Sidebar />
-        <div className="flex min-h-screen flex-1 flex-col">
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <Header mobileOpen={mobileOpen} onMobileOpenChange={setMobileOpen} />
-          <main id="main-content" className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-6xl">{children}</div>
+          <main id="main-content" className="min-w-0 flex-1 px-3 py-5 sm:px-6 sm:py-6 lg:px-8">
+            <div className="mx-auto w-full min-w-0 max-w-6xl">{children}</div>
           </main>
         </div>
       </div>

@@ -29,6 +29,7 @@ export default function VisitManager({ patientId, visits = [] }) {
   const [visitDate, setVisitDate] = useState("");
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
+  const [activeAction, setActiveAction] = useState(null);
 
   function createVisit(event) {
     event.preventDefault();
@@ -42,6 +43,7 @@ export default function VisitManager({ patientId, visits = [] }) {
       setMessage("تاریخ و زمان ویزیت معتبر نیست.");
       return;
     }
+    setActiveAction("create");
     startTransition(async () => {
       const result = await createPhysicianVisit({
         patient_id: patientId,
@@ -58,6 +60,7 @@ export default function VisitManager({ patientId, visits = [] }) {
 
   function changeStatus(visitId, status) {
     setMessage("");
+    setActiveAction(`${visitId}:${status}`);
     startTransition(async () => {
       const result = await updatePhysicianVisitStatus({ id: visitId, status });
       if (!result?.ok) {
@@ -88,7 +91,7 @@ export default function VisitManager({ patientId, visits = [] }) {
               className="h-10 min-w-0 flex-1 rounded-md border bg-background px-3 text-sm"
               disabled={pending}
             />
-            <Button type="submit" size="sm" disabled={pending || !visitDate}>
+            <Button type="submit" size="sm" disabled={pending || !visitDate} loading={pending && activeAction === "create"}>
               <CalendarClock className="size-4" aria-hidden="true" />
               ثبت ویزیت
             </Button>
@@ -112,13 +115,13 @@ export default function VisitManager({ patientId, visits = [] }) {
                 <p className="mt-1 text-xs text-muted-foreground">{formatDate(visit.visit_date || visit.created_at)}</p>
                 {visit.status === "scheduled" ? (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => changeStatus(visit.id, "in_progress")}>شروع ویزیت</Button>
-                    <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => changeStatus(visit.id, "cancelled")}>لغو ویزیت</Button>
+                    <Button type="button" size="sm" variant="outline" disabled={pending} loading={pending && activeAction === `${visit.id}:in_progress`} onClick={() => changeStatus(visit.id, "in_progress")}>شروع ویزیت</Button>
+                    <Button type="button" size="sm" variant="ghost" disabled={pending} loading={pending && activeAction === `${visit.id}:cancelled`} onClick={() => changeStatus(visit.id, "cancelled")}>لغو ویزیت</Button>
                   </div>
                 ) : null}
                 {visit.status === "in_progress" ? (
                   <div className="mt-3">
-                    <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => changeStatus(visit.id, "completed")}>
+                    <Button type="button" size="sm" variant="outline" disabled={pending} loading={pending && activeAction === `${visit.id}:completed`} onClick={() => changeStatus(visit.id, "completed")}>
                       <CheckCircle2 className="size-4" aria-hidden="true" /> تکمیل ویزیت
                     </Button>
                   </div>

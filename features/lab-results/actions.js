@@ -8,11 +8,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/auth/server";
 import { getLabOrderTests, getLabReport } from "@/features/lab/queries";
 import { getTestDisplayName } from "@/lib/medical/test-name";
-import {
-  buildReferenceSnapshot,
-  calculateNumericFlag,
-  resolveReferenceRanges,
-} from "@/features/lab-results/ranges";
 
 const ORDER_SELECT =
   "id, patient_id, doctor_id, laboratory_id, status, clinical_note, ordered_at, received_at, completed_at, cancelled_at";
@@ -107,6 +102,13 @@ function parseObservationValue(test, rawValue) {
   }
 
   if (test.value_type === "text") {
+    if (value.length > 1000) {
+      return {
+        ok: false,
+        message: `نتیجه متنی «${getTestDisplayName(test)}» نباید بیش از ۱۰۰۰ نویسه باشد.`,
+      };
+    }
+
     return {
       ok: true,
       value_numeric: null,
@@ -121,204 +123,91 @@ function parseObservationValue(test, rawValue) {
   };
 }
 
-function sameObservationValue(observation, parsed) {
-  return (
-    (observation.value_numeric ?? null) ===
-      (parsed.value_numeric ?? null) &&
-    (observation.value_text ?? null) ===
-      (parsed.value_text ?? null) &&
-    (observation.value_boolean ?? null) ===
-      (parsed.value_boolean ?? null)
-  );
-}
-
-async function ensureDraftReport(supabase, orderId, laboratoryId) {
-  const { data: drafts, error: draftError } = await supabase
-    .from("diagnostic_reports")
-    .select("id, status")
-    .eq("lab_order_id", orderId)
-    .eq("laboratory_id", laboratoryId)
-    .eq("status", "draft")
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  if (draftError) throw draftError;
-
-  if (drafts?.[0]) return drafts[0];
-
-  const { data: report, error: reportError } = await supabase
-    .from("diagnostic_reports")
-    .insert({
-      lab_order_id: orderId,
-      laboratory_id: laboratoryId,
-      status: "draft",
-      entered_by: laboratoryId,
-    })
-    .select("id, status")
-    .single();
-
-  if (!reportError) return report;
-
-  if (reportError.code === "23505") {
-    const { data: retryReport, error: retryError } = await supabase
-      .from("diagnostic_reports")
-      .select("id, status")
-      .eq("lab_order_id", orderId)
-      .eq("laboratory_id", laboratoryId)
-      .eq("status", "draft")
-      .maybeSingle();
-
-    if (retryError) throw retryError;
-    if (retryReport) return retryReport;
-  }
-
-  throw reportError;
-}
-
-async function savePreliminaryObservations({
-  supabase,
-  admin,
-  reportId,
-  patientId,
-  tests,
-  formData,
-  laboratoryId,
-}) {
-  const { data: existing, error: existingError } = await supabase
-    .from("observations")
-    .select(
-      "id, test_definition_id, value_numeric, value_text, value_boolean, status, unit, reference_range_template_id, reference_min, reference_max, reference_text, reference_source, flag",
-    )
-    .eq("diagnostic_report_id", reportId)
-    .in("status", ["preliminary", "final", "corrected", "superseded"])
-    .order("created_at", { ascending: true });
-
-  if (existingError) throw existingError;
-
-  const currentByTest = new Map();
-
-  for (const observation of existing || []) {
-    if (observation.status === "superseded") continue;
-    currentByTest.set(observation.test_definition_id, observation);
-  }
-
-  const references = await resolveReferenceRanges({
-    admin,
-    laboratoryId,
-    patientId,
-    testDefinitionIds: tests.map((test) => test.id),
-  });
+function prepareObservationRows(tests, formData) {
+  const rows = [];
 
   for (const test of tests) {
     const rawValue = formData.get(`value_${test.id}`);
     const hasValue = String(rawValue ?? "").trim() !== "";
-    const current = currentByTest.get(test.id) || null;
 
-    if (!hasValue && test.is_required === false) {
-      if (current?.status === "preliminary") {
-        const { error: supersedeError } = await supabase
-          .from("observations")
-          .update({ status: "superseded" })
-          .eq("id", current.id)
-          .eq("status", "preliminary");
-
-        if (supersedeError) throw supersedeError;
+    if (!hasValue) {
+      if (test.is_required !== false) {
+        return {
+          ok: false,
+          message: `نتیجه «${getTestDisplayName(test)}» الزامی است.`,
+        };
       }
 
+      rows.push({
+        test_definition_id: test.id,
+        has_value: false,
+        value_numeric: null,
+        value_text: null,
+        value_boolean: null,
+      });
       continue;
     }
 
     const parsed = parseObservationValue(test, rawValue);
-
     if (!parsed.ok) return parsed;
 
-    const reference = buildReferenceSnapshot(
-      test,
-      references.get(test.id) || null,
-    );
-
-    if (reference.ok === false) return reference;
-
-    if (current && sameObservationValue(current, parsed)) {
-      if (current.status !== "preliminary") {
-        return {
-          ok: false,
-          message:
-            "این گزارش دیگر پیش‌نویس قابل ویرایش نیست و باید از مسیر اصلاح نتیجه ادامه داده شود.",
-        };
-      }
-
-      continue;
-    }
-
-    if (current) {
-      if (current.status !== "preliminary") {
-        return {
-          ok: false,
-          message:
-            "نتیجهٔ فعلی این آزمایش قابل ویرایش مستقیم نیست؛ از مسیر اصلاح نتیجه استفاده کنید.",
-        };
-      }
-
-      const { error: supersedeError } = await supabase
-        .from("observations")
-        .update({ status: "superseded" })
-        .eq("id", current.id)
-        .eq("status", "preliminary");
-
-      if (supersedeError) throw supersedeError;
-    }
-
-    const flag =
-      test.value_type === "numeric"
-        ? calculateNumericFlag(parsed.value_numeric, reference)
-        : "normal";
-
-    const { error: insertError } = await supabase
-      .from("observations")
-      .insert({
-        diagnostic_report_id: reportId,
-        test_definition_id: test.id,
-        value_numeric: parsed.value_numeric,
-        value_text: parsed.value_text,
-        value_boolean: parsed.value_boolean,
-        unit: reference.unit,
-        reference_range_template_id:
-          reference.reference_range_template_id,
-        reference_min: reference.reference_min,
-        reference_max: reference.reference_max,
-        reference_text: reference.reference_text,
-        reference_source: reference.reference_source,
-        flag,
-        status: "preliminary",
-        supersedes_observation_id: null,
-        entered_by: laboratoryId,
-      });
-
-    if (insertError) throw insertError;
+    rows.push({
+      test_definition_id: test.id,
+      has_value: true,
+      value_numeric: parsed.value_numeric,
+      value_text: parsed.value_text,
+      value_boolean: parsed.value_boolean,
+    });
   }
 
-  return { ok: true };
+  return { ok: true, observations: rows };
+}
+
+async function saveLabResultsAtomically({
+  supabase,
+  orderId,
+  requestedReportId = null,
+  observations,
+  finalize = false,
+}) {
+  const { data, error } = await supabase.rpc("save_lab_results_atomic", {
+    p_order_id: orderId,
+    p_report_id: requestedReportId,
+    p_observations: observations,
+    p_finalize: finalize,
+  });
+
+  if (error) throw error;
+  if (!data?.ok || !data?.report_id) {
+    throw new Error("The database did not confirm saving the laboratory results.");
+  }
+
+  return data;
 }
 
 export async function updateLabOrderStatus(formData) {
   try {
+    if (!formData || typeof formData.get !== "function") {
+      return fail("اطلاعات فرم معتبر نیست؛ صفحه را تازه‌سازی و دوباره ارسال کنید.");
+    }
+
     const context = await getLaboratoryContext();
 
     if (!context) {
       return fail("دسترسی آزمایشگاه معتبر نیست.");
     }
 
-    const { user, supabase } = context;
+    const { supabase } = context;
     const orderId = String(formData.get("order_id") || "").trim();
     const nextStatus = String(formData.get("status") || "").trim();
 
     if (!orderId) return fail("شناسه پذیرش معتبر نیست.");
 
+    // Completion is only allowed through saveLabResults + the atomic database
+    // finalizer so the report and order cannot diverge.
     const allowedStatuses = new Set([
       "received_by_lab",
       "in_progress",
-      "completed",
       "cancelled",
     ]);
 
@@ -330,7 +219,6 @@ export async function updateLabOrderStatus(formData) {
       .from("lab_orders")
       .select(ORDER_SELECT)
       .eq("id", orderId)
-      .eq("laboratory_id", user.id)
       .maybeSingle();
 
     if (orderError) throw orderError;
@@ -346,12 +234,6 @@ export async function updateLabOrderStatus(formData) {
     ) {
       return fail(
         "برای شروع انجام آزمایش، ابتدا پذیرش آن را ثبت کنید.",
-      );
-    }
-
-    if (nextStatus === "completed" && order.status !== "in_progress") {
-      return fail(
-        "برای نهایی‌کردن پذیرش، وضعیت آن باید «در حال انجام» باشد.",
       );
     }
 
@@ -371,24 +253,6 @@ export async function updateLabOrderStatus(formData) {
       payload.received_at = new Date().toISOString();
     }
 
-    if (nextStatus === "completed") {
-      const { data: finalReports, error: reportError } = await supabase
-        .from("diagnostic_reports")
-        .select("id")
-        .eq("lab_order_id", order.id)
-        .eq("laboratory_id", user.id)
-        .eq("status", "final")
-        .limit(1);
-
-      if (reportError) throw reportError;
-
-      if (!finalReports?.length) {
-        return fail("پذیرش بدون گزارش نهایی معتبر قابل تکمیل نیست.");
-      }
-
-      payload.completed_at = new Date().toISOString();
-    }
-
     if (nextStatus === "cancelled") {
       payload.cancelled_at = new Date().toISOString();
     }
@@ -400,7 +264,6 @@ export async function updateLabOrderStatus(formData) {
       .from("lab_orders")
       .update(payload)
       .eq("id", order.id)
-      .eq("laboratory_id", user.id)
       .eq("status", order.status)
       .select("id");
 
@@ -431,15 +294,23 @@ export async function updateLabOrderStatus(formData) {
 const RESULT_ATTACHMENT_BUCKET = "pab-lab-result-attachments";
 const MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024;
 
-function isPdfFile(file) {
-  return Boolean(
-    file &&
-      typeof file === "object" &&
-      typeof file.size === "number" &&
-      file.size > 0 &&
-      file.size <= MAX_PDF_SIZE_BYTES &&
-      String(file.type || "").toLowerCase() === "application/pdf",
-  );
+async function isPdfFile(file) {
+  if (
+    !file ||
+    typeof file !== "object" ||
+    typeof file.size !== "number" ||
+    file.size < 5 ||
+    file.size > MAX_PDF_SIZE_BYTES ||
+    String(file.type || "").toLowerCase() !== "application/pdf" ||
+    typeof file.arrayBuffer !== "function" ||
+    typeof file.slice !== "function"
+  ) {
+    return false;
+  }
+
+  // MIME type is controlled by the client. Require the PDF magic header too.
+  const header = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+  return header.length === 5 && String.fromCharCode(...header) === "%PDF-";
 }
 
 async function saveLabReportAttachment({
@@ -451,8 +322,8 @@ async function saveLabReportAttachment({
 }) {
   if (!file || file.size === 0) return null;
 
-  if (!isPdfFile(file)) {
-    return fail("فایل پیوست باید از نوع پی‌دی‌اف و حداکثر ۱۰ مگابایت باشد.");
+  if (!(await isPdfFile(file))) {
+    return fail("فایل پیوست باید PDF واقعی و حداکثر ۱۰ مگابایت باشد.");
   }
 
   const safeName = String(file.name || "report.pdf")
@@ -509,6 +380,10 @@ async function saveLabReportAttachment({
 
 export async function uploadLabReportAttachment(_previousState, formData) {
   try {
+    if (!formData || typeof formData.get !== "function") {
+      return fail("اطلاعات فرم معتبر نیست؛ صفحه را تازه‌سازی و دوباره ارسال کنید.");
+    }
+
     const context = await getLaboratoryContext();
 
     if (!context) return fail("دسترسی آزمایشگاه معتبر نیست.");
@@ -525,7 +400,6 @@ export async function uploadLabReportAttachment(_previousState, formData) {
       .from("diagnostic_reports")
       .select("id, laboratory_id, status")
       .eq("id", reportId)
-      .eq("laboratory_id", user.id)
       .maybeSingle();
 
     if (error) throw error;
@@ -540,6 +414,7 @@ export async function uploadLabReportAttachment(_previousState, formData) {
     });
 
     if (!attachment) return fail("فایلی برای بارگذاری انتخاب نشده است.");
+    if (attachment.ok === false) return attachment;
 
     revalidatePath(`/lab/results/${reportId}`);
     revalidatePath(`/lab/results/${reportId}/correct`);
@@ -557,6 +432,10 @@ export async function uploadLabReportAttachment(_previousState, formData) {
 
 export async function importLabResultRows(_previousState, formData) {
   try {
+    if (!formData || typeof formData.get !== "function") {
+      return fail("اطلاعات فرم معتبر نیست؛ صفحه را تازه‌سازی و دوباره ارسال کنید.");
+    }
+
     const context = await getLaboratoryContext();
 
     if (!context) return fail("دسترسی آزمایشگاه معتبر نیست.");
@@ -586,7 +465,6 @@ export async function importLabResultRows(_previousState, formData) {
       .from("lab_orders")
       .select(ORDER_SELECT)
       .eq("id", orderId)
-      .eq("laboratory_id", user.id)
       .maybeSingle();
 
     if (orderError) throw orderError;
@@ -611,7 +489,7 @@ export async function importLabResultRows(_previousState, formData) {
     const testsByAlias = new Map();
     for (const alias of aliases || []) {
       const test = testsById.get(String(alias.test_definition_id || "").toLowerCase());
-      if (test && (!alias.source_lab_id || alias.source_lab_id === user.id)) {
+      if (test && (!alias.source_lab_id || alias.source_lab_id === order.laboratory_id)) {
         testsByAlias.set(String(alias.alias || "").trim().toLowerCase(), test);
       }
     }
@@ -637,20 +515,14 @@ export async function importLabResultRows(_previousState, formData) {
       preparedFormData.set(`value_${test.id}`, row.value);
     }
 
-    const report = await ensureDraftReport(supabase, order.id, user.id);
-    const admin = createAdminClient();
+    const prepared = prepareObservationRows(tests, preparedFormData);
+    if (!prepared.ok) return prepared;
 
-    const result = await savePreliminaryObservations({
+    const saved = await saveLabResultsAtomically({
       supabase,
-      admin,
-      reportId: report.id,
-      patientId: order.patient_id,
-      tests,
-      formData: preparedFormData,
-      laboratoryId: user.id,
+      orderId: order.id,
+      observations: prepared.observations,
     });
-
-    if (!result.ok) return result;
 
     revalidatePath(`/lab/orders/${order.id}`);
     revalidatePath(`/lab/orders/${order.id}/results/new`);
@@ -659,7 +531,7 @@ export async function importLabResultRows(_previousState, formData) {
 
     return {
       ok: true,
-      reportId: report.id,
+      reportId: saved.report_id,
       imported: parsedRows.data.length,
       message: `${parsedRows.data.length} نتیجه به‌صورت پیش‌نویس ثبت شد.`,
     };
@@ -671,11 +543,15 @@ export async function importLabResultRows(_previousState, formData) {
 
 export async function finalizeLabReport(formData) {
   try {
+    if (!formData || typeof formData.get !== "function") {
+      return fail("اطلاعات فرم معتبر نیست؛ صفحه را تازه‌سازی و دوباره ارسال کنید.");
+    }
+
     const context = await getLaboratoryContext();
 
     if (!context) return fail("دسترسی آزمایشگاه معتبر نیست.");
 
-    const { user, supabase } = context;
+    const { supabase } = context;
     const reportId = String(formData.get("report_id") || "").trim();
 
     if (!reportId || !isUuid(reportId)) return fail("شناسه گزارش معتبر نیست.");
@@ -684,7 +560,6 @@ export async function finalizeLabReport(formData) {
       .from("diagnostic_reports")
       .select("id, lab_order_id, status")
       .eq("id", reportId)
-      .eq("laboratory_id", user.id)
       .maybeSingle();
 
     if (reportError) throw reportError;
@@ -714,6 +589,10 @@ export async function finalizeLabReport(formData) {
 
 export async function saveLabResults(_previousState, formData) {
   try {
+    if (!formData || typeof formData.get !== "function") {
+      return fail("اطلاعات فرم معتبر نیست؛ صفحه را تازه‌سازی و دوباره ارسال کنید.");
+    }
+
     const context = await getLaboratoryContext();
 
     if (!context) {
@@ -734,7 +613,6 @@ export async function saveLabResults(_previousState, formData) {
       .from("lab_orders")
       .select(ORDER_SELECT)
       .eq("id", orderId)
-      .eq("laboratory_id", user.id)
       .maybeSingle();
 
     if (orderError) throw orderError;
@@ -752,73 +630,78 @@ export async function saveLabResults(_previousState, formData) {
       return fail("برای این پذیرش تستی تعریف نشده است.");
     }
 
-    const report = await ensureDraftReport(supabase, order.id, user.id);
-
-    if (requestedReportId && requestedReportId !== report.id) {
-      return fail("گزارش انتخاب‌شده متعلق به این پذیرش نیست.");
-    }
-
-    const admin = createAdminClient();
-
-    const result = await savePreliminaryObservations({
-      supabase,
-      admin,
-      reportId: report.id,
-      patientId: order.patient_id,
-      tests,
-      formData,
-      laboratoryId: user.id,
-    });
-
-    if (!result.ok) return result;
+    const prepared = prepareObservationRows(tests, formData);
+    if (!prepared.ok) return prepared;
 
     const pdfFile = formData.get("pdf");
     if (pdfFile && typeof pdfFile === "object" && pdfFile.size > 0) {
-      const attachmentResult = await saveLabReportAttachment({
-        supabase,
-        admin,
-        laboratoryId: user.id,
-        reportId: report.id,
-        file: pdfFile,
-      });
-
-      if (attachmentResult?.ok === false) return attachmentResult;
+      if (!(await isPdfFile(pdfFile))) {
+        return fail("فایل پیوست باید PDF واقعی و حداکثر ۱۰ مگابایت باشد.");
+      }
     }
 
-    if (!finalize) {
-      revalidatePath(`/lab/orders/${order.id}`);
-      revalidatePath(`/lab/orders/${order.id}/results/new`);
-      revalidatePath("/lab/results");
-      revalidatePath("/lab/dashboard");
+    // The RPC creates/reuses the draft, validates every result, supersedes old
+    // preliminary rows, inserts replacements and optionally finalizes inside
+    // one PostgreSQL transaction. No partial result batch is committed.
+    const saved = await saveLabResultsAtomically({
+      supabase,
+      orderId: order.id,
+      requestedReportId: requestedReportId || null,
+      observations: prepared.observations,
+      finalize,
+    });
+    const reportId = saved.report_id;
+    const admin = createAdminClient();
+    let attachmentWarning = null;
 
-      return {
-        ok: true,
-        message: "پیش‌نویس نتایج ذخیره شد.",
-        reportId: report.id,
-      };
-    }
-
-    const { data: finalReportId, error: finalizeError } = await supabase.rpc(
-      "finalize_lab_report",
-      {
-        p_report_id: report.id,
-      },
-    );
-
-    if (finalizeError) {
-      console.error("[saveLabResults:finalize]", finalizeError);
-      return fail(
-        finalizeError.message || "نهایی‌سازی گزارش انجام نشد.",
-      );
+    // Object storage cannot share the PostgreSQL transaction. Validate the
+    // PDF before committing results and compensate by deleting an uploaded
+    // object if its metadata row cannot be inserted.
+    if (pdfFile && typeof pdfFile === "object" && pdfFile.size > 0) {
+      try {
+        const attachmentResult = await saveLabReportAttachment({
+          supabase,
+          admin,
+          laboratoryId: user.id,
+          reportId,
+          file: pdfFile,
+        });
+        if (attachmentResult?.ok === false) {
+          attachmentWarning = attachmentResult.message || "پیوست PDF ذخیره نشد.";
+        }
+      } catch (attachmentError) {
+        // Results may already have been committed. Do not report the entire
+        // operation as failed when only the separately stored PDF failed.
+        console.error("[saveLabResults:attachment]", attachmentError);
+        attachmentWarning = "پیوست PDF ذخیره نشد؛ نتایج در دیتابیس محفوظ هستند.";
+      }
     }
 
     revalidatePath("/lab/orders");
     revalidatePath(`/lab/orders/${order.id}`);
+    revalidatePath(`/lab/orders/${order.id}/results/new`);
     revalidatePath("/lab/results");
-    revalidatePath(`/lab/results/${finalReportId}`);
     revalidatePath("/lab/dashboard");
 
-    redirect(`/lab/results/${finalReportId}`);
+    if (!finalize) {
+      return {
+        ok: true,
+        message: attachmentWarning
+          ? `پیش‌نویس نتایج ذخیره شد، اما پیوست بارگذاری نشد: ${attachmentWarning}`
+          : "پیش‌نویس نتایج ذخیره شد.",
+        reportId,
+      };
+    }
+
+    revalidatePath(`/lab/results/${reportId}`);
+    if (attachmentWarning) {
+      return {
+        ok: true,
+        message: `گزارش نهایی شد، اما پیوست بارگذاری نشد: ${attachmentWarning}`,
+        reportId,
+      };
+    }
+    redirect(`/lab/results/${reportId}`);
   } catch (error) {
     if (error?.digest?.startsWith("NEXT_REDIRECT")) throw error;
 
@@ -832,13 +715,17 @@ export async function saveLabResults(_previousState, formData) {
 
 export async function correctLabResult(_previousState, formData) {
   try {
+    if (!formData || typeof formData.get !== "function") {
+      return fail("اطلاعات فرم معتبر نیست؛ صفحه را تازه‌سازی و دوباره ارسال کنید.");
+    }
+
     const context = await getLaboratoryContext();
 
     if (!context) {
       return fail("دسترسی آزمایشگاه معتبر نیست.");
     }
 
-    const { user, supabase } = context;
+    const { supabase } = context;
     const reportId = String(formData.get("report_id") || "").trim();
     const observationId = String(
       formData.get("observation_id") || "",
@@ -851,7 +738,7 @@ export async function correctLabResult(_previousState, formData) {
 
     const report = await getLabReport(reportId);
 
-    if (!report || report.order?.laboratory_id !== user.id) {
+    if (!report) {
       return fail("گزارش انتخاب‌شده معتبر نیست.");
     }
 

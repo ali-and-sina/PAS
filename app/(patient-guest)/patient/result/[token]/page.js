@@ -214,7 +214,7 @@ export default async function GuestResultLandingPage({ params }) {
                 className="pa-button h-12 w-full rounded-2xl text-sm font-medium shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
               >
                 <Link href={`/patient/result/${token}/view`}>
-                  <span>مشاهده جواب آزمایش</span>
+                  <span>مشاهده نتیجه آزمایش</span>
                   <ArrowLeft className="size-4" aria-hidden="true" />
                 </Link>
               </Button>

@@ -26,7 +26,11 @@ export default function Header({ mobileOpen, onMobileOpenChange }) {
         >
           <Menu className="size-5" aria-hidden="true" />
         </Button>
-        <SheetContent side="right" className="w-72 p-0">
+        <SheetContent
+          side="right"
+          className="w-72 p-0"
+          closeButtonClassName="left-4 right-auto"
+        >
           <SheetTitle className="sr-only">منوی ناوبری</SheetTitle>
           <MobileNav onNavigate={() => onMobileOpenChange(false)} />
         </SheetContent>

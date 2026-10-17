@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { findPatientForDoctor } from "@/features/patients/server";
 import { requireVerifiedDoctor } from "@/features/doctor/access";
-import { normalizeIranianMobile } from "@/lib/utils/validation";
+import { isValidIranianNationalId, normalizeDigits, normalizeIranianMobile } from "@/lib/utils/validation";
 
 function fail(message) {
   return {
@@ -15,20 +15,24 @@ function fail(message) {
 }
 
 export async function addExistingPatient(_previousState, formData) {
+  if (!formData || typeof formData.get !== "function") {
+    return fail("اطلاعات فرم معتبر نیست.");
+  }
+
   const doctor = await requireVerifiedDoctor();
 
   if (!doctor) {
     return fail("دسترسی معتبر نیست.");
   }
 
-  const nationalId = String(formData.get("national_id") || "").trim();
+  const nationalId = normalizeDigits(String(formData.get("national_id") || "")).trim();
 
   const rawPhone = String(formData.get("phone") || "").trim();
 
   const phone = normalizeIranianMobile(rawPhone);
 
-  if (!/^\d{10}$/.test(nationalId)) {
-    return fail("کد ملی باید ۱۰ رقم باشد.");
+  if (!isValidIranianNationalId(nationalId)) {
+    return fail("کد ملی معتبر نیست؛ رقم‌های واردشده را بررسی کنید.");
   }
 
   if (!phone) {

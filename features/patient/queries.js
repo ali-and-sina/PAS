@@ -615,7 +615,7 @@ export async function getPatientResult(reportId, _ignoredPatientId, { auditView 
   }
 
   await recordPatientAudit({
-    actorId: context.user_id,
+    actorId: context.patient_id,
     action: "patient_result_viewed",
     entityType: "diagnostic_report",
     entityId: reportId,
@@ -906,7 +906,7 @@ export async function getPatientTimeline({
 
   if (auditView) {
     await recordPatientAudit({
-      actorId: context.user_id,
+      actorId: context.patient_id,
       action: "patient_timeline_viewed",
       entityType: "patient_profile",
       entityId: context.patient_id,
@@ -1091,7 +1091,7 @@ export async function getPatientAccessList() {
   };
 
   await recordPatientAudit({
-    actorId: context.user_id,
+    actorId: context.patient_id,
     action: "patient_access_list_viewed",
     entityType: "patient_profile",
     entityId: context.patient_id,

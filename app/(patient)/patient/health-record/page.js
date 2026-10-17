@@ -13,7 +13,7 @@ import {
 
 import EmptyState from "@/components/shared/EmptyState";
 import PageHeader from "@/components/shared/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import DisclosureSection from "@/components/shared/DisclosureSection";
 import { getPatientTimeline } from "@/features/patient/queries";
 
 export const dynamic = "force-dynamic";
@@ -68,11 +68,11 @@ export default async function PatientHealthRecordPage() {
         ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>روند سلامت</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <DisclosureSection
+        title="روند سلامت"
+        description={timeline[0] ? `آخرین رویداد: ${timeline[0].title}` : "ویزیت‌ها، نتایج، نسخه‌ها و پیگیری‌های ثبت‌شده"}
+        meta={`${timeline.length} رویداد`}
+      >
           {timeline.length === 0 ? (
             <EmptyState
               icon={ClipboardList}
@@ -133,8 +133,7 @@ export default async function PatientHealthRecordPage() {
               })}
             </ol>
           )}
-        </CardContent>
-      </Card>
+      </DisclosureSection>
     </div>
   );
 }

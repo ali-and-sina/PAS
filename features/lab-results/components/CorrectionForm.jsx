@@ -90,7 +90,7 @@ export default function CorrectionForm({ reportId, observation }) {
         </p>
       ) : null}
 
-      <Button className="mt-4" type="submit" disabled={pending}>
+      <Button className="mt-4" type="submit" disabled={pending} loading={pending}>
         {pending ? "در حال اصلاح..." : "ثبت اصلاح"}
       </Button>
     </form>

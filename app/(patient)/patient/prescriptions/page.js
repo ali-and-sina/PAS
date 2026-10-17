@@ -19,7 +19,7 @@ function prescriptionStatus(status) {
   const map = {
     active: { label: "فعال", variant: "normal" },
     completed: { label: "تکمیل‌شده", variant: "neutral" },
-    cancelled: { label: "لغوشده", variant: "critical" },
+    cancelled: { label: "لغوشده", variant: "neutral" },
   };
   return map[status] ?? { label: status ?? "نامشخص", variant: "neutral" };
 }

@@ -2,13 +2,13 @@ import StatusBadge from "@/components/shared/StatusBadge";
 
 const CONFIG = {
   draft: {
-    label: "پیش‌نویس",
+    label: "پیش‌نویس نتیجه",
     variant: "neutral",
   },
 
   preliminary: {
-    label: "پیش‌نویس",
-    variant: "neutral",
+    label: "نتیجه اولیه",
+    variant: "preliminary",
   },
 
   final: {
@@ -18,17 +18,17 @@ const CONFIG = {
 
   corrected: {
     label: "اصلاح‌شده",
-    variant: "normal",
+    variant: "amended",
   },
 
   superseded: {
-    label: "منسوخ‌شده",
-    variant: "neutral",
+    label: "جایگزین‌شده",
+    variant: "superseded",
   },
 
   amended: {
     label: "اصلاح‌شده",
-    variant: "normal",
+    variant: "amended",
   },
 };
 

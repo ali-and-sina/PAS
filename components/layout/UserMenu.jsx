@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -71,13 +71,6 @@ export default function UserMenu({ user }) {
           {user?.full_name?.trim() || "کاربر مهمان"}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <a href="#" className="cursor-not-allowed opacity-60">
-            <UserIcon aria-hidden="true" />
-            تنظیمات حساب
-          </a>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={(event) => {
             event.preventDefault();
@@ -86,7 +79,7 @@ export default function UserMenu({ user }) {
           disabled={pending || signingOut}
           className="text-destructive focus:bg-destructive/10 focus:text-destructive"
         >
-          <LogOut aria-hidden="true" />
+          {signingOut ? <span className="pas-button-spinner" aria-hidden="true" /> : <LogOut aria-hidden="true" />}
           {signingOut ? "در حال خروج..." : "خروج از حساب"}
         </DropdownMenuItem>
       </DropdownMenuContent>

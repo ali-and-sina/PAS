@@ -1,4 +1,5 @@
 import { Toaster } from "sonner";
+import NavigationFeedback from "@/components/providers/NavigationFeedback";
 import "./globals.css";
 
 export const metadata = {
@@ -33,6 +34,7 @@ export default function RootLayout({ children }) {
           پرش به محتوای اصلی
         </a>
 
+        <NavigationFeedback />
         {children}
 
         <Toaster

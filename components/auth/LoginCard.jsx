@@ -12,6 +12,7 @@ import {
   CardDescription,
   CardHeader,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 import { auth } from "@/lib/auth/client";
 
@@ -545,14 +546,15 @@ export default function LoginCard({
                       )}
 
                       <div className="flex gap-2">
-                        <button
+                        <Button
                           type="button"
                           className="h-11 flex-1 rounded-xl bg-gradient-to-l from-teal-500 to-teal-600 px-3 text-sm font-medium text-white shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                           onClick={handleTestLogin}
                           disabled={testPending}
+                          loading={testPending}
                         >
                           {testPending ? "در حال ورود..." : "ورود تست"}
-                        </button>
+                        </Button>
 
                         <button
                           type="button"

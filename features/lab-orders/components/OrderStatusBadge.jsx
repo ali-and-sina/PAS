@@ -1,11 +1,11 @@
 import StatusBadge from "@/components/shared/StatusBadge";
 
 const CONFIG = {
-  pending: { label: "جدید", variant: "neutral" },
+  pending: { label: "در انتظار پذیرش", variant: "neutral" },
   received_by_lab: { label: "پذیرفته‌شده", variant: "normal" },
   in_progress: { label: "در حال انجام", variant: "neutral" },
   completed: { label: "تکمیل‌شده", variant: "normal" },
-  cancelled: { label: "لغوشده", variant: "critical" },
+  cancelled: { label: "لغوشده", variant: "neutral" },
 };
 
 export default function OrderStatusBadge({ status }) {

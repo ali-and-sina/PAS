@@ -4,8 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-function isActive(pathname, href) {
+function matchesPath(pathname, href) {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function getActiveHref(pathname, items) {
+  return items.reduce((bestHref, item) => {
+    if (!matchesPath(pathname, item.href)) return bestHref;
+    if (!bestHref || item.href.length > bestHref.length) return item.href;
+    return bestHref;
+  }, null);
 }
 
 /**
@@ -13,11 +21,12 @@ function isActive(pathname, href) {
  */
 export default function SidebarNav({ items, onNavigate }) {
   const pathname = usePathname();
+  const activeHref = getActiveHref(pathname, items);
 
   return (
     <nav aria-label="ناوبری اصلی" className="space-y-1">
       {items.map(({ href, label, icon: Icon }) => {
-        const active = isActive(pathname, href);
+        const active = href === activeHref;
         return (
           <Link
             key={href}

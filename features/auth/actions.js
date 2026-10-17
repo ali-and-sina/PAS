@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPostLoginRedirect } from "@/lib/auth";
-import { normalizeDigits, normalizeIranianMobile } from "@/lib/utils/validation";
+import { isValidIranianNationalId, normalizeDigits, normalizeIranianMobile } from "@/lib/utils/validation";
 
 // Admin is handled through the same OTP action, but its personnel-code/phone
 // pair is verified against the private admin directory before sending OTP.
@@ -22,15 +22,9 @@ function isValidPhone(phone) {
   return /^989\d{9}$/.test(phone);
 }
 
-/**
- * Iranian national ID.
- *
- * At this layer we only require 10 Latin digits.
- * Full checksum validation is handled by the shared
- * validation helper before registration.
- */
+/** Validate the Iranian national ID format and checksum on the server. */
 function isValidNationalId(value) {
-  return /^\d{10}$/.test(value);
+  return isValidIranianNationalId(value);
 }
 
 /**
@@ -264,6 +258,9 @@ export async function requestLoginOtp({ role, identifier, phone } = {}) {
  * clear that local session before returning login failure.
  */
 export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
+  let supabase = null;
+  let authEstablished = false;
+
   try {
     role = normalizeString(role);
     identifier = normalizeString(identifier);
@@ -286,16 +283,12 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
       return invalidInput();
     }
 
-    const supabase = await createClient();
+    supabase = await createClient();
 
     /**
-     * Once OTP verification succeeds, a session exists.
-     *
-     * We use authEstablished to distinguish:
-     * - failures before authentication
-     * - failures after authentication
+     * Once OTP verification succeeds, a session exists. authEstablished lets
+     * the outer catch distinguish pre-auth failures from post-auth failures.
      */
-    let authEstablished = false;
 
     /**
      * Domain/authz failure after OTP success.
@@ -606,11 +599,8 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
      * We cannot access authFailure here because it is scoped
      * inside the try block, so cleanup directly.
      */
-    try {
-      const supabase = await createClient();
+    if (authEstablished && supabase) {
       await clearCurrentSession(supabase);
-    } catch {
-      // Best-effort cleanup only.
     }
 
     return {

@@ -15,6 +15,25 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("fa-IR").format(new Date(value));
 }
 
+function PatientDetails({ patient }) {
+  return (
+    <div className="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">کد ملی</p>
+        <p className="mt-1 break-words tabular-nums">{patient.national_id || "—"}</p>
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">شمارهٔ موبایل</p>
+        <p dir="ltr" className="mt-1 break-words text-start tabular-nums">{patient.phone || "—"}</p>
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">تاریخ تولد</p>
+        <p className="mt-1">{formatDate(patient.patientProfile?.date_of_birth)}</p>
+      </div>
+    </div>
+  );
+}
+
 export default async function DoctorPatientsPage({ searchParams }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
@@ -38,26 +57,48 @@ export default async function DoctorPatientsPage({ searchParams }) {
           action={{ href: "/doctor/patients/new", label: "افزودن بیمار" }}
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border bg-card">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead className="border-b bg-muted/40 text-right">
-                <tr><th className="p-4 font-medium">بیمار</th><th className="p-4 font-medium">کد ملی</th><th className="p-4 font-medium">موبایل</th><th className="p-4 font-medium">تاریخ تولد</th><th className="p-4 font-medium">عملیات</th></tr>
-              </thead>
-              <tbody>
-                {patients.map((patient) => (
-                  <tr key={patient.id} className="border-b last:border-0">
-                    <td className="p-4 font-medium">{patient.full_name || "بدون نام"}</td>
-                    <td className="p-4">{patient.national_id || "—"}</td>
-                    <td className="p-4 dir-ltr text-right">{patient.phone || "—"}</td>
-                    <td className="p-4">{formatDate(patient.patientProfile?.date_of_birth)}</td>
-                    <td className="p-4"><Link href={`/doctor/patients/${patient.id}`} className="text-primary hover:underline">مشاهده پرونده</Link></td>
+        <>
+          <div className="hidden overflow-hidden rounded-xl border bg-card lg:block">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead className="border-b bg-muted/40 text-start">
+                  <tr>
+                    <th className="p-4 text-start font-medium">بیمار</th>
+                    <th className="p-4 text-start font-medium">کد ملی</th>
+                    <th className="p-4 text-start font-medium">موبایل</th>
+                    <th className="p-4 text-start font-medium">تاریخ تولد</th>
+                    <th className="p-4 text-start font-medium">عملیات</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {patients.map((patient) => (
+                    <tr key={patient.id} className="border-b last:border-0">
+                      <td className="p-4 font-medium">{patient.full_name || "بدون نام"}</td>
+                      <td className="p-4 tabular-nums">{patient.national_id || "—"}</td>
+                      <td dir="ltr" className="p-4 text-start tabular-nums">{patient.phone || "—"}</td>
+                      <td className="p-4">{formatDate(patient.patientProfile?.date_of_birth)}</td>
+                      <td className="p-4">
+                        <Link href={`/doctor/patients/${patient.id}`} className="text-primary hover:underline">مشاهده پرونده</Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          <div className="space-y-3 lg:hidden">
+            {patients.map((patient) => (
+              <article key={patient.id} className="min-w-0 rounded-xl border bg-card p-4">
+                <h2 className="break-words font-semibold">{patient.full_name || "بدون نام"}</h2>
+                <PatientDetails patient={patient} />
+                <Button asChild variant="outline" size="sm" className="mt-4 w-full">
+                  <Link href={`/doctor/patients/${patient.id}`}>مشاهدهٔ پرونده</Link>
+                </Button>
+              </article>
+            ))}
+          </div>
+        </>
       )}
       <Pagination
         pathname="/doctor/patients"

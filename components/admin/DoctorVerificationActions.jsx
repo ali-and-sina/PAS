@@ -25,12 +25,12 @@ export default function DoctorVerificationActions({ doctorId, isVerified }) {
   }
 
   return isVerified ? (
-    <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => run(revokeDoctorVerification)}>
+    <Button type="button" size="sm" variant="outline" disabled={pending} loading={pending} onClick={() => run(revokeDoctorVerification)}>
       <ShieldOff aria-hidden="true" />
       لغو تأیید
     </Button>
   ) : (
-    <Button type="button" size="sm" disabled={pending} onClick={() => run(verifyDoctor)}>
+    <Button type="button" size="sm" disabled={pending} loading={pending} onClick={() => run(verifyDoctor)}>
       <CheckCircle2 aria-hidden="true" />
       تأیید پزشک
     </Button>

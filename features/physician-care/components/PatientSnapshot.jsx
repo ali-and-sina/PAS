@@ -2,17 +2,14 @@ import Link from "next/link";
 import {
   ArrowDown,
   ArrowUp,
-  CalendarDays,
-  CheckCircle2,
   FileText,
   Minus,
-  NotebookPen,
-  Pill,
   UserRound,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatusBadge from "@/components/shared/StatusBadge";
+import DisclosureSection from "@/components/shared/DisclosureSection";
 import LabTrendChart from "@/features/physician-care/components/LabTrendChart";
 import VoiceVisitNoteRecorder from "@/features/physician-care/components/VoiceVisitNoteRecorder";
 import VoiceNoteClinicalDocumentEditor from "@/features/physician-care/components/VoiceNoteClinicalDocumentEditor";
@@ -144,38 +141,38 @@ export default function PatientSnapshot({ data }) {
         </div>
       </section>
 
-      <section aria-labelledby="related-physicians-heading">
-        <Card>
-          <CardHeader>
-            <CardTitle id="related-physicians-heading">پزشکان مرتبط با بیمار</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              فقط پزشکان دارای رابطه فعال و تأییدشده نمایش داده می‌شوند.
-            </p>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {data.relatedPhysicians?.length ? (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {data.relatedPhysicians.map((physician) => (
-                  <div key={physician.doctor_id} className="rounded-xl border p-3">
-                    <p className="font-medium">{physician.full_name || "پزشک"}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {physician.specialty || "تخصص ثبت نشده"}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {physician.relationship_type === "primary_care" ? "پزشک اصلی" : physician.relationship_type === "consulting" ? "پزشک مشاور" : "ارتباط موردی"}
-                    </p>
-                  </div>
-                ))}
+      <DisclosureSection
+        title="پزشکان مرتبط با بیمار"
+        description="فقط پزشکان دارای رابطه فعال و تأییدشده نمایش داده می‌شوند."
+        meta={`${data.relatedPhysicians?.length ?? 0} پزشک`}
+      >
+        {data.relatedPhysicians?.length ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {data.relatedPhysicians.map((physician) => (
+              <div key={physician.doctor_id} className="rounded-xl border bg-card p-3">
+                <p className="font-medium">{physician.full_name || "پزشک"}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {physician.specialty || "تخصص ثبت نشده"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {physician.relationship_type === "primary_care" ? "پزشک اصلی" : physician.relationship_type === "consulting" ? "پزشک مشاور" : "ارتباط موردی"}
+                </p>
               </div>
-            ) : (
-              <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-                پزشک مرتبط دیگری با رابطه فعال ثبت نشده است.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-xl border border-dashed bg-card p-4 text-sm text-muted-foreground">
+            پزشک مرتبط دیگری با رابطه فعال ثبت نشده است.
+          </p>
+        )}
+      </DisclosureSection>
 
+      <DisclosureSection
+        title="تاریخچه و تغییرات آزمایش‌ها"
+        description={`${data.labHistory.length} گزارش نهایی · ${data.changes.length} مورد قابل مقایسه`}
+        meta={`${data.labHistory.length} گزارش`}
+      >
+        <div className="space-y-6">
       <section aria-labelledby="changes-heading">
         <Card>
           <CardHeader>
@@ -287,7 +284,7 @@ export default function PatientSnapshot({ data }) {
                           report.status === "amended" ? "اصلاح‌شده" : "نهایی"
                         }
                         variant={
-                          report.status === "amended" ? "superseded" : "normal"
+                          report.status === "amended" ? "amended" : "normal"
                         }
                       />
                     </div>
@@ -365,14 +362,15 @@ export default function PatientSnapshot({ data }) {
         </Card>
       </div>
 
+        </div>
+      </DisclosureSection>
+
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="size-4" aria-hidden="true" /> پیگیری‌ها
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
+        <DisclosureSection
+          title="پیگیری‌ها"
+          description={data.followUps.filter((item) => item.displayStatus === "overdue").length ? `${data.followUps.filter((item) => item.displayStatus === "overdue").length} پیگیری عقب‌افتاده` : "برای مرور و مدیریت پیگیری‌های بیمار، جزئیات را باز کنید."}
+          meta={`${data.followUps.length} پیگیری`}
+        >
             {data.followUps.length === 0 ? (
               <div className="rounded-xl border border-dashed p-4 text-sm leading-6 text-muted-foreground">
                 هنوز پیگیری‌ای برای این بیمار ثبت نشده است.
@@ -394,19 +392,21 @@ export default function PatientSnapshot({ data }) {
                 <Link href="/doctor/follow-ups" className="inline-flex text-xs text-primary hover:underline">مدیریت همه پیگیری‌ها</Link>
               </div>
             )}
-          </CardContent>
-        </Card>
+        </DisclosureSection>
 
-        <VisitManager patientId={patient.id} visits={data.visits} />
+        <DisclosureSection
+          title="ویزیت‌ها"
+          description="برای ثبت ویزیت جدید یا به‌روزرسانی وضعیت ویزیت‌های قبلی، جزئیات را باز کنید."
+          meta={`${data.visits.length} ویزیت`}
+        >
+          <VisitManager patientId={patient.id} visits={data.visits} />
+        </DisclosureSection>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <NotebookPen className="size-4" aria-hidden="true" /> آخرین
-              یادداشت
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
+        <DisclosureSection
+          title="یادداشت خصوصی"
+          description={latestNote ? "یادداشت خصوصی ثبت شده است؛ برای خواندن یا ثبت یادداشت جدید جزئیات را باز کنید." : "یادداشت خصوصی ثبت نشده است؛ فرم ثبت داخل جزئیات قرار دارد."}
+          meta={latestNote ? "ثبت‌شده" : "بدون یادداشت"}
+        >
             {latestNote ? (
               <div className="rounded-xl bg-muted/30 p-4 text-sm leading-7">
                 {latestNote.content}
@@ -419,68 +419,51 @@ export default function PatientSnapshot({ data }) {
             <div className="mt-4">
               <PrivateNoteForm patientId={patient.id} reportId={latestReport?.id || ""} />
             </div>
-          </CardContent>
-        </Card>
+        </DisclosureSection>
       </div>
 
-      <section>
+      <DisclosureSection
+        title="یادداشت صوتی و ویزیت"
+        description="ضبط یادداشت ویزیت و مرور خلاصه‌های صوتی قبلی"
+        meta={`${data.voiceNotes.length} یادداشت قبلی`}
+      >
         <VoiceVisitNoteRecorder patientId={patient.id} visits={data.visits} />
-
         {data.voiceNotes.length > 0 ? (
-          <div className="mt-5 rounded-2xl border bg-card p-5 sm:p-6">
-            <div className="mb-4">
-              <h2 className="font-semibold">یادداشت‌های صوتی قبلی</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                خلاصه‌های صوتی ویزیت‌های قبلی برای مرور سریع.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {data.voiceNotes.map((voiceNote) => (
-                <article key={voiceNote.id} className="rounded-xl border p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-medium">یادداشت صوتی ویزیت</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {formatDate(voiceNote.created_at)} •{" "}
-                        {Math.round(Number(voiceNote.duration || 0))} ثانیه
-                      </p>
-                    </div>
-                    {voiceNote.visit?.visit_date ? (
-                      <span className="text-xs text-muted-foreground">
-                        ویزیت: {formatDate(voiceNote.visit.visit_date)}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {voiceNote.audioUrl ? (
-                    <audio
-                      controls
-                      preload="none"
-                      src={voiceNote.audioUrl}
-                      className="mt-4 w-full"
-                    />
-                  ) : (
-                    <p className="mt-4 text-sm text-muted-foreground">
-                      فایل صوتی در حال حاضر در دسترس نیست.
+          <div className="space-y-3">
+            {data.voiceNotes.map((voiceNote) => (
+              <article key={voiceNote.id} className="rounded-xl border bg-card p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium">یادداشت صوتی ویزیت</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatDate(voiceNote.created_at)} • {Math.round(Number(voiceNote.duration || 0))} ثانیه
                     </p>
-                  )}
-                  <VoiceNoteClinicalDocumentEditor voiceNote={voiceNote} />
-                </article>
-              ))}
-            </div>
+                  </div>
+                  {voiceNote.visit?.visit_date ? (
+                    <span className="text-xs text-muted-foreground">ویزیت: {formatDate(voiceNote.visit.visit_date)}</span>
+                  ) : null}
+                </div>
+                {voiceNote.audioUrl ? (
+                  <audio controls preload="none" src={voiceNote.audioUrl} className="mt-4 w-full" />
+                ) : (
+                  <p className="mt-4 text-sm text-muted-foreground">فایل صوتی در حال حاضر در دسترس نیست.</p>
+                )}
+                <VoiceNoteClinicalDocumentEditor voiceNote={voiceNote} />
+              </article>
+            ))}
           </div>
-        ) : null}
-      </section>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>روند سلامت بیمار</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            رویدادهای مهم پرونده از جدیدترین به قدیمی‌ترین.
+        ) : (
+          <p className="rounded-xl border border-dashed bg-card p-4 text-sm text-muted-foreground">
+            هنوز یادداشت صوتی قبلی برای این بیمار ثبت نشده است.
           </p>
-        </CardHeader>
-        <CardContent className="pt-0">
+        )}
+      </DisclosureSection>
+
+      <DisclosureSection
+        title="روند سلامت بیمار"
+        description={data.timeline.length ? `آخرین رویداد: ${data.timeline[0]?.title || "ثبت‌شده"}` : "هنوز رویدادی برای روند سلامت ثبت نشده است."}
+        meta={`${data.timeline.length} رویداد`}
+      >
           {data.timeline.length === 0 ? (
             <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
               هنوز رویدادی برای روند سلامت ثبت نشده است.
@@ -516,16 +499,13 @@ export default function PatientSnapshot({ data }) {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </DisclosureSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Pill className="size-4" aria-hidden="true" /> نسخه‌های بیمار
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
+      <DisclosureSection
+        title="نسخه‌های بیمار"
+        description={data.prescriptions.length ? "برای مشاهدهٔ داروها، مقدار مصرف و وضعیت هر نسخه، جزئیات را باز کنید." : "نسخه‌ای برای این بیمار ثبت نشده است."}
+        meta={`${data.prescriptions.length} نسخه`}
+      >
           {data.prescriptions.length === 0 ? (
             <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
               نسخه‌ای برای این بیمار ثبت نشده است.
@@ -549,7 +529,7 @@ export default function PatientSnapshot({ data }) {
                           ? "normal"
                           : prescription.status === "completed"
                             ? "neutral"
-                            : "critical"
+                            : "neutral"
                       }
                     />
                   </div>
@@ -576,8 +556,7 @@ export default function PatientSnapshot({ data }) {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </DisclosureSection>
     </div>
   );
 }

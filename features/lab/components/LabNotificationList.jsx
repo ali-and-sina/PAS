@@ -36,7 +36,7 @@ export default function LabNotificationList({ notifications = [] }) {
             <p className="text-sm font-medium">{unreadCount} اعلان خوانده‌نشده</p>
             <p className="mt-1 text-xs text-muted-foreground">اعلان‌های مهم مربوط به کار آزمایشگاه را مرور کنید.</p>
           </div>
-          <Button type="button" variant="outline" size="sm" disabled={pending} onClick={markAll}>
+          <Button type="button" variant="outline" size="sm" disabled={pending} loading={pending} onClick={markAll}>
             <CheckCheck className="size-4" aria-hidden="true" />
             {pending ? "در حال به‌روزرسانی..." : "خواندن همه"}
           </Button>

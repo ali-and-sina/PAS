@@ -42,7 +42,7 @@ export default function LabResultRow({ observation }) {
         <div className="flex flex-wrap items-center gap-2">
           <FlagBadge flag={flag} />
           {observation.status === "corrected" ? (
-            <StatusBadge label="اصلاح‌شده" variant="neutral" />
+            <StatusBadge label="اصلاح‌شده" variant="amended" />
           ) : null}
           {referenceSourceLabel ? (
             <StatusBadge label={referenceSourceLabel} variant="neutral" />

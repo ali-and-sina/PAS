@@ -170,3 +170,93 @@
     display: none;
   }
 }
+
+
+/* Global feedback for internal route transitions and asynchronous buttons. */
+.pas-navigation-feedback__bar {
+  position: fixed;
+  z-index: 1000;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  overflow: hidden;
+  background: hsl(var(--primary) / 0.14);
+  pointer-events: none;
+}
+
+.pas-navigation-feedback__bar::after {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -38%;
+  width: 38%;
+  content: "";
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 10px hsl(var(--primary) / 0.32);
+  animation: pas-navigation-progress 1.05s ease-in-out infinite;
+}
+
+.pas-navigation-feedback__label {
+  position: fixed;
+  z-index: 1001;
+  top: 12px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 13px;
+  transform: translateX(-50%);
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: hsl(var(--background) / 0.96);
+  color: hsl(var(--foreground));
+  box-shadow: 0 4px 18px hsl(222 47% 11% / 0.09);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+}
+
+.pas-navigation-feedback__spinner,
+.pas-button-spinner {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: pas-feedback-spin 0.72s linear infinite;
+}
+
+.pas-navigation-feedback__spinner {
+  color: hsl(var(--primary));
+}
+
+.pas-button-spinner {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-width: 2px;
+}
+
+@keyframes pas-navigation-progress {
+  0% { inset-inline-start: -38%; }
+  100% { inset-inline-start: 100%; }
+}
+
+@keyframes pas-feedback-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pas-navigation-feedback__bar::after {
+    animation-duration: 2.5s;
+  }
+
+  .pas-navigation-feedback__spinner,
+  .pas-button-spinner {
+    animation-duration: 1.8s;
+  }
+}

@@ -304,7 +304,7 @@ export default async function PatientDashboardPage() {
                         report.status === "amended" ? "اصلاح‌شده" : "نهایی"
                       }
                       variant={
-                        report.status === "amended" ? "neutral" : "normal"
+                        report.status === "amended" ? "amended" : "normal"
                       }
                     />
                   </Link>

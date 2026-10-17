@@ -25,7 +25,7 @@ export default async function AdminUsersPage({ searchParams }) {
       <PageHeader title="کاربران" description="نمایش خلاصه‌ای از حساب‌های بیمار، پزشک و آزمایشگاه." />
       <Card>
         <CardContent className="p-4">
-          <form className="flex flex-col gap-3 md:flex-row" method="get">
+          <form className="flex flex-col gap-3 md:flex-row" method="get" data-navigation-feedback="true">
             <input name="q" defaultValue={search} placeholder="جستجو با نام یا موبایل" aria-label="جستجوی کاربران" className="h-9 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring" />
             <select name="role" defaultValue={role} aria-label="فیلتر نقش" className="h-9 rounded-md border bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring">
               <option value="all">همه نقش‌ها</option>

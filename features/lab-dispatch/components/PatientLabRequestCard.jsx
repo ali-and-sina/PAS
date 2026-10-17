@@ -114,7 +114,7 @@ export default function PatientLabRequestCard({ request, branches }) {
           {latest.response_note && <p className="text-sm">پاسخ آزمایشگاه: {latest.response_note}</p>}
           {latest.requested_home_collection && <p className="text-sm text-primary">نمونه‌گیری در منزل درخواست شده است.</p>}
           {latest.status === "pending" && <p className="text-xs leading-5 text-muted-foreground">پس از پذیرش آزمایشگاه، در صورت نیاز کد پذیرش تازه بسازید. کدهای قبلی با ساخت کد جدید باطل می‌شوند.</p>}
-          {latest.status === "accepted" && latest.lab_order_id && <Button type="button" variant="outline" size="sm" onClick={() => generateQr(latest.id)} disabled={isGenerating}><QrCode aria-hidden="true" />{isGenerating ? "در حال ساخت…" : "ساخت کد پذیرش"}</Button>}
+          {latest.status === "accepted" && latest.lab_order_id && <Button type="button" variant="outline" size="sm" onClick={() => generateQr(latest.id)} disabled={isGenerating} loading={isGenerating}><QrCode aria-hidden="true" />{isGenerating ? "در حال ساخت…" : "ساخت کد پذیرش"}</Button>}
           {latest.status === "pending" && <Button type="button" variant="outline" size="sm" onClick={() => generateQr(latest.id)} disabled={isGenerating}><QrCode aria-hidden="true" />{isGenerating ? "در حال ساخت…" : "نمایش کد پیگیری"}</Button>}
         </div>;
       })() : null}

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import PageHeader from "@/components/shared/PageHeader";
+import DisclosureSection from "@/components/shared/DisclosureSection";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,6 +74,12 @@ export default async function PatientResultDetailPage({ params }) {
     (observation) =>
       observation.value_numeric !== null && observation.value_numeric !== undefined,
   );
+  const criticalCount = observations.filter((observation) =>
+    ["critical", "critical_low", "critical_high"].includes(observation.flag),
+  ).length;
+  const attentionCount = observations.filter((observation) =>
+    ["low", "high", "critical", "critical_low", "critical_high"].includes(observation.flag),
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -85,7 +92,7 @@ export default async function PatientResultDetailPage({ params }) {
       </Link>
 
       <PageHeader
-        title="جواب آزمایش"
+        title="نتیجه آزمایش"
         description={`نهایی‌شده در ${formatDateTime(report.finalized_at ?? report.created_at)}`}
         actions={
           numericTests.length > 0 ? (
@@ -106,7 +113,7 @@ export default async function PatientResultDetailPage({ params }) {
             <div className="mt-2">
               <StatusBadge
                 label={report.status === "amended" ? "اصلاح‌شده" : "نهایی"}
-                variant={report.status === "amended" ? "neutral" : "normal"}
+                variant={report.status === "amended" ? "amended" : "normal"}
               />
             </div>
           </CardContent>
@@ -125,14 +132,21 @@ export default async function PatientResultDetailPage({ params }) {
         </Card>
       </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FlaskConical className="size-5 text-primary" aria-hidden="true" />
-            نتایج ساختاریافته
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      {criticalCount > 0 ? (
+        <div role="status" className="rounded-xl border border-status-critical-border bg-status-critical-bg p-4 text-sm leading-6 text-status-critical">
+          در این گزارش {criticalCount} مورد با پرچم بحرانی ثبت شده است. برای دیدن نام آزمایش و مقدار آن، جزئیات نتایج را باز کنید.
+        </div>
+      ) : attentionCount > 0 ? (
+        <div className="rounded-xl border border-status-high-border bg-status-high-bg p-4 text-sm leading-6 text-status-high">
+          {attentionCount} مورد دارای پرچم بالا یا پایین است. این پرچم‌ها به‌تنهایی تشخیص بیماری نیستند.
+        </div>
+      ) : null}
+
+      <DisclosureSection
+        title="نتایج ساختاریافته"
+        description={attentionCount ? `${observations.length} مورد ثبت‌شده · ${attentionCount} مورد دارای پرچم بالا، پایین یا بحرانی` : "مقادیر، واحدها و محدوده‌های مرجع هر آزمایش در جزئیات قابل مشاهده‌اند."}
+        meta={`${observations.length} مورد`}
+      >
           {observations.length === 0 ? (
             <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
               نتیجه‌ای برای این گزارش ثبت نشده است.
@@ -199,8 +213,7 @@ export default async function PatientResultDetailPage({ params }) {
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </DisclosureSection>
 
       <section className="grid gap-4 lg:grid-cols-2">
         <Card>

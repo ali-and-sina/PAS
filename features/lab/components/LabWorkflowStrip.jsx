@@ -2,7 +2,7 @@ import { Check, CircleDot, FlaskConical, ClipboardList, FileCheck2, PencilLine }
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { key: "pending", label: "پذیرش جدید", icon: ClipboardList },
+  { key: "pending", label: "در انتظار پذیرش", icon: ClipboardList },
   { key: "received_by_lab", label: "پذیرفته‌شده", icon: Check },
   { key: "in_progress", label: "در حال انجام", icon: FlaskConical },
   { key: "draft", label: "پیش‌نویس نتیجه", icon: PencilLine },
@@ -29,14 +29,14 @@ export default function LabWorkflowStrip({ status = "pending" }) {
         <CircleDot className="size-4 text-muted-foreground" aria-hidden="true" />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap md:flex-nowrap md:overflow-x-auto md:pb-2">
         {STEPS.map((step, index) => {
           const Icon = step.icon;
           const done = index <= currentIndex;
           const current = index === currentIndex;
 
           return (
-            <div key={step.key} className="flex min-w-[122px] items-center gap-2">
+            <div key={step.key} className="flex min-w-0 items-center gap-2 sm:min-w-[122px] sm:flex-1 md:flex-none">
               <span
                 className={cn(
                   "flex size-8 shrink-0 items-center justify-center rounded-full border",
@@ -49,7 +49,7 @@ export default function LabWorkflowStrip({ status = "pending" }) {
               <span className={cn("text-xs font-medium", done ? "text-foreground" : "text-muted-foreground")}>
                 {step.label}
               </span>
-              {index < STEPS.length - 1 ? <span className="hidden h-px flex-1 bg-border md:block" aria-hidden="true" /> : null}
+              {index < STEPS.length - 1 ? <span className="hidden h-px flex-1 bg-border lg:block" aria-hidden="true" /> : null}
             </div>
           );
         })}

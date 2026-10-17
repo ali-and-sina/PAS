@@ -42,7 +42,7 @@ export default function LabDispatchCard({ dispatch }) {
     {dispatch.clinical_note && <div className="rounded-lg border p-3"><p className="text-xs font-medium text-muted-foreground">یادداشت بالینی</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6">{dispatch.clinical_note}</p></div>}
     {dispatch.response_note && <p className="text-sm text-muted-foreground">پاسخ ثبت‌شده: {dispatch.response_note}</p>}
     {actionable && <div className="grid gap-3 sm:grid-cols-2">
-      <Button type="button" onClick={accept} disabled={pending || rejecting}><CheckCircle2 aria-hidden="true" />{pending ? "در حال ثبت…" : "پذیرش درخواست"}</Button>
+      <Button type="button" onClick={accept} disabled={pending || rejecting} loading={pending}><CheckCircle2 aria-hidden="true" />{pending ? "در حال ثبت…" : "پذیرش درخواست"}</Button>
       <form action={rejectAction} className="space-y-2 rounded-lg border p-3"><input type="hidden" name="dispatch_id" value={dispatch.dispatch_id || dispatch.id} /><Textarea name="response_note" rows={2} maxLength={1000} placeholder="دلیل رد درخواست (اختیاری)" aria-label="دلیل رد درخواست" />{rejectState.message && <p role={rejectState.ok ? "status" : "alert"} className={`text-xs ${rejectState.ok ? "text-status-normal" : "text-destructive"}`}>{rejectState.message}</p>}<Button type="submit" variant="outline" className="w-full" disabled={rejecting || pending}><XCircle aria-hidden="true" />{rejecting ? "در حال ثبت…" : "رد درخواست"}</Button></form>
     </div>}
     {feedback && <p role="alert" className="text-sm text-destructive">{feedback}</p>}
