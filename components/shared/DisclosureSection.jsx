@@ -21,12 +21,12 @@ export default function DisclosureSection({
     >
       <summary
         className={cn(
-          "flex min-w-0 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl border bg-card p-4 transition-colors hover:bg-accent/20 sm:gap-4 sm:p-5",
+          "flex min-h-14 min-w-0 cursor-pointer list-none flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-4 transition-colors hover:bg-accent/20 sm:flex-nowrap sm:gap-4 sm:p-5",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
           "[&::-webkit-details-marker]:hidden",
         )}
       >
-        <span className="min-w-0 flex-1">
+        <span className="min-w-32 flex-1">
           <span className="block font-semibold leading-6">{title}</span>
           {description ? (
             <span className="mt-1 block text-sm leading-6 text-muted-foreground">

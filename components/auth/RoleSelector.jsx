@@ -26,7 +26,7 @@ export default function RoleSelector({ onSelect }) {
               type="button"
               onClick={() => onSelect(item.role)}
               style={{ "--auth-delay": `${index * 55}ms` }}
-              className={`${visualStyles.option} group relative flex min-h-[4.6rem] w-full items-center gap-4 rounded-2xl border border-border/80 bg-background/55 p-4 text-start transition-[transform,border-color,background-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-accent/55 hover:shadow-[0_12px_30px_-25px_hsl(var(--primary)/0.7)] active:translate-y-0 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none`}
+              className={`${visualStyles.option} group relative flex min-h-24 w-full items-center gap-4 rounded-2xl border bg-card p-4 text-start transition-[border-color,background-color,box-shadow] duration-150 hover:border-primary/45 hover:bg-accent/40 hover:shadow-sm active:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none`}
             >
               <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/[0.085] text-primary ring-1 ring-primary/10 transition-transform duration-200 group-hover:scale-[1.04] motion-reduce:transition-none">
                 <Icon className="size-5" strokeWidth={1.8} aria-hidden="true" />

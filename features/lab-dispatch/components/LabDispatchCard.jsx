@@ -1,5 +1,7 @@
 "use client";
 
+import { formatPersianDateTime } from "@/lib/utils/date-time";
+
 import { useState, useTransition } from "react";
 import { useActionState } from "react";
 import { CheckCircle2, Clock3, MapPin, UserRound, XCircle } from "lucide-react";
@@ -10,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 const rejectInitial = { ok: false, message: "" };
 const STATUS = { pending: "در انتظار پاسخ", accepted: "پذیرفته‌شده", rejected: "ردشده", cancelled: "لغوشده" };
-function formatDate(value) { return value ? new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—"; }
+
 
 export default function LabDispatchCard({ dispatch }) {
   const [rejectState, rejectAction, rejecting] = useActionState(rejectLabDispatch, rejectInitial);
@@ -37,7 +39,7 @@ export default function LabDispatchCard({ dispatch }) {
       <span className={`rounded-full px-3 py-1 text-xs ${dispatch.status === "accepted" ? "bg-emerald-50 text-emerald-800" : dispatch.status === "pending" ? "bg-amber-50 text-amber-800" : "bg-muted text-muted-foreground"}`}>{STATUS[dispatch.status] || dispatch.status}</span>
     </div>
     <div className="flex flex-wrap gap-2">{items.map((item, index) => <span key={item.request_item_id || `${item.item_id}-${index}`} className="rounded-md bg-muted px-2.5 py-1.5 text-xs">{item.name || "آزمایش"}</span>)}</div>
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground"><span className="flex items-center gap-1.5"><MapPin className="size-3.5" aria-hidden="true" />{dispatch.branch_name || "شعبه آزمایشگاه"}{dispatch.branch_city ? `، ${dispatch.branch_city}` : ""}</span><span className="flex items-center gap-1.5"><Clock3 className="size-3.5" aria-hidden="true" />ارسال: {formatDate(dispatch.sent_at)}</span></div>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground"><span className="flex items-center gap-1.5"><MapPin className="size-3.5" aria-hidden="true" />{dispatch.branch_name || "شعبه آزمایشگاه"}{dispatch.branch_city ? `، ${dispatch.branch_city}` : ""}</span><span className="flex items-center gap-1.5"><Clock3 className="size-3.5" aria-hidden="true" />ارسال: {formatPersianDateTime(dispatch.sent_at)}</span></div>
     {dispatch.requested_home_collection && <p className="rounded-lg bg-accent/50 p-3 text-sm text-primary">این درخواست شامل نمونه‌گیری در منزل نیز هست.</p>}
     {dispatch.clinical_note && <div className="rounded-lg border p-3"><p className="text-xs font-medium text-muted-foreground">یادداشت بالینی</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6">{dispatch.clinical_note}</p></div>}
     {dispatch.response_note && <p className="text-sm text-muted-foreground">پاسخ ثبت‌شده: {dispatch.response_note}</p>}

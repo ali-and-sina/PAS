@@ -7,12 +7,12 @@ export default function PageHeader({ title, description, actions, className }) {
   return (
     <header
       className={cn(
-        "mb-5 flex min-w-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4",
+        "mb-6 flex min-w-0 flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:justify-between sm:gap-5",
         className,
       )}
     >
-      <div className="min-w-0 space-y-1">
-        <h1 className="break-words text-xl font-semibold tracking-tight sm:text-2xl">
+      <div className="min-w-0 space-y-2">
+        <h1 className="break-words text-2xl font-bold leading-relaxed sm:text-[1.75rem]">
           {title}
         </h1>
         {description ? (

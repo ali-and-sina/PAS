@@ -1,5 +1,7 @@
 "use client";
 
+import { formatPersianDateTime } from "@/lib/utils/date-time";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Mic, Trash2, Upload, Square } from "lucide-react";
 
@@ -327,7 +329,7 @@ export default function VoiceVisitNoteRecorder({ patientId, visits = [] }) {
               <option value="">ایجاد ویزیت جدید پس از ثبت صدا</option>
               {activeVisits.map((visit) => (
                 <option key={visit.id} value={visit.id}>
-                  {new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(visit.visit_date || visit.created_at))} · {visit.status === "scheduled" ? "برنامه‌ریزی‌شده" : visit.status === "in_progress" ? "در حال انجام" : "تکمیل‌شده"}
+                  {formatPersianDateTime(visit.visit_date || visit.created_at)} · {visit.status === "scheduled" ? "برنامه‌ریزی‌شده" : visit.status === "in_progress" ? "در حال انجام" : "تکمیل‌شده"}
                 </option>
               ))}
             </select>

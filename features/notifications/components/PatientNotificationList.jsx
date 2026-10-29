@@ -1,5 +1,7 @@
 "use client";
 
+import { formatPersianDateTime } from "@/lib/utils/date-time";
+
 import { useTransition } from "react";
 
 import {
@@ -8,14 +10,7 @@ import {
 } from "@/features/notifications/actions";
 import { Button } from "@/components/ui/button";
 
-function formatDate(value) {
-  if (!value) return "—";
 
-  return new Intl.DateTimeFormat("fa-IR", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
 
 export default function PatientNotificationList({ notifications }) {
   const [pending, startTransition] = useTransition();
@@ -97,7 +92,7 @@ export default function PatientNotificationList({ notifications }) {
                 ) : null}
 
                 <time className="mt-3 block text-xs text-muted-foreground">
-                  {formatDate(notification.created_at)}
+                  {formatPersianDateTime(notification.created_at)}
                 </time>
               </div>
             </div>

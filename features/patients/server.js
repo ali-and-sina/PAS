@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getSessionUser } from "@/lib/auth/server";
 import { normalizeIranianMobile } from "@/lib/utils/validation";
 
 function normalizeStoredPhone(phone) {
@@ -9,6 +10,13 @@ function normalizeStoredPhone(phone) {
 
 export async function findPatientForDoctor({ doctorId, nationalId, phone }) {
   if (!doctorId || !nationalId || !phone) {
+    return null;
+  }
+
+  // Defense in depth: this helper uses the privileged client. Never trust a
+  // doctorId supplied by another server caller; bind it to the live session.
+  const actor = await getSessionUser();
+  if (actor?.id !== doctorId || actor?.role !== "doctor" || actor?.is_verified !== true) {
     return null;
   }
 

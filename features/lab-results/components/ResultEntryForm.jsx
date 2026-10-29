@@ -30,7 +30,7 @@ export default function ResultEntryForm({ orderId, reportId = null, tests = [], 
   ).length;
 
   return (
-    <form action={formAction} className="space-y-5" encType="multipart/form-data">
+    <form action={formAction} className="space-y-5">
       <input type="hidden" name="order_id" value={orderId} />
       {reportId ? <input type="hidden" name="report_id" value={reportId} /> : null}
 
@@ -39,11 +39,12 @@ export default function ResultEntryForm({ orderId, reportId = null, tests = [], 
           <div>
             <p className="text-sm font-medium">وضعیت ورود نتیجه</p>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              {completedRequiredCount} از {requiredCount} آزمایش الزامی تکمیل شده است.
+              {new Intl.NumberFormat("fa-IR").format(completedRequiredCount)} از {new Intl.NumberFormat("fa-IR").format(requiredCount)} آزمایش الزامی تکمیل شده است.
             </p>
           </div>
           <div className="text-xs font-medium text-muted-foreground">می‌توانید نتایج را در هر مرحله به‌صورت پیش‌نویس ذخیره کنید.</div>
         </div>
+        <div role="progressbar" aria-label="تکمیل آزمایش‌های الزامی" aria-valuemin={0} aria-valuemax={Math.max(requiredCount, 1)} aria-valuenow={requiredCount ? completedRequiredCount : 1} aria-valuetext={requiredCount ? `${completedRequiredCount} از ${requiredCount} آزمایش الزامی` : "آزمایش الزامی وجود ندارد"} className="mt-4 h-1.5 overflow-hidden rounded-full bg-primary/10"><div className="h-full rounded-full bg-primary transition-[width] motion-reduce:transition-none" style={{ width: `${requiredCount ? (completedRequiredCount / requiredCount) * 100 : 100}%` }} /></div>
       </div>
 
       <ResultImportPanel tests={tests} onImport={handleImport} />
@@ -79,9 +80,9 @@ export default function ResultEntryForm({ orderId, reportId = null, tests = [], 
         </div>
       ) : null}
 
-      <div className="sticky bottom-3 z-10 rounded-xl border bg-card/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80">
+      <div className="pas-result-actions sticky z-30 rounded-2xl border bg-card/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button type="submit" name="finalize" value="false" variant="outline" disabled={pending}>
+          <Button type="submit" name="finalize" value="false" formNoValidate variant="outline" disabled={pending}>
             <Save className="size-4" aria-hidden="true" />
             {pending ? "در حال ذخیره..." : "ذخیره پیش‌نویس نتیجه"}
           </Button>

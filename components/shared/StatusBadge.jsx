@@ -22,7 +22,7 @@ export default function StatusBadge({ variant = "neutral", label, icon: Icon }) 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
+        "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium leading-5",
         VARIANTS[variant] ?? VARIANTS.neutral,
       )}
     >

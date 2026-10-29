@@ -47,9 +47,10 @@ export default function UserMenu({ user }) {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="h-auto gap-2 rounded-full px-2 py-1.5"
+          className="min-h-[44px] gap-2 rounded-full px-[4px] py-[4px] sm:px-2"
+          aria-label={`منوی حساب ${user?.full_name?.trim() || "کاربر"}`}
         >
-          <Avatar className="size-8">
+          <Avatar className="size-[36px]">
             <AvatarImage src={user?.avatar_url ?? undefined} alt="" />
             <AvatarFallback className="bg-accent text-sm text-primary">
               {initialsOf(user?.full_name)}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Activity, CheckCircle2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+
 import visualStyles from "./auth-card.module.css";
 
 import {
@@ -15,7 +16,6 @@ import {
 import { Button } from "@/components/ui/button";
 
 import { auth } from "@/lib/auth/client";
-
 import { resolvePostLoginTarget } from "@/lib/auth";
 
 import {
@@ -34,50 +34,41 @@ import {
 import RoleSelector from "./RoleSelector";
 import IdentityForm from "./IdentityForm";
 import OtpForm from "./OtpForm";
+import Brand from "@/components/brand/Brand";
 
 const HEADING_ID = "login-heading";
 
 export default function LoginCard({
   next = null,
   isDevelopmentAuth = false,
-  isTestLoginEnabled = true,
+  isTestLoginEnabled = false,
   fixedRole = null,
 }) {
   const router = useRouter();
 
+  const canUseTestLogin =
+    process.env.NODE_ENV === "development" || isTestLoginEnabled;
+
   const [step, setStep] = useState(fixedRole ? "identity" : "role");
-
   const [role, setRole] = useState(fixedRole);
-
   const [values, setValues] = useState({
     identifier: "",
     phone: "",
   });
 
   const [submitted, setSubmitted] = useState(null);
-
   const [fieldErrors, setFieldErrors] = useState({});
-
   const [focusRequest, setFocusRequest] = useState(0);
-
   const [formError, setFormError] = useState(null);
-
   const [code, setCode] = useState("");
-
   const [pending, setPending] = useState(false);
-
   const [resendCount, setResendCount] = useState(0);
-
   const [done, setDone] = useState(false);
 
   const [showTestLogin, setShowTestLogin] = useState(false);
-
   const [testIdentifier, setTestIdentifier] = useState("");
-
   const [testPassword, setTestPassword] = useState("");
-
   const [testPending, setTestPending] = useState(false);
-
   const [testError, setTestError] = useState("");
 
   const config = role ? LOGIN_ROLE_CONFIG[role] : null;
@@ -125,9 +116,7 @@ export default function LoginCard({
   }
 
   async function handleIdentitySubmit() {
-    if (pending || !role) {
-      return;
-    }
+    if (pending || !role) return;
 
     const parsed = buildLoginIdentitySchema(role).safeParse(values);
 
@@ -163,9 +152,7 @@ export default function LoginCard({
   }
 
   async function handleResend() {
-    if (pending || !role || !submitted) {
-      return;
-    }
+    if (pending || !role || !submitted) return;
 
     setFormError(null);
     setPending(true);
@@ -191,25 +178,21 @@ export default function LoginCard({
   }
 
   async function handleTestLogin() {
-    if (testPending) {
-      return;
-    }
+    if (!canUseTestLogin || testPending) return;
 
-    const identifier = testIdentifier.trim();
+    const identifier = normalizeDigits(testIdentifier).trim();
     const password = testPassword;
 
     if (!identifier || !password) {
-      setTestError("شناسه و رمز ورود تست را وارد کنید.");
+      setTestError("شناسه و رمز ورود آزمایشی را وارد کنید.");
       return;
     }
 
-    // ادمین نباید از لاگین عمومی وارد شود.
     if (fixedRole !== "admin" && identifier.toLowerCase() === "admin") {
       setTestError("ورود مدیر فقط از صفحه اختصاصی مدیریت امکان‌پذیر است.");
       return;
     }
 
-    // اگر این LoginCard برای مدیر است، فقط شناسه مدیر مجاز است.
     if (fixedRole === "admin" && identifier.toLowerCase() !== "admin") {
       setTestError("شناسه ورود مدیر نادرست است.");
       return;
@@ -222,39 +205,38 @@ export default function LoginCard({
       const result = await auth.loginTestUser({
         identifier,
         password,
+        loginContext: fixedRole === "admin" ? "admin" : "public",
       });
 
       if (result?.ok) {
         setDone(true);
 
-        router.replace(
+        window.location.replace(
           resolvePostLoginTarget({
             redirectTo: result.redirectTo,
             next,
           }),
         );
 
-        router.refresh();
-
         return;
       }
 
       setTestError(
         result?.code === "NOT_AVAILABLE"
-          ? "ورود تست در تنظیمات سرور فعال نیست."
-          : "کد دسترسی تست اشتباه است یا حساب آزمایشی در پروژهٔ توسعه ساخته نشده است.",
+          ? "ورود آزمایشی در تنظیمات سرور فعال نیست."
+          : result?.code === "SERVER_ERROR"
+            ? "ورود آزمایشی با مشکل مواجه شد."
+            : "شناسه یا رمز دسترسی آزمایشی درست نیست.",
       );
     } catch {
-      setTestError("ورود تست با مشکل مواجه شد.");
+      setTestError("ورود آزمایشی با مشکل مواجه شد.");
     } finally {
       setTestPending(false);
     }
   }
 
   async function handleVerify() {
-    if (pending || !role || !submitted) {
-      return;
-    }
+    if (pending || !role || !submitted) return;
 
     const parsed = otpCodeSchema.safeParse(code);
 
@@ -262,7 +244,6 @@ export default function LoginCard({
       setFormError(
         parsed.error.issues[0]?.message ?? getAuthErrorMessage("WRONG_OTP"),
       );
-
       return;
     }
 
@@ -288,12 +269,10 @@ export default function LoginCard({
         );
 
         router.refresh();
-
         return;
       }
 
       setCode("");
-
       setFormError(getAuthErrorMessage(result?.code));
 
       if (
@@ -304,25 +283,22 @@ export default function LoginCard({
       }
     } catch {
       setFormError(getAuthErrorMessage("SERVER_ERROR"));
+    } finally {
+      setPending(false);
     }
-
-    setPending(false);
   }
 
   const header = {
     role: {
       title: "ورود به پاس",
-      description: "نقش خود را انتخاب کنید.",
+      description: "برای شروع، نقش خود را انتخاب کنید.",
     },
-
     identity: {
       title: `ورود ${config?.label ?? ""}`.trim(),
       description: "برای دریافت کد ورود، مشخصات خود را وارد کنید.",
     },
-
     otp: {
       title: "کد تأیید",
-
       description: (
         <>
           کد ورود برای شماره{" "}
@@ -335,73 +311,61 @@ export default function LoginCard({
     },
   }[step];
 
-  const BrandIcon = fixedRole === "admin" ? ShieldCheck : Activity;
+  const stepNumber =
+    step === "role"
+      ? 1
+      : step === "identity"
+        ? fixedRole
+          ? 1
+          : 2
+        : fixedRole
+          ? 2
+          : 3;
+
+  const totalSteps = fixedRole ? 2 : 3;
 
   return (
-    <Card
-      dir="rtl"
-      className="relative isolate w-full max-w-md overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/90 text-slate-800 shadow-[0_24px_80px_-32px_rgba(54,115,170,0.32)] backdrop-blur-xl"
-    >
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 500 260"
-        preserveAspectRatio="none"
-        className="pointer-events-none absolute inset-0 -z-10 h-full w-full"
-        fill="none"
-      >
-        <path
-          d="M350 -30 C350 75 450 40 530 110"
-          stroke="#C8DCFF"
-          strokeWidth="1.2"
-        />
-        <path
-          d="M-80 180 C40 100 90 250 230 235"
-          stroke="#8FD7E0"
-          strokeWidth="1.2"
-        />
-        <circle cx="450" cy="30" r="55" fill="#EAF5FB" opacity=".45" />
-      </svg>
+    <Card dir="rtl" className="w-full border-0 bg-transparent shadow-none">
+      <CardHeader className="space-y-3 p-0 pb-7 text-start sm:p-0 sm:pb-7">
+        <div className="mb-6 lg:hidden">
+          <Brand />
+        </div>
 
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-l from-transparent via-teal-400/70 to-transparent"
-      />
+        <div className="mb-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+          <span>
+            {fixedRole === "admin" ? "ورود مدیریت" : "ورود به حساب کاربری"}
+          </span>
 
-      <CardHeader className="space-y-3 px-6 pb-6 pt-8 text-right sm:px-9 sm:pt-10">
-        <div className="mb-3 flex items-center gap-3">
-          <div className="relative flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-400 to-blue-500 text-white shadow-[0_8px_22px_-10px_rgba(20,150,170,.65)]">
-            <BrandIcon
-              className="size-6"
-              strokeWidth={1.7}
-              aria-hidden="true"
-            />
+          <span>
+            مرحله {new Intl.NumberFormat("fa-IR").format(stepNumber)} از{" "}
+            {new Intl.NumberFormat("fa-IR").format(totalSteps)}
+          </span>
+        </div>
+
+        <div aria-hidden="true" className="flex gap-1.5">
+          {Array.from({ length: totalSteps }, (_, index) => (
             <span
-              aria-hidden="true"
-              className="absolute -bottom-1 -left-1 size-3 rounded-full border-2 border-white bg-emerald-400"
+              key={index}
+              className={`h-1 flex-1 rounded-full ${
+                index < stepNumber ? "bg-primary" : "bg-muted"
+              }`}
             />
-          </div>
-
-          <div className="space-y-1">
-            <div className="text-xl font-bold tracking-tight text-slate-800">
-              پاس
-            </div>
-            <div className="text-xs text-slate-500">پلتفرم ارزیابی سلامت</div>
-          </div>
+          ))}
         </div>
 
         <h1
           id={HEADING_ID}
-          className="pt-2 text-2xl font-bold tracking-tight text-slate-800 sm:text-[1.8rem]"
+          className="pt-4 text-2xl font-bold leading-relaxed text-foreground sm:text-[1.8rem]"
         >
           {header.title}
         </h1>
 
-        <CardDescription className="max-w-sm text-sm leading-7 text-slate-500">
+        <CardDescription className="max-w-sm text-sm leading-7 text-muted-foreground">
           {header.description}
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="px-6 pb-8 pt-1 sm:px-9 sm:pb-10">
+      <CardContent className="p-0">
         {done ? (
           <div
             role="status"
@@ -413,9 +377,7 @@ export default function LoginCard({
         ) : (
           <>
             <div key={step} className={visualStyles.stepEnter}>
-              {step === "role" && !showTestLogin && (
-                <RoleSelector onSelect={handleSelectRole} />
-              )}
+              {step === "role" && <RoleSelector onSelect={handleSelectRole} />}
 
               {step === "identity" && config && (
                 <IdentityForm
@@ -448,81 +410,137 @@ export default function LoginCard({
               )}
             </div>
 
-            <div className="mt-7 flex items-start gap-2 border-t border-slate-100 pt-4">
+            <div className="mt-7 flex items-start gap-2 rounded-xl bg-muted/50 p-3.5">
               <ShieldCheck
-                className="mt-0.5 size-4 shrink-0 text-teal-600"
+                className="mt-0.5 size-4 shrink-0 text-primary"
                 aria-hidden="true"
               />
-              <p className="text-xs leading-6 text-slate-500">
-                اطلاعات شما با رعایت اصول امنیت و حریم خصوصی پردازش می‌شود.
+
+              <p className="text-xs leading-6 text-muted-foreground">
+                کد ورود را فقط در همین صفحه وارد کنید و در اختیار دیگران
+                نگذارید.
               </p>
             </div>
 
-            {isTestLoginEnabled && (
-              <div className="mt-5 border-t border-slate-100 pt-4">
-                {!showTestLogin ? (
-                  <button
-                    type="button"
-                    className="mx-auto flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/70 px-4 text-sm font-medium text-slate-700 transition-colors hover:border-teal-300 hover:bg-teal-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 motion-reduce:transition-none"
-                    onClick={() => setShowTestLogin(true)}
+            <div className="mt-5 border-t pt-4">
+              <button
+                type="button"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
+                aria-expanded={showTestLogin}
+                aria-controls="test-login-panel"
+                onClick={() => {
+                  setShowTestLogin((open) => !open);
+                  setTestError("");
+                }}
+                disabled={testPending}
+              >
+                <Activity className="size-4 text-primary" aria-hidden="true" />
+
+                {showTestLogin ? "بستن ورود آزمایشی" : "ورود آزمایشی"}
+              </button>
+
+              <div
+                id="test-login-panel"
+                hidden={!showTestLogin}
+                className="mt-4 rounded-2xl border bg-muted/40 p-4"
+              >
+                {!canUseTestLogin ? (
+                  <p
+                    role="status"
+                    className="text-sm leading-7 text-muted-foreground"
                   >
-                    <Activity
-                      className="size-4 text-teal-600"
-                      aria-hidden="true"
-                    />
-                    ورود تست
-                  </button>
+                    ورود آزمایشی در این محیط فعال نیست.
+                  </p>
                 ) : (
-                  <div className="space-y-4 rounded-2xl border border-slate-200/90 bg-slate-50/80 p-4">
-                    <div className="text-center text-xs leading-6 text-slate-500">
-                      ورود موقت برای بررسی بخش‌های مختلف سامانه
-                    </div>
+                  <form
+                    className="space-y-4"
+                    aria-label="ورود آزمایشی"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      handleTestLogin();
+                    }}
+                  >
+                    <p className="text-sm leading-7 text-muted-foreground">
+                      حساب آزمایشی را انتخاب و رمز دسترسی را وارد کنید.
+                    </p>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        ["بیمار", "1272511677", "patient"],
-                        ["پزشک", "12345", "doctor"],
-                        ["آزمایشگاه", "LAB-1234", "laboratory"],
-                        ["مدیر", "admin", "admin"],
-                      ]
-                        .filter(([, , itemRole]) => {
-                          if (fixedRole === "admin") {
-                            return itemRole === "admin";
-                          }
+                    <fieldset disabled={testPending} className="space-y-2">
+                      <legend className="mb-2 text-sm font-medium">
+                        حساب آزمایشی
+                      </legend>
 
-                          return itemRole !== "admin";
-                        })
-                        .map(([label, identifier]) => (
-                          <button
-                            key={identifier}
-                            type="button"
-                            className="min-h-10 rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 transition-colors hover:border-teal-300 hover:bg-teal-50/60 disabled:opacity-50"
-                            onClick={() => {
-                              setTestIdentifier(identifier);
-                              setTestError("");
-                            }}
-                            disabled={testPending}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                    </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          ["بیمار", "1272511677", "patient"],
+                          ["پزشک", "12345", "doctor"],
+                          ["آزمایشگاه", "LAB-1234", "laboratory"],
+                          ["مدیر", "admin", "admin"],
+                        ]
+                          .filter(([, , itemRole]) =>
+                            fixedRole === "admin"
+                              ? itemRole === "admin"
+                              : itemRole !== "admin",
+                          )
+                          .map(([label, identifier]) => (
+                            <Button
+                              key={identifier}
+                              type="button"
+                              variant={
+                                testIdentifier === identifier
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                              aria-pressed={testIdentifier === identifier}
+                              onClick={() => {
+                                setTestIdentifier(identifier);
+                                setTestError("");
+                              }}
+                            >
+                              {label}
+                            </Button>
+                          ))}
+                      </div>
+                    </fieldset>
 
                     <div className="space-y-2">
+                      <label
+                        htmlFor="test-login-identifier"
+                        className="block text-sm font-medium"
+                      >
+                        شناسهٔ آزمایشی
+                      </label>
+
                       <input
+                        id="test-login-identifier"
+                        name="testIdentifier"
                         dir="ltr"
                         value={testIdentifier}
                         onChange={(event) => {
-                          setTestIdentifier(event.target.value);
+                          setTestIdentifier(
+                            normalizeDigits(event.target.value),
+                          );
                           setTestError("");
                         }}
-                        placeholder="شناسه تست"
-                        autoComplete="off"
-                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100 disabled:opacity-60"
+                        required
+                        autoComplete="username"
+                        spellCheck={false}
+                        autoCapitalize="none"
+                        className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
                         disabled={testPending}
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="test-login-password"
+                        className="block text-sm font-medium"
+                      >
+                        رمز دسترسی آزمایشی
+                      </label>
 
                       <input
+                        id="test-login-password"
+                        name="testPassword"
                         dir="ltr"
                         type="password"
                         value={testPassword}
@@ -530,49 +548,39 @@ export default function LoginCard({
                           setTestPassword(event.target.value);
                           setTestError("");
                         }}
-                        placeholder="رمز عبور تست: 1234"
-                        autoComplete="off"
-                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100 disabled:opacity-60"
+                        required
+                        autoComplete="current-password"
+                        aria-describedby={
+                          testError ? "test-login-error" : undefined
+                        }
+                        aria-invalid={Boolean(testError)}
+                        className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
                         disabled={testPending}
                       />
-
-                      {testError && (
-                        <p
-                          role="alert"
-                          className="text-xs leading-5 text-destructive"
-                        >
-                          {testError}
-                        </p>
-                      )}
-
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          className="h-11 flex-1 rounded-xl bg-gradient-to-l from-teal-500 to-teal-600 px-3 text-sm font-medium text-white shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-                          onClick={handleTestLogin}
-                          disabled={testPending}
-                          loading={testPending}
-                        >
-                          {testPending ? "در حال ورود..." : "ورود تست"}
-                        </Button>
-
-                        <button
-                          type="button"
-                          className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
-                          onClick={() => {
-                            setShowTestLogin(false);
-                            setTestError("");
-                          }}
-                          disabled={testPending}
-                        >
-                          بستن
-                        </button>
-                      </div>
                     </div>
-                  </div>
+
+                    {testError && (
+                      <p
+                        id="test-login-error"
+                        role="alert"
+                        className="text-sm leading-6 text-destructive"
+                      >
+                        {testError}
+                      </p>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={testPending}
+                      loading={testPending}
+                    >
+                      {testPending ? "در حال ورود…" : "ورود به حساب آزمایشی"}
+                    </Button>
+                  </form>
                 )}
               </div>
-            )}
+            </div>
           </>
         )}
       </CardContent>

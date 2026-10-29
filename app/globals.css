@@ -5,94 +5,96 @@
 @layer base {
   :root {
     /* ─── Base ───────────────────────────────── */
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    --background: 210.00 25.00% 96.86%;
+    --foreground: 202.86 45.65% 18.04%;
 
     /* ─── Surface ────────────────────────────── */
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card: 0.00 0.00% 100.00%;
+    --card-foreground: 202.86 45.65% 18.04%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 0.00 0.00% 100.00%;
+    --popover-foreground: 202.86 45.65% 18.04%;
 
     /* ─── Primary ────────────────────────────── */
-    --primary: 192 84% 31%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 175.34 77.44% 26.08%;
+    --primary-hover: 175.12 79.63% 21.18%;
+    --primary-active: 175.00 78.26% 18.04%;
+    --primary-foreground: 0.00 0.00% 100.00%;
 
     /* ─── Secondary ──────────────────────────── */
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 202.50 28.57% 94.51%;
+    --secondary-foreground: 202.86 45.65% 18.04%;
 
     /* ─── Muted ──────────────────────────────── */
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 205.71 25.93% 94.71%;
+    --muted-foreground: 207.43 17.59% 39.02%;
 
     /* ─── Accent ─────────────────────────────── */
-    --accent: 186 100% 96%;
-    --accent-foreground: 192 84% 31%;
+    --accent: 158.57 36.84% 92.55%;
+    --accent-foreground: 175.34 77.44% 26.08%;
 
     /* ─── Destructive ────────────────────────── */
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0.00 73.71% 41.76%;
+    --destructive-foreground: 0.00 0.00% 100.00%;
 
     /* ─── Border / Input / Ring ──────────────── */
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 192 84% 31%;
+    --border: 200.00 23.08% 89.80%;
+    --input: 206.00 13.51% 56.47%;
+    --ring: 175.34 77.44% 26.08%;
 
     /* ─── Radius ─────────────────────────────── */
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     /* ─── Status: Normal ─────────────────────── */
-    --status-normal: 142 71% 45%;
-    --status-normal-bg: 138 76% 97%;
-    --status-normal-border: 141 79% 85%;
+    --status-normal: 162.93 93.55% 24.31%;
+    --status-normal-bg: 151.76 80.95% 95.88%;
+    --status-normal-border: 152.37 76.00% 80.39%;
 
     /* ─── Status: Low ────────────────────────── */
-    --status-low: 32 95% 44%;
-    --status-low-bg: 48 100% 96%;
-    --status-low-border: 46 97% 65%;
+    --status-low: 22.73 82.50% 31.37%;
+    --status-low-bg: 48.00 100.00% 96.08%;
+    --status-low-border: 45.94 96.69% 64.51%;
 
     /* ─── Status: High ───────────────────────── */
-    --status-high: 21 90% 48%;
-    --status-high-bg: 33 100% 96%;
-    --status-high-border: 27 96% 61%;
+    --status-high: 15.00 79.07% 33.73%;
+    --status-high-bg: 33.33 100.00% 96.47%;
+    --status-high-border: 30.66 97.16% 72.35%;
 
     /* ─── Status: Critical ───────────────────── */
-    --status-critical: 0 72% 51%;
-    --status-critical-bg: 0 86% 97%;
-    --status-critical-border: 0 96% 89%;
+    --status-critical: 0.00 73.71% 41.76%;
+    --status-critical-bg: 0.00 85.71% 97.25%;
+    --status-critical-border: 0.00 96.30% 89.41%;
 
     /* ─── Status: Superseded ─────────────────── */
-    --status-superseded: 215 16% 47%;
-    --status-superseded-bg: 210 40% 98%;
-    --status-superseded-border: 214 32% 91%;
+    --status-superseded: 207.43 17.59% 39.02%;
+    --status-superseded-bg: 210.00 25.00% 96.86%;
+    --status-superseded-border: 200.00 23.08% 89.80%;
 
     /* ─── Order Status ───────────────────────── */
-    --order-pending: 215 16% 47%;
-    --order-pending-bg: 210 40% 96%;
+    --order-pending: 207.43 17.59% 39.02%;
+    --order-pending-bg: 205.71 25.93% 94.71%;
 
-    --order-received: 192 84% 31%;
-    --order-received-bg: 186 100% 96%;
+    --order-received: 175.34 77.44% 26.08%;
+    --order-received-bg: 158.57 36.84% 92.55%;
 
-    --order-in-progress: 32 95% 44%;
-    --order-in-progress-bg: 48 100% 96%;
+    --order-in-progress: 22.73 82.50% 31.37%;
+    --order-in-progress-bg: 48.00 100.00% 96.08%;
 
-    --order-completed: 142 71% 45%;
-    --order-completed-bg: 138 76% 97%;
+    --order-completed: 162.93 93.55% 24.31%;
+    --order-completed-bg: 151.76 80.95% 95.88%;
 
-    --order-cancelled: 0 72% 51%;
-    --order-cancelled-bg: 0 86% 97%;
+    --order-cancelled: 0.00 73.71% 41.76%;
+    --order-cancelled-bg: 0.00 85.71% 97.25%;
 
     /* ─── Prescription Status ────────────────── */
-    --prescription-active: 142 71% 45%;
-    --prescription-active-bg: 138 76% 97%;
+    --prescription-active: 162.93 93.55% 24.31%;
+    --prescription-active-bg: 151.76 80.95% 95.88%;
 
-    --prescription-completed: 215 16% 47%;
-    --prescription-completed-bg: 210 40% 96%;
+    --prescription-completed: 207.43 17.59% 39.02%;
+    --prescription-completed-bg: 205.71 25.93% 94.71%;
 
-    --prescription-cancelled: 0 72% 51%;
-    --prescription-cancelled-bg: 0 86% 97%;
+    --prescription-cancelled: 0.00 73.71% 41.76%;
+    --prescription-cancelled-bg: 0.00 85.71% 97.25%;
   }
 }
 
@@ -105,10 +107,12 @@
     direction: rtl;
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
+    scroll-padding-block: 6rem 7rem;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
+    line-height: 1.75;
   }
 
   :focus-visible {
@@ -121,7 +125,8 @@
   h4,
   h5,
   h6 {
-    @apply font-medium tracking-tight;
+    @apply font-semibold;
+    letter-spacing: normal;
   }
 
   ::-webkit-scrollbar {
@@ -260,3 +265,26 @@
     animation-duration: 1.8s;
   }
 }
+
+/* Shared workspace rhythm and device safe areas. */
+.pas-workspace { padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); }
+.pas-bottom-nav { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button, [role="button"], select { touch-action: manipulation; }
+button, [role="button"] { cursor: pointer; }
+select { min-height: 2.75rem; }
+input[readonly], textarea[readonly] { background-color: hsl(var(--muted) / .5); }
+:focus-visible { scroll-margin-block: 6rem 7rem; }
+::selection { background: hsl(var(--primary) / .18); color: hsl(var(--foreground)); }
+.pas-hero-pattern {
+  background-image: radial-gradient(hsl(var(--primary) / .12) 1px, transparent 1px);
+  background-size: 16px 16px;
+  mask-image: linear-gradient(to right, #000, transparent);
+}
+@media (min-width: 1024px) {
+  .pas-workspace { padding-bottom: 2.5rem; }
+  html { scroll-padding-bottom: 2rem; }
+}
+.pas-result-actions { bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+@media (min-width: 1024px) { .pas-result-actions { bottom: 1rem; } }
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) { min-height: 2.75rem; }

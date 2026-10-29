@@ -1,6 +1,7 @@
 import "server-only";
 
-import { requireAdmin } from "@/lib/auth/admin";
+import { redirect } from "next/navigation";
+import { AdminAuthorizationError, requireAdmin } from "@/lib/auth/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_PAGE_SIZE, makePagination, normalizePage, normalizePageSize } from "@/lib/pagination";
 
@@ -9,8 +10,22 @@ function unwrap(row) {
   return row ?? null;
 }
 
+async function requireAdminPage() {
+  try {
+    return await requireAdmin();
+  } catch (error) {
+    if (error instanceof AdminAuthorizationError &&
+        ["ADMIN_UNAUTHENTICATED", "ADMIN_FORBIDDEN"].includes(error.message)) {
+      // Pages and layouts can render concurrently. Authorization denial in a
+      // page must redirect too, rather than installing a global error state.
+      redirect("/unauthorized");
+    }
+    throw error;
+  }
+}
+
 export async function getAdminOverview() {
-  await requireAdmin();
+  await requireAdminPage();
   const supabase = createAdminClient();
 
   const [
@@ -50,7 +65,7 @@ export async function getAdminOverview() {
 }
 
 export async function getAdminUsers({ role = "all", search = "", page: requestedPage = 1, pageSize: requestedPageSize = DEFAULT_PAGE_SIZE } = {}) {
-  await requireAdmin();
+  await requireAdminPage();
   const supabase = createAdminClient();
   const pageSize = normalizePageSize(requestedPageSize);
   let page = normalizePage(requestedPage);
@@ -66,7 +81,7 @@ export async function getAdminUsers({ role = "all", search = "", page: requested
           phone,
           role,
           created_at,
-          doctor_profiles (
+          doctor_profiles!doctor_profiles_id_fkey (
             medical_license_number,
             specialty,
             is_verified
@@ -144,7 +159,7 @@ export async function getAdminUsers({ role = "all", search = "", page: requested
 }
 
 export async function getAdminDoctors({ status = "all", page: requestedPage = 1, pageSize: requestedPageSize = DEFAULT_PAGE_SIZE } = {}) {
-  await requireAdmin();
+  await requireAdminPage();
   const supabase = createAdminClient();
   const pageSize = normalizePageSize(requestedPageSize);
   let page = normalizePage(requestedPage);
@@ -214,7 +229,7 @@ export async function getAdminDoctors({ status = "all", page: requestedPage = 1,
 }
 
 export async function getAdminLaboratories({ page: requestedPage = 1, pageSize: requestedPageSize = DEFAULT_PAGE_SIZE } = {}) {
-  await requireAdmin();
+  await requireAdminPage();
   const supabase = createAdminClient();
   const pageSize = normalizePageSize(requestedPageSize);
   let page = normalizePage(requestedPage);
@@ -281,7 +296,7 @@ export async function getAdminLaboratories({ page: requestedPage = 1, pageSize: 
 }
 
 export async function getAdminDoctor(doctorId) {
-  await requireAdmin();
+  await requireAdminPage();
   const id = String(doctorId ?? "").trim();
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
 
@@ -327,7 +342,7 @@ export async function getAdminDoctor(doctorId) {
 }
 
 export async function getAdminLaboratory(laboratoryId) {
-  await requireAdmin();
+  await requireAdminPage();
   const id = String(laboratoryId ?? "").trim();
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
 
@@ -374,7 +389,7 @@ export async function getAdminLaboratory(laboratoryId) {
 }
 
 export async function getAdminUser(userId) {
-  await requireAdmin();
+  await requireAdminPage();
   const id = String(userId ?? "").trim();
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
 
@@ -389,7 +404,7 @@ export async function getAdminUser(userId) {
       national_id,
       created_at,
       updated_at,
-      doctor_profiles (
+      doctor_profiles!doctor_profiles_id_fkey (
         medical_license_number,
         specialty,
         is_verified,

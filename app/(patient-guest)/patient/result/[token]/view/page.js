@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Brand from "@/components/brand/Brand";
 import {
   ArrowRight,
   CheckCircle2,
@@ -69,7 +70,7 @@ export default async function GuestResultViewPage({ params }) {
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm text-muted-foreground">پاس</p>
+            <Brand compact />
             <h1 className="mt-1 text-2xl font-semibold">نتیجه آزمایش</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               نهایی‌شده در {formatDate(access.report.finalized_at ?? access.report.created_at)}

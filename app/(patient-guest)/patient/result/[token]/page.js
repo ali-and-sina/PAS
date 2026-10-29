@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Brand from "@/components/brand/Brand";
 
 import { ArrowLeft, CheckCircle2, ShieldCheck } from "lucide-react";
 
@@ -173,16 +174,8 @@ export default async function GuestResultLandingPage({ params }) {
             {/* Brand + intro */}
             <div className="pa-intro">
               <div className="mb-4 flex justify-center">
-                <div className="flex size-12 items-center justify-center rounded-2xl border border-primary/10 bg-primary/[0.045]">
-                  <span className="text-base font-bold tracking-tight text-primary">
-                    پاس
-                  </span>
-                </div>
+                <Brand />
               </div>
-
-              <p className="text-[11px] font-medium tracking-[0.18em] text-muted-foreground">
-                پلتفرم ارزیابی سلامت
-              </p>
 
               <div className="mx-auto mt-10 flex size-14 items-center justify-center rounded-full border border-primary/10 bg-background/90 shadow-sm">
                 <CheckCircle2

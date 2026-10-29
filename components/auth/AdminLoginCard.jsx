@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ShieldCheck } from "lucide-react";
-import visualStyles from "./auth-card.module.css";
+import { ArrowRight } from "lucide-react";
+import Brand from "@/components/brand/Brand";
 
 import {
   Card,
@@ -63,9 +63,9 @@ export default function AdminLoginCard({ next = null, isTestLoginEnabled = false
   }
 
   async function handleTestLogin() {
-    if (testPending) return;
+    if (!isTestLoginEnabled || testPending) return;
     if (!testAccessCode) {
-      setTestError("کد دسترسی تست را وارد کنید.");
+      setTestError("رمز دسترسی آزمایشی را وارد کنید.");
       return;
     }
 
@@ -81,18 +81,18 @@ export default function AdminLoginCard({ next = null, isTestLoginEnabled = false
       if (!result?.ok) {
         setTestError(
           result?.code === "NOT_AVAILABLE"
-            ? "ورود تست در تنظیمات سرور فعال نیست."
-            : "ورود تست انجام نشد؛ کد دسترسی یا حساب تست در پروژهٔ توسعه تنظیم نشده است.",
+            ? "ورود آزمایشی در این محیط فعال نیست."
+            : "ورود آزمایشی انجام نشد؛ شناسه یا رمز دسترسی درست نیست.",
         );
         return;
       }
 
-      router.replace(
+      // Discard all client state belonging to a previously tested role.
+      window.location.replace(
         resolvePostLoginTarget({ redirectTo: result.redirectTo, next }),
       );
-      router.refresh();
     } catch {
-      setTestError("ورود تست با مشکل مواجه شد.");
+      setTestError("ورود آزمایشی با مشکل مواجه شد.");
     } finally {
       setTestPending(false);
     }
@@ -106,19 +106,7 @@ export default function AdminLoginCard({ next = null, isTestLoginEnabled = false
       />
       <CardHeader className="space-y-3 px-6 pb-5 pt-8 text-center sm:px-8 sm:pt-9">
         <div className="mb-1 flex flex-col items-center gap-3">
-          <div
-            className={`${visualStyles.brandMark} relative flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm`}
-          >
-            <ShieldCheck
-              className="size-6"
-              strokeWidth={1.8}
-              aria-hidden="true"
-            />
-            <span
-              aria-hidden="true"
-              className="absolute -bottom-1 -left-1 size-3 rounded-full border-2 border-card bg-emerald-400"
-            />
-          </div>
+          <Brand />
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/[0.055] px-3 py-1 text-[11px] font-medium text-primary">
             دسترسی امن مدیران سامانه
           </span>
@@ -183,63 +171,57 @@ export default function AdminLoginCard({ next = null, isTestLoginEnabled = false
           دسترسی فقط پس از تأیید حساب مدیریتی در سامانه انجام می‌شود.
         </p>
 
-        {isTestLoginEnabled && (
-          <div className="border-t border-border/70 pt-5">
-            {!showTestLogin ? (
-              <button
-                type="button"
-                className="mx-auto flex min-h-9 items-center gap-2 rounded-full px-3 text-xs text-muted-foreground transition-colors duration-200 hover:bg-muted/70 hover:text-foreground motion-reduce:transition-none"
-                onClick={() => setShowTestLogin(true)}
-              >
-                ورود تست محیط توسعه <ArrowRight className="size-3" aria-hidden="true" />
-              </button>
+        <div className="border-t pt-5">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            aria-expanded={showTestLogin}
+            aria-controls="admin-test-login-panel"
+            onClick={() => {
+              setShowTestLogin((open) => !open);
+              setTestError("");
+            }}
+            disabled={testPending}
+          >
+            {showTestLogin ? "بستن ورود آزمایشی مدیر" : "ورود آزمایشی مدیر"}
+            <ArrowRight className="size-4" aria-hidden="true" />
+          </Button>
+          <div id="admin-test-login-panel" hidden={!showTestLogin} className="mt-4 rounded-2xl border bg-muted/25 p-4">
+            {!isTestLoginEnabled ? (
+              <p role="status" className="text-sm leading-7 text-muted-foreground">
+                ورود آزمایشی مدیر در این محیط فعال نیست. برای دریافت دسترسی با مدیر سامانه هماهنگ کنید.
+              </p>
             ) : (
-              <div className="space-y-3 rounded-2xl border border-border/70 bg-muted/25 p-4">
-                <Label htmlFor="admin-test-access-code">کد دسترسی تست</Label>
+              <form className="space-y-3" aria-label="ورود آزمایشی مدیر" onSubmit={(event) => {
+                event.preventDefault();
+                handleTestLogin();
+              }}>
+                <Label htmlFor="admin-test-access-code">رمز دسترسی آزمایشی مدیر</Label>
                 <Input
                   id="admin-test-access-code"
+                  name="adminTestPassword"
                   dir="ltr"
                   type="password"
-                  autoComplete="off"
+                  required
+                  autoComplete="current-password"
                   value={testAccessCode}
                   onChange={(event) => {
                     setTestAccessCode(event.target.value);
                     setTestError("");
                   }}
                   disabled={testPending}
-                  className="h-11 rounded-xl bg-background/80"
+                  aria-invalid={Boolean(testError)}
+                  aria-describedby={testError ? "admin-test-login-error" : undefined}
                 />
-                {testError && (
-                  <p className="text-xs text-destructive" role="alert">
-                    {testError}
-                  </p>
-                )}
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    className="h-11 flex-1 rounded-xl transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 motion-reduce:transition-none"
-                    onClick={handleTestLogin}
-                    disabled={testPending}
-                  >
-                    {testPending ? "در حال ورود..." : "ورود تست"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 rounded-xl"
-                    onClick={() => {
-                      setShowTestLogin(false);
-                      setTestError("");
-                    }}
-                    disabled={testPending}
-                  >
-                    بستن
-                  </Button>
-                </div>
-              </div>
+                {testError && <p id="admin-test-login-error" className="text-sm leading-6 text-destructive" role="alert">{testError}</p>}
+                <Button type="submit" className="w-full" disabled={testPending} loading={testPending}>
+                  {testPending ? "در حال ورود…" : "ورود به حساب آزمایشی مدیر"}
+                </Button>
+              </form>
             )}
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { formatPersianDateTime } from "@/lib/utils/date-time";
+
 import { useState, useTransition } from "react";
 import { ShieldCheck, ShieldOff } from "lucide-react";
 
@@ -10,10 +12,7 @@ import {
   revokePhysicianVoiceRecordingConsent,
 } from "@/features/physician-care/consent-actions";
 
-function formatDate(value) {
-  if (!value) return null;
-  return new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
-}
+
 
 export default function VoiceRecordingConsentCard({ initialGranted = false, grantedAt = null }) {
   const [granted, setGranted] = useState(initialGranted);
@@ -52,7 +51,7 @@ export default function VoiceRecordingConsentCard({ initialGranted = false, gran
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <span className={`rounded-full px-3 py-1 text-xs ${granted ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
-            {granted ? `رضایت فعال${formatDate(consentDate) ? ` · ${formatDate(consentDate)}` : ""}` : "رضایت ثبت نشده یا لغو شده"}
+            {granted ? `رضایت فعال${formatPersianDateTime(consentDate) ? ` · ${formatPersianDateTime(consentDate)}` : ""}` : "رضایت ثبت نشده یا لغو شده"}
           </span>
           <Button type="button" variant={granted ? "outline" : "default"} onClick={changeConsent} disabled={pending} loading={pending}>
             {pending ? "در حال ثبت..." : granted ? "لغو رضایت" : "ثبت رضایت"}

@@ -122,7 +122,7 @@ export default function OtpForm({
       <div className="flex items-start gap-2 rounded-xl border border-primary/10 bg-primary/[0.055] px-3.5 py-3 text-sm text-accent-foreground">
         <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <div className="space-y-1 leading-relaxed">
-          <p>ارسال کد تأیید در نسخه نهایی فعال خواهد شد.</p>
+          <p>اگر کد را دریافت نکردید، شماره را بررسی کنید یا پس از پایان شمارش، ارسال مجدد را بزنید.</p>
           {isDevelopmentAuth && (
             <p className="text-xs">
               در حالت آزمایشی، برای شماره‌های تست تعریف‌شده در سامانه همان کد
@@ -134,7 +134,7 @@ export default function OtpForm({
 
       <Button
         type="submit"
-        className="h-12 w-full rounded-xl font-medium shadow-sm transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:translate-y-0 motion-reduce:transition-none"
+        className="min-h-12 w-full rounded-xl shadow-sm"
         disabled={pending}
         aria-busy={pending}
       >

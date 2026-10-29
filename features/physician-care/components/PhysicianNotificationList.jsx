@@ -1,5 +1,7 @@
 "use client";
 
+import { formatPersianDateTime } from "@/lib/utils/date-time";
+
 import Link from "next/link";
 import { useTransition } from "react";
 import { Bell, FileCheck2 } from "lucide-react";
@@ -7,10 +9,7 @@ import { Bell, FileCheck2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { markAllNotificationsRead, markNotificationRead } from "@/features/notifications/actions";
 
-function formatDate(value) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
-}
+
 
 function getHref(notification) {
   if (notification.related_entity_type === "diagnostic_report" && notification.related_entity_id) {
@@ -62,7 +61,7 @@ export default function PhysicianNotificationList({ notifications }) {
                       <h2 className="font-medium">{notification.title}</h2>
                       {notification.body ? <p className="mt-1 text-sm leading-6 text-muted-foreground">{notification.body}</p> : null}
                     </div>
-                    <time className="shrink-0 text-xs text-muted-foreground">{formatDate(notification.created_at)}</time>
+                    <time className="shrink-0 text-xs text-muted-foreground">{formatPersianDateTime(notification.created_at)}</time>
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">

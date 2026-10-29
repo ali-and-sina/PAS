@@ -1,5 +1,7 @@
 "use client";
 
+import { formatPersianDateTime } from "@/lib/utils/date-time";
+
 import { useState, useTransition } from "react";
 import { Check, Copy, ExternalLink, MessageSquareText, Link2 } from "lucide-react";
 
@@ -136,7 +138,7 @@ export default function GuestResultLinkPanel({ reportId, patientPhone = null }) 
 
             {expiresAt ? (
               <p className="text-xs text-muted-foreground">
-                اعتبار این لینک تا {new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(expiresAt))} است.
+                اعتبار این لینک تا {formatPersianDateTime(expiresAt)} است.
               </p>
             ) : null}
           </>

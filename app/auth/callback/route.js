@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getPostLoginRedirect, LOGIN_PATH } from "@/lib/auth";
+import { getSessionUser } from "@/lib/auth/server";
+import { getPostLoginRedirect, LOGIN_PATH, resolvePostLoginTarget } from "@/lib/auth";
 
 export async function GET(request) {
   const { searchParams, origin } = new URL(request.url);
@@ -8,47 +9,24 @@ export async function GET(request) {
   const next = searchParams.get("next");
 
   if (!code) {
-    return NextResponse.redirect(`${origin}${LOGIN_PATH}?error=missing_code`);
+    return NextResponse.redirect(new URL(`${LOGIN_PATH}?error=missing_code`, origin));
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
-
   if (error) {
-    console.error("OAuth callback error:", error);
-
-    return NextResponse.redirect(
-      `${origin}${LOGIN_PATH}?error=${encodeURIComponent(error.message)}`,
-    );
+    // Do not echo provider errors or internal error details into public URLs.
+    console.error("[auth/callback] Code exchange failed");
+    return NextResponse.redirect(new URL(`${LOGIN_PATH}?error=authentication_failed`, origin));
   }
 
-  if (next) {
-    return NextResponse.redirect(`${origin}${next}`);
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
+    await supabase.auth.signOut({ scope: "local" });
+    return NextResponse.redirect(new URL(LOGIN_PATH, origin));
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.redirect(`${origin}${LOGIN_PATH}`);
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(
-      `
-      role,
-      doctor_profiles (is_verified)
-    `,
-    )
-    .eq("id", user.id)
-    .single();
-
-  const redirectTo = getPostLoginRedirect({
-    role: profile?.role,
-    is_verified: profile?.doctor_profiles?.is_verified,
-  });
-
-  return NextResponse.redirect(`${origin}${redirectTo}`);
+  const redirectTo = getPostLoginRedirect(sessionUser);
+  const safeTarget = resolvePostLoginTarget({ redirectTo, next });
+  return NextResponse.redirect(new URL(safeTarget, origin));
 }

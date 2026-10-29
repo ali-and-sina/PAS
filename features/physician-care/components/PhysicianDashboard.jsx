@@ -15,6 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhysicianFollowUpStatusForm } from "@/features/physician-care/components/FollowUpForms";
+import DashboardWelcome from "@/components/shared/DashboardWelcome";
+import StatCard from "@/components/shared/StatCard";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -49,37 +51,19 @@ export default function PhysicianDashboard({ data }) {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border bg-card p-5 sm:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">امروز پزشک</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">سلام {greetingName}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              خلاصه بیماران فعال، نتایج تازه، وضعیت تست‌ها و پیگیری‌های سررسیدشده.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+      <DashboardWelcome
+        eyebrow="مراقبت روزانه · فضای پزشک"
+        title={`سلام، ${greetingName}`}
+        description="بیماران، نتایج تازه و پیگیری‌های امروز را از اینجا دنبال کنید."
+        actions={<>
             <Button asChild><Link href="/doctor/lab-orders/new">ثبت درخواست آزمایش</Link></Button>
             <Button asChild variant="outline"><Link href="/doctor/patients">مشاهده بیماران</Link></Button>
-          </div>
-        </div>
-      </section>
+        </>}
+      />
 
-      <section aria-label="شمارنده‌های قابل پیگیری" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="شمارنده‌های قابل پیگیری" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {statItems.map(({ key, label, icon: Icon, tone, href }) => (
-          <Link href={href} key={key} className="group">
-            <Card className="h-full transition-colors group-hover:border-primary/30 group-hover:bg-accent/30">
-              <CardContent className="flex items-center justify-between gap-4 p-5">
-                <div>
-                  <p className="text-sm text-muted-foreground">{label}</p>
-                  <p className="mt-1 text-3xl font-semibold tabular-nums">{data.counts?.[key] ?? 0}</p>
-                </div>
-                <span className={`inline-flex size-11 items-center justify-center rounded-xl ${toneClasses[tone]}`}>
-                  <Icon className="size-5" aria-hidden="true" />
-                </span>
-              </CardContent>
-            </Card>
-          </Link>
+          <StatCard key={key} href={href} label={label} value={data.counts?.[key] ?? 0} icon={Icon} tone={tone} />
         ))}
       </section>
 

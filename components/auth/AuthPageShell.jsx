@@ -1,30 +1,34 @@
+import { ClipboardList, FileCheck2, HeartHandshake, ShieldCheck, Stethoscope, Users } from "lucide-react";
+import Brand from "@/components/brand/Brand";
 import styles from "./AuthPageShell.module.css";
+
+const careSteps = [
+  { icon: ClipboardList, title: "درخواست آزمایش", description: "ثبت درخواست پزشک و انتخاب آزمایشگاه" },
+  { icon: FileCheck2, title: "نتایج در دسترس", description: "مشاهده نتیجه و توضیحات تأییدشده پزشک" },
+  { icon: HeartHandshake, title: "ادامه مسیر مراقبت", description: "نسخه‌ها، پرونده و پیگیری‌های سلامت" },
+];
+const adminSteps = [
+  { icon: Users, title: "مدیریت کاربران", description: "جستجو و بررسی حساب‌های سامانه" },
+  { icon: Stethoscope, title: "تأیید پزشکان", description: "بررسی مشخصات و وضعیت حساب پزشک" },
+  { icon: ShieldCheck, title: "مدیریت آزمایشگاه‌ها", description: "سازمان‌ها، شعب و اعضای هر شعبه" },
+];
 
 export default function AuthPageShell({ children, variant = "public" }) {
   const isAdmin = variant === "admin";
-
-  return (
-    <main
-      id="main-content"
-      className="relative isolate flex min-h-svh items-center justify-center overflow-hidden bg-background px-4 py-10 sm:px-6 sm:py-14"
-    >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-      >
-        <div className={`${styles.grid} absolute inset-0`} />
-        <div className={`${styles.orb} absolute -right-32 -top-36 size-[25rem] rounded-full bg-primary/[0.105] blur-3xl sm:-right-20 sm:-top-40 sm:size-[32rem]`} />
-        <div className={`${styles.orb} ${styles.orbSecondary} absolute -bottom-36 -left-28 size-[23rem] rounded-full bg-cyan-300/[0.11] blur-3xl sm:-bottom-44 sm:-left-28 sm:size-[29rem]`} />
-        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-background/80 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background/65 to-transparent" />
-      </div>
-
-      <div className={`${styles.content} relative z-10 w-full max-w-md`}>
+  const steps = isAdmin ? adminSteps : careSteps;
+  return <main id="main-content" className="flex min-h-svh items-center justify-center bg-background px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+    <div className="grid w-full max-w-md overflow-hidden rounded-3xl border bg-card shadow-[0_24px_80px_-48px_hsl(var(--foreground)/0.3)] lg:min-h-[740px] lg:max-w-6xl lg:grid-cols-[1.05fr_1fr]">
+      <aside aria-label={isAdmin ? "فضای مدیریت پاس" : "درباره پاس"} className={`${styles.panel} relative hidden flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground lg:flex xl:p-12`}>
+        <div aria-hidden="true" className={styles.rings} />
+        <div className="relative"><Brand inverse /><p className="mt-14 text-sm font-medium text-white">{isAdmin ? "مدیریت هماهنگ سامانه" : "همراه مسیر سلامت"}</p><p className="mt-4 max-w-md text-4xl font-extrabold leading-[1.65] xl:text-[2.75rem]">{isAdmin ? <>یک نمای روشن<br />از تمام سامانه.</> : <>مراقبت بهتر،<br />با ارتباط روشن‌تر.</>}</p><p className="mt-5 max-w-sm text-sm leading-8 text-white">{isAdmin ? "کاربران، پزشکان و آزمایشگاه‌ها را از یک فضای کاری یکپارچه مدیریت کنید." : "از درخواست آزمایش تا نتیجه و پیگیری؛ بیمار، پزشک و آزمایشگاه در یک مسیر هماهنگ."}</p></div>
+        <ol className="relative mt-10 space-y-4 rounded-2xl border border-white/20 bg-white/[0.08] p-5">
+          {steps.map(({ icon: Icon, title, description }) => <li key={title} className="flex items-center gap-4"><span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/15"><Icon className="size-5" strokeWidth={1.6} aria-hidden="true" /></span><span><span className="block text-sm font-semibold">{title}</span><span className="mt-0.5 block text-xs leading-6 text-white">{description}</span></span></li>)}
+        </ol>
+      </aside>
+      <div className="flex min-w-0 flex-col justify-center px-6 py-8 sm:px-9 sm:py-10 lg:px-10 xl:px-14">
         {children}
-        <p className="mt-5 text-center text-[11px] tracking-wide text-muted-foreground/75">
-          {isAdmin ? "دسترسی امن مدیران سامانه" : "سلامت، شفاف‌تر و در دسترس‌تر"}
-        </p>
+        <p className="mt-8 border-t pt-5 text-center text-xs leading-6 text-muted-foreground">{isAdmin ? "ورود ویژه مدیران سامانه" : "پاس · پلتفرم ارزیابی سلامت"}</p>
       </div>
-    </main>
-  );
+    </div>
+  </main>;
 }

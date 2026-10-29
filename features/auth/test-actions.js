@@ -1,15 +1,14 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 import { getPostLoginRedirect } from "@/lib/auth";
 
 import {
   getTestUserCredentials,
   isTestLoginEnabled,
+  isAdminTestLoginEnabled,
   toAuthPhone,
-  TEST_AUTH_PASSWORD,
 } from "@/lib/auth/test-session";
 
 async function clearCurrentSession(supabase) {
@@ -22,7 +21,24 @@ async function clearCurrentSession(supabase) {
   }
 }
 
-export async function loginTestUser({
+export async function loginTestUser(input = {}) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return { ok: false, code: "INVALID_INPUT" };
+  }
+  try {
+    return await authenticateTestUser(input);
+  } catch (error) {
+    console.error("[loginTestUser]", { name: error?.name, code: error?.code });
+    try {
+      await clearCurrentSession(await createClient());
+    } catch {
+      // The request may have failed before a client/session could be created.
+    }
+    return { ok: false, code: "SERVER_ERROR" };
+  }
+}
+
+async function authenticateTestUser({
   identifier,
   password,
   loginContext = "public",
@@ -41,6 +57,10 @@ export async function loginTestUser({
    * admin        -> admin only
    */
   const normalizedContext = loginContext === "admin" ? "admin" : "public";
+
+  if (normalizedContext === "admin" && !isAdminTestLoginEnabled()) {
+    return { ok: false, code: "NOT_AVAILABLE" };
+  }
 
   const testUser = getTestUserCredentials(identifier, password);
 
@@ -87,7 +107,7 @@ export async function loginTestUser({
   const { data: authData, error: authError } =
     await supabase.auth.signInWithPassword({
       phone: authPhone,
-      password: TEST_AUTH_PASSWORD,
+      password: process.env.PAS_TEST_AUTH_PASSWORD,
     });
 
   if (authError) {
@@ -216,33 +236,11 @@ export async function loginTestUser({
     }
   }
 
-  /*
-   * Admin-specific validation.
-   *
-   * Admin must have:
-   * 1. profiles.role = admin
-   * 2. matching admin_profiles row
-   * 3. matching personnel_code
-   *
-   * This is intentionally checked after the real Supabase
-   * authentication has been established.
-   */
+  // Demo administration is bound to a specific Auth user configured by the
+  // owner, in addition to the password, phone and database role checks above.
+  // It needs no privileged directory read or service key in the login path.
   if (testUser.role === "admin") {
-    // admin_profiles has no authenticated SELECT policy by design.
-    const privileged = createAdminClient();
-    const { data: adminProfile, error: adminProfileError } = await privileged
-      .from("admin_profiles")
-      .select("personnel_code")
-      .eq("id", user.id)
-      .single();
-
-    if (
-      adminProfileError ||
-      !adminProfile ||
-      String(adminProfile.personnel_code ?? "").trim().toUpperCase() !== testUser.identifier.toUpperCase()
-    ) {
-      console.error("[loginTestUser:adminProfile]", adminProfileError);
-
+    if (user.id !== testUser.user_id) {
       await clearCurrentSession(supabase);
 
       return {
@@ -260,12 +258,23 @@ export async function loginTestUser({
     ? profile.laboratory_profiles[0]
     : profile.laboratory_profiles;
 
+  let patientProfileCompleted = null;
+  if (testUser.role === "patient") {
+    const { data: patientProfile, error: patientProfileError } = await supabase
+      .from("patient_profiles").select("id").eq("id", user.id).maybeSingle();
+    if (patientProfileError) {
+      await clearCurrentSession(supabase);
+      return { ok: false, code: "SERVER_ERROR" };
+    }
+    patientProfileCompleted = Boolean(patientProfile);
+  }
+
   const redirectTo = await getPostLoginRedirect({
     ...profile,
     is_verified: doctorProfile?.is_verified ?? null,
     specialty: doctorProfile?.specialty ?? null,
     organization_id: laboratoryProfile?.organization_id ?? null,
-    patient_profile_completed: testUser.role === "patient" ? true : null,
+    patient_profile_completed: patientProfileCompleted,
   });
 
   return { ok: true, userId: user.id, role: profile.role, redirectTo };

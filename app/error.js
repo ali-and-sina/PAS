@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -31,14 +32,8 @@ export default function GlobalError({ error, reset }) {
           <Button type="button" onClick={() => reset()}>
             تلاش دوباره
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              window.location.href = "/";
-            }}
-          >
-            بازگشت به داشبورد
+          <Button asChild variant="outline">
+            <Link href="/">بازگشت به داشبورد</Link>
           </Button>
         </div>
       </div>

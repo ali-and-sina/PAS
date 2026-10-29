@@ -1,5 +1,7 @@
 "use client";
 
+import { formatPersianDateTime } from "@/lib/utils/date-time";
+
 import { useState, useTransition } from "react";
 import { CalendarClock, CheckCircle2, Clock3 } from "lucide-react";
 
@@ -17,13 +19,7 @@ const STATUS_LABELS = {
   cancelled: "لغوشده",
 };
 
-function formatDate(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? String(value)
-    : new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(date);
-}
+
 
 export default function VisitManager({ patientId, visits = [] }) {
   const [visitDate, setVisitDate] = useState("");
@@ -112,7 +108,7 @@ export default function VisitManager({ patientId, visits = [] }) {
                     {STATUS_LABELS[visit.status] || visit.status}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{formatDate(visit.visit_date || visit.created_at)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{formatPersianDateTime(visit.visit_date || visit.created_at)}</p>
                 {visit.status === "scheduled" ? (
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button type="button" size="sm" variant="outline" disabled={pending} loading={pending && activeAction === `${visit.id}:in_progress`} onClick={() => changeStatus(visit.id, "in_progress")}>شروع ویزیت</Button>

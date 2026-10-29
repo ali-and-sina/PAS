@@ -4,6 +4,7 @@ import { useState } from "react";
 import SessionProvider from "@/components/providers/SessionProvider";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
+import MobileBottomNav from "./MobileBottomNav";
 
 /**
  * Shared chrome for every authenticated role area: sidebar (desktop) +
@@ -22,9 +23,10 @@ export default function AppShell({ user, children }) {
         <Sidebar />
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <Header mobileOpen={mobileOpen} onMobileOpenChange={setMobileOpen} />
-          <main id="main-content" className="min-w-0 flex-1 px-3 py-5 sm:px-6 sm:py-6 lg:px-8">
-            <div className="mx-auto w-full min-w-0 max-w-6xl">{children}</div>
+          <main id="main-content" tabIndex={-1} className="pas-workspace min-w-0 flex-1 px-4 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pb-10">
+            <div className="mx-auto w-full min-w-0 max-w-7xl">{children}</div>
           </main>
+          <MobileBottomNav onOpenMenu={() => setMobileOpen(true)} menuOpen={mobileOpen} />
         </div>
       </div>
     </SessionProvider>

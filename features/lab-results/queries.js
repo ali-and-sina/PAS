@@ -123,6 +123,20 @@ export async function getReferenceRange(patientId, testDefinitionId) {
     return null;
   }
 
+  // This helper reads demographics through the service-role client. Verify
+  // that RLS permits this laboratory to access an order for the patient
+  // before requesting any patient-specific reference range.
+  const supabase = await createClient();
+  const { data: authorizedOrder, error: orderError } = await supabase
+    .from("lab_orders")
+    .select("id")
+    .eq("patient_id", patientId)
+    .limit(1)
+    .maybeSingle();
+
+  if (orderError) throw orderError;
+  if (!authorizedOrder) return null;
+
   const admin = createAdminClient();
   const ranges = await resolveReferenceRanges({
     admin,

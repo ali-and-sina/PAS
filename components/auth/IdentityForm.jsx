@@ -70,6 +70,7 @@ export default function IdentityForm({
 }) {
   const identifierRef = useRef(null);
   const phoneRef = useRef(null);
+  const summaryRef = useRef(null);
   const handledFocusRequest = useRef(0);
   const { identifier } = config;
 
@@ -82,7 +83,8 @@ export default function IdentityForm({
   useEffect(() => {
     if (focusRequest === handledFocusRequest.current) return;
     handledFocusRequest.current = focusRequest;
-    if (errors.identifier) identifierRef.current?.focus();
+    if (errors.identifier && errors.phone) summaryRef.current?.focus();
+    else if (errors.identifier) identifierRef.current?.focus();
     else if (errors.phone) phoneRef.current?.focus();
   }, [focusRequest, errors]);
 
@@ -114,6 +116,8 @@ export default function IdentityForm({
 
       <FormError>{formError}</FormError>
 
+      {errors.identifier && errors.phone && <div ref={summaryRef} tabIndex={-1} role="alert" aria-labelledby="identity-error-title" className="rounded-xl border border-destructive/30 bg-status-critical-bg p-4 text-sm text-destructive"><h2 id="identity-error-title" className="font-semibold">این دو مورد را اصلاح کنید</h2><ul className="mt-2 list-inside list-disc space-y-1"><li><a href="#identifier" className="underline underline-offset-4">{errors.identifier}</a></li><li><a href="#phone" className="underline underline-offset-4">{errors.phone}</a></li></ul></div>}
+
       <TextField
         id="identifier"
         name="identifier"
@@ -121,6 +125,7 @@ export default function IdentityForm({
         error={errors.identifier}
         inputRef={identifierRef}
         type="text"
+        required
         inputMode={identifier.inputMode}
         autoComplete="off"
         placeholder={identifier.placeholder}
@@ -132,10 +137,11 @@ export default function IdentityForm({
         id="phone"
         name="phone"
         label="شماره موبایل"
-        hint="با فرمت 09123456789 وارد کنید."
+        hint="مثال: ۰۹۱۲۳۴۵۶۷۸۹"
         error={errors.phone}
         inputRef={phoneRef}
         type="tel"
+        required
         inputMode="tel"
         autoComplete="tel"
         placeholder="09123456789"
@@ -145,7 +151,7 @@ export default function IdentityForm({
 
       <Button
         type="submit"
-        className="h-12 w-full rounded-xl font-medium shadow-sm transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:translate-y-0 motion-reduce:transition-none"
+        className="min-h-12 w-full rounded-xl shadow-sm"
         disabled={pending}
         aria-busy={pending}
       >

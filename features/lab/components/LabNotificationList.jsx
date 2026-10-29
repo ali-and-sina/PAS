@@ -1,16 +1,14 @@
 "use client";
 
+import { formatPersianDateTime } from "@/lib/utils/date-time";
+
 import { useTransition } from "react";
 import { Bell, Check, CheckCheck } from "lucide-react";
 import { markAllNotificationsRead, markNotificationRead } from "@/features/notifications/actions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-function formatDate(value) {
-  return value
-    ? new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value))
-    : "—";
-}
+
 
 const TYPE_LABELS = {
   new_result: "نتیجه جدید",
@@ -81,7 +79,7 @@ export default function LabNotificationList({ notifications = [] }) {
                   <p className="mt-3 whitespace-pre-line text-sm leading-6 text-muted-foreground">{notification.body}</p>
                 ) : null}
 
-                <time className="mt-3 block text-xs text-muted-foreground">{formatDate(notification.created_at)}</time>
+                <time className="mt-3 block text-xs text-muted-foreground">{formatPersianDateTime(notification.created_at)}</time>
               </div>
             </div>
           </article>

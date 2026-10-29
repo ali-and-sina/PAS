@@ -10,6 +10,7 @@ export default function LabCameraScanner({ onDetected, onError }) {
   const videoRef = useRef(null);
 
   useEffect(() => {
+    const video = videoRef.current;
     let stopped = false;
     let stream = null;
     let timeoutId = null;
@@ -31,7 +32,6 @@ export default function LabCameraScanner({ onDetected, onError }) {
         });
         if (stopped) return;
 
-        const video = videoRef.current;
         if (!video) return;
         video.srcObject = stream;
         await video.play();
@@ -64,7 +64,7 @@ export default function LabCameraScanner({ onDetected, onError }) {
         }
       } finally {
         if (stream) stream.getTracks().forEach((track) => track.stop());
-        if (videoRef.current) videoRef.current.srcObject = null;
+        if (video) video.srcObject = null;
       }
     }
 
@@ -74,7 +74,7 @@ export default function LabCameraScanner({ onDetected, onError }) {
       if (timeoutId !== null) window.clearTimeout(timeoutId);
       cancelWait?.();
       if (stream) stream.getTracks().forEach((track) => track.stop());
-      if (videoRef.current) videoRef.current.srcObject = null;
+      if (video) video.srcObject = null;
     };
   }, [onDetected, onError]);
 

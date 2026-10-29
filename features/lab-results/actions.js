@@ -286,7 +286,7 @@ export async function updateLabOrderStatus(formData) {
     };
   } catch (error) {
     console.error("[updateLabOrderStatus]", error);
-    return fail(error?.message || "به‌روزرسانی وضعیت پذیرش انجام نشد.");
+    return fail("به‌روزرسانی وضعیت پذیرش انجام نشد.");
   }
 }
 
@@ -426,7 +426,7 @@ export async function uploadLabReportAttachment(_previousState, formData) {
     };
   } catch (error) {
     console.error("[uploadLabReportAttachment]", error);
-    return fail(error?.message || "بارگذاری فایل گزارش انجام نشد.");
+    return fail("بارگذاری فایل گزارش انجام نشد.");
   }
 }
 
@@ -537,7 +537,7 @@ export async function importLabResultRows(_previousState, formData) {
     };
   } catch (error) {
     console.error("[importLabResultRows]", error);
-    return fail(error?.message || "ورود گروهی نتایج انجام نشد.");
+    return fail("ورود گروهی نتایج انجام نشد.");
   }
 }
 
@@ -571,7 +571,8 @@ export async function finalizeLabReport(formData) {
     );
 
     if (finalizeError) {
-      return fail(finalizeError.message || "نهایی‌سازی گزارش انجام نشد.");
+      console.error("[finalizeLabReport:rpc]", finalizeError);
+      return fail("گزارش نهایی نشد؛ وضعیت پذیرش و نتایج الزامی را بررسی کنید.");
     }
 
     revalidatePath("/lab/orders");
@@ -583,7 +584,7 @@ export async function finalizeLabReport(formData) {
     return { ok: true, reportId: finalReportId };
   } catch (error) {
     console.error("[finalizeLabReport]", error);
-    return fail(error?.message || "نهایی‌سازی گزارش انجام نشد.");
+    return fail("نهایی‌سازی گزارش انجام نشد.");
   }
 }
 
@@ -708,7 +709,7 @@ export async function saveLabResults(_previousState, formData) {
     console.error("[saveLabResults]", error);
 
     return fail(
-      error?.message || "در ذخیره یا نهایی‌سازی نتایج خطایی رخ داد.",
+      "در ذخیره یا نهایی‌سازی نتایج خطایی رخ داد.",
     );
   }
 }
@@ -776,7 +777,7 @@ export async function correctLabResult(_previousState, formData) {
 
     if (error) {
       console.error("[correctLabResult]", error);
-      return fail(error.message || "اصلاح نتیجه انجام نشد.");
+      return fail("اصلاح نتیجه انجام نشد.");
     }
 
     revalidatePath("/lab/results");
@@ -791,6 +792,6 @@ export async function correctLabResult(_previousState, formData) {
     };
   } catch (error) {
     console.error("[correctLabResult]", error);
-    return fail(error?.message || "در اصلاح نتیجه خطایی رخ داد.");
+    return fail("در اصلاح نتیجه خطایی رخ داد.");
   }
 }

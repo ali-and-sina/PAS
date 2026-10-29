@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, Building2, Clock3, Stethoscope, Users } from "lucide-react";
-import PageHeader from "@/components/shared/PageHeader";
+import DashboardWelcome from "@/components/shared/DashboardWelcome";
+import StatCard from "@/components/shared/StatCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAdminOverview } from "@/features/admin/queries";
@@ -19,22 +20,12 @@ export default async function AdminHomePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="مدیریت سیستم" description="نمای کلی کاربران و وضعیت حساب‌های سازمانی." />
+      <DashboardWelcome eyebrow="فضای مدیریت" title="مدیریت سامانه" description="نمای کلی کاربران، تأیید پزشکان و مدیریت آزمایشگاه‌ها." actions={<Button asChild><Link href="/admin/doctors/new">ثبت پزشک جدید</Link></Button>} />
       <section aria-labelledby="overview-title">
         <h2 id="overview-title" className="sr-only">نمای کلی</h2>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {stats.map(({ key, label, icon: Icon }) => (
-            <Card key={key}>
-              <CardContent className="flex items-center justify-between p-5">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{label}</p>
-                  <p className="text-2xl font-semibold tracking-tight">{overview[key]}</p>
-                </div>
-                <div className="flex size-11 items-center justify-center rounded-xl bg-accent text-primary">
-                  <Icon className="size-5" aria-hidden="true" />
-                </div>
-              </CardContent>
-            </Card>
+            <StatCard key={key} label={label} value={overview[key]} icon={Icon} href={key === "patients" ? "/admin/users" : key === "laboratories" ? "/admin/laboratories" : "/admin/doctors"} tone={key === "pendingDoctors" ? "warning" : "info"} />
           ))}
         </div>
       </section>

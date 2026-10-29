@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ClipboardList, Bell, ArrowLeft } from "lucide-react";
-import PageHeader from "@/components/shared/PageHeader";
+import DashboardWelcome from "@/components/shared/DashboardWelcome";
 import EmptyState from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,7 +17,8 @@ export default async function LabDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <DashboardWelcome
+        eyebrow="گردش‌کار آزمایشگاه"
         title="داشبورد آزمایشگاه"
         description="فرآیند آزمایشگاه را از پذیرش درخواست تا نهایی‌سازی نتیجه در یک نگاه مدیریت کنید."
         actions={
@@ -31,7 +32,7 @@ export default async function LabDashboardPage() {
 
       <LabDashboardStats data={data} />
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
         <Card>
           <CardContent className="p-5 sm:p-6">
             <div className="mb-5 flex items-start justify-between gap-3">

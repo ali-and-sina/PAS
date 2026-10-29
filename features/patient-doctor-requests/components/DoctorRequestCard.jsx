@@ -1,5 +1,7 @@
 "use client";
 
+import { formatPersianDateTime } from "@/lib/utils/date-time";
+
 import { useActionState } from "react";
 import { UserCheck, UserX } from "lucide-react";
 
@@ -11,14 +13,7 @@ const initialState = {
   status: "pending",
 };
 
-function formatDate(value) {
-  if (!value) return "—";
 
-  return new Intl.DateTimeFormat("fa-IR", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
 
 function statusLabel(status) {
   switch (status) {
@@ -107,7 +102,7 @@ export default function DoctorRequestCard({
           </p>
 
           <time className="mt-3 block text-xs text-slate-400">
-            زمان درخواست: {formatDate(request.created_at)}
+            زمان درخواست: {formatPersianDateTime(request.created_at)}
           </time>
         </div>
 

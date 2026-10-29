@@ -1,5 +1,7 @@
 "use client";
 
+import { formatPersianDateTime } from "@/lib/utils/date-time";
+
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useActionState } from "react";
 import dynamic from "next/dynamic";
@@ -26,10 +28,14 @@ const DISPATCH_STATUS = {
   cancelled: { label: "لغوشده", icon: XCircle },
 };
 const HOME_STATUS = { requested: "در انتظار بررسی", approved: "تأییدشده", rejected: "ردشده", scheduled: "زمان مراجعه تعیین شده", dispatched: "نمونه‌گیر اعزام شده", collected: "نمونه دریافت شده", cancelled: "لغوشده" };
-function dateLabel(value) { return value ? new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—"; }
+
 function itemLabel(item) { return item.panel?.name_fa || item.panel?.name || item.test?.name_fa || item.test?.name || "آزمایش"; }
 
 export default function PatientLabRequestCard({ request, branches }) {
+  return <PatientRequestCard key={request.id} request={request} branches={branches} />;
+}
+
+function PatientRequestCard({ request, branches }) {
   const [state, formAction, pending] = useActionState(submitLabRequestToBranch, initialState);
   const [homeCollection, setHomeCollection] = useState(false);
   const [selectedBranchId, setSelectedBranchId] = useState("");
@@ -51,12 +57,6 @@ export default function PatientLabRequestCard({ request, branches }) {
       qrRequestSequenceRef.current += 1;
     };
   }, []);
-
-  useEffect(() => {
-    qrRequestSequenceRef.current += 1;
-    setQr(null);
-    setFeedback("");
-  }, [request.id]);
 
   async function generateQr(dispatchId) {
     const requestId = ++qrRequestSequenceRef.current;
@@ -95,7 +95,7 @@ export default function PatientLabRequestCard({ request, branches }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-semibold">درخواست آزمایش</p>
-          <p className="mt-1 text-xs text-muted-foreground">ثبت‌شده در {dateLabel(request.created_at)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">ثبت‌شده در {formatPersianDateTime(request.created_at)}</p>
         </div>
         <span className="rounded-full bg-muted px-3 py-1 text-xs">{REQUEST_STATUS[request.status] || request.status}</span>
       </div>
@@ -110,7 +110,7 @@ export default function PatientLabRequestCard({ request, branches }) {
         const StatusIcon = info.icon;
         return <div className="space-y-3 rounded-xl border p-4">
           <div className="flex flex-wrap items-center justify-between gap-2"><p className="flex items-center gap-2 font-medium"><MapPin className="size-4 text-primary" aria-hidden="true" />{latest.branch?.display_name || "شعبه نامشخص"}</p><span className="flex items-center gap-1.5 text-xs text-muted-foreground"><StatusIcon className="size-4" aria-hidden="true" />{info.label}</span></div>
-          <p className="text-xs text-muted-foreground">{latest.branch?.city || "شهر ثبت نشده"} · ارسال در {dateLabel(latest.sent_at)}</p>
+          <p className="text-xs text-muted-foreground">{latest.branch?.city || "شهر ثبت نشده"} · ارسال در {formatPersianDateTime(latest.sent_at)}</p>
           {latest.response_note && <p className="text-sm">پاسخ آزمایشگاه: {latest.response_note}</p>}
           {latest.requested_home_collection && <p className="text-sm text-primary">نمونه‌گیری در منزل درخواست شده است.</p>}
           {latest.status === "pending" && <p className="text-xs leading-5 text-muted-foreground">پس از پذیرش آزمایشگاه، در صورت نیاز کد پذیرش تازه بسازید. کدهای قبلی با ساخت کد جدید باطل می‌شوند.</p>}
@@ -121,7 +121,7 @@ export default function PatientLabRequestCard({ request, branches }) {
 
       {request.dispatches?.filter((dispatch) => dispatch.requested_home_collection).map((dispatch) => {
         const collection = request.homeCollectionRequests?.find((row) => row.lab_dispatch_id === dispatch.id);
-        return <div key={`home-${dispatch.id}`} className="rounded-lg border border-dashed p-3 text-sm"><p className="font-medium">نمونه‌گیری در منزل</p><p className="mt-1 text-muted-foreground">{HOME_STATUS[collection?.status] || (dispatch.requested_home_collection ? "درخواست نمونه‌گیری ثبت شده" : "—")}</p>{collection?.scheduled_for && <p className="mt-1">زمان مراجعه: {dateLabel(collection.scheduled_for)}</p>}</div>;
+        return <div key={`home-${dispatch.id}`} className="rounded-lg border border-dashed p-3 text-sm"><p className="font-medium">نمونه‌گیری در منزل</p><p className="mt-1 text-muted-foreground">{HOME_STATUS[collection?.status] || (dispatch.requested_home_collection ? "درخواست نمونه‌گیری ثبت شده" : "—")}</p>{collection?.scheduled_for && <p className="mt-1">زمان مراجعه: {formatPersianDateTime(collection.scheduled_for)}</p>}</div>;
       })}
 
       {canSubmit && (
@@ -143,7 +143,7 @@ export default function PatientLabRequestCard({ request, branches }) {
         </form>
       )}
 
-      {qr?.dispatchId === latest?.id && <div className="grid gap-4 rounded-xl border p-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center"><QRCodeSvg value={qr.url} title="کد پذیرش آزمایشگاه" /><div className="space-y-2"><p className="font-medium">کد پذیرش شما</p><p className="text-sm leading-6 text-muted-foreground">این کد را هنگام مراجعه به پذیرش نشان دهید. کد تا {dateLabel(qr.expiresAt)} معتبر است.</p><Input readOnly value={qr.url} dir="ltr" className="text-xs" aria-label="نشانی کد پذیرش" /><Button type="button" variant="outline" size="sm" onClick={copyQrValue}>کپی نشانی کد</Button></div></div>}
+      {qr && latest && qr.dispatchId === latest.id && <div className="grid gap-4 rounded-xl border p-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center"><QRCodeSvg value={qr.url} title="کد پذیرش آزمایشگاه" /><div className="space-y-2"><p className="font-medium">کد پذیرش شما</p><p className="text-sm leading-6 text-muted-foreground">این کد را هنگام مراجعه به پذیرش نشان دهید. کد تا {formatPersianDateTime(qr.expiresAt)} معتبر است.</p><Input readOnly value={qr.url} dir="ltr" className="text-xs" aria-label="نشانی کد پذیرش" /><Button type="button" variant="outline" size="sm" onClick={copyQrValue}>کپی نشانی کد</Button></div></div>}
       {feedback && <p className="text-sm text-muted-foreground" role="status">{feedback}</p>}
     </article>
   );

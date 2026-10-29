@@ -10,7 +10,8 @@ import {
   ListChecks,
 } from "lucide-react";
 
-import PageHeader from "@/components/shared/PageHeader";
+import DashboardWelcome from "@/components/shared/DashboardWelcome";
+import StatCard from "@/components/shared/StatCard";
 import EmptyState from "@/components/shared/EmptyState";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -76,9 +77,10 @@ export default async function PatientDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <DashboardWelcome
+        eyebrow="مسیر سلامت شما"
         title={firstName ? `سلام، ${firstName}` : "سلام"}
-        description="وضعیت فعلی سلامت و مهم‌ترین قدم بعدی شما، بدون شلوغی."
+        description="نتایج، پیگیری‌ها و قدم بعدی مراقبت را از اینجا دنبال کنید."
         actions={
           <Button asChild variant="outline">
             <Link href="/patient/results">
@@ -91,10 +93,10 @@ export default async function PatientDashboardPage() {
 
       <section
         aria-label="خلاصه وضعیت سلامت"
-        className="grid gap-4 sm:grid-cols-3"
+        className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3"
       >
-        <Card>
-          <CardContent className="flex items-start gap-4 p-5">
+        <Card className="col-span-2 h-full md:col-span-1">
+          <CardContent className="flex h-full items-start gap-4 p-5">
             <div className="rounded-xl bg-accent p-2.5 text-primary">
               <HeartPulse className="size-5" aria-hidden="true" />
             </div>
@@ -110,42 +112,8 @@ export default async function PatientDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="flex items-start gap-4 p-5">
-            <div className="rounded-xl bg-accent p-2.5 text-primary">
-              <ListChecks className="size-5" aria-hidden="true" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">پیگیری فعال</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {activeFollowUps.length}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                مورد نیازمند توجه یا پیگیری
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-start gap-4 p-5">
-            <div className="rounded-xl bg-accent p-2.5 text-primary">
-              <Bell className="size-5" aria-hidden="true" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">اعلان خوانده‌نشده</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {data.unread_notifications}
-              </p>
-              <Link
-                href="/patient/notifications"
-                className="mt-1 inline-flex text-xs font-medium text-primary hover:underline"
-              >
-                مشاهده اعلان‌ها
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard label="پیگیری فعال" value={activeFollowUps.length} icon={ListChecks} href="/patient/follow-ups" detail="مشاهده پیگیری‌ها" />
+        <StatCard label="اعلان خوانده‌نشده" value={data.unread_notifications ?? 0} icon={Bell} href="/patient/notifications" detail="مشاهده اعلان‌ها" tone="neutral" />
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">

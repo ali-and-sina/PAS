@@ -3,7 +3,7 @@ import { getSessionUser } from "@/lib/auth/server";
 import { getPostLoginRedirect, ROLES, sanitizeNext } from "@/lib/auth";
 import AdminLoginCard from "@/components/auth/AdminLoginCard";
 import AuthPageShell from "@/components/auth/AuthPageShell";
-import { isTestLoginEnabled } from "@/lib/auth/test-session";
+import { isAdminTestLoginEnabled } from "@/lib/auth/test-session";
 
 export const metadata = {
   title: "ورود مدیر",
@@ -27,7 +27,7 @@ export default async function AdminLoginPage({ searchParams }) {
     <AuthPageShell variant="admin">
       <AdminLoginCard
         next={sanitizeNext(next)}
-        isTestLoginEnabled={isTestLoginEnabled()}
+        isTestLoginEnabled={isAdminTestLoginEnabled()}
       />
     </AuthPageShell>
   );

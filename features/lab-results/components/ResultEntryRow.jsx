@@ -16,7 +16,7 @@ export default function ResultEntryRow({ test, value = "", onChange }) {
 
   return (
     <div className="rounded-xl border bg-card p-4 sm:p-5">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_minmax(210px,0.8fr)] lg:items-center">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(160px,220px)_minmax(180px,0.8fr)] xl:items-center">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Label
@@ -26,11 +26,11 @@ export default function ResultEntryRow({ test, value = "", onChange }) {
               {label}
             </Label>
             {test?.is_required ? (
-              <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive">
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                 الزامی
               </span>
             ) : (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                 اختیاری
               </span>
             )}
@@ -48,7 +48,8 @@ export default function ResultEntryRow({ test, value = "", onChange }) {
             value={value}
             onChange={(event) => onChange(test.id, event.target.value)}
             required={Boolean(test?.is_required)}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-describedby={`reference-${test.id}`}
+            className="flex min-h-11 w-full rounded-xl border border-input bg-card px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="">انتخاب نتیجه</option>
             <option value="true">مثبت / بله</option>
@@ -69,19 +70,21 @@ export default function ResultEntryRow({ test, value = "", onChange }) {
                   : undefined
             }
             value={value}
+            dir={type === "number" ? "ltr" : undefined}
+            aria-describedby={`reference-${test.id}`}
             onChange={(event) => onChange(test.id, event.target.value)}
             required={Boolean(test?.is_required)}
             className="h-10 bg-background"
           />
         )}
 
-        <div className="rounded-lg bg-muted/40 px-3 py-2.5">
+        <div id={`reference-${test.id}`} className="rounded-xl bg-muted/60 px-3 py-2.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-medium text-muted-foreground">
+            <span className="text-xs font-medium text-muted-foreground">
               محدوده مرجع
             </span>
             {sourceLabel ? (
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {sourceLabel}
               </span>
             ) : null}

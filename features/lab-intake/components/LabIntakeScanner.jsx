@@ -1,5 +1,7 @@
 "use client";
 
+import { formatPersianDateTime } from "@/lib/utils/date-time";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Camera, CheckCircle2, Clipboard, ScanLine } from "lucide-react";
@@ -26,7 +28,7 @@ function extractToken(value) {
     return "";
   }
 }
-function formatDate(value) { return value ? new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—"; }
+
 
 export default function LabIntakeScanner() {
   const [inputValue, setInputValue] = useState("");
@@ -138,7 +140,7 @@ export default function LabIntakeScanner() {
 
     {result && <section className="space-y-4 rounded-2xl border bg-card p-4 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs text-muted-foreground">{isHomeCollection ? "درخواست نمونه‌گیری در منزل" : "درخواست آزمایش"}</p><h2 className="mt-1 text-lg font-semibold">{result.patient_name || "درخواست بیمار"}</h2><p className="mt-1 text-sm text-muted-foreground">{result.branch_name || "شعبه"}{result.branch_city ? ` · ${result.branch_city}` : ""}</p></div><span className="rounded-full bg-muted px-3 py-1 text-xs">{isHomeCollection ? ({ scheduled: "زمان‌بندی‌شده", dispatched: "نمونه‌گیر اعزام‌شده", collected: "نمونه دریافت‌شده" }[result.status] || result.status) : ({ pending: "در انتظار پذیرش", accepted: "پذیرفته‌شده", rejected: "ردشده", cancelled: "لغوشده" }[result.status] || result.status)}</span></div>
       {items.length > 0 && <div className="flex flex-wrap gap-2">{items.map((item, index) => <span key={item.request_item_id || index} className="rounded-md bg-muted px-2.5 py-1.5 text-xs">{item.name || "آزمایش"}</span>)}</div>}
-      <dl className="grid gap-3 rounded-xl bg-muted/30 p-4 text-sm sm:grid-cols-2"><div><dt className="text-xs text-muted-foreground">شناسه درخواست</dt><dd className="mt-1 break-all font-mono text-xs" dir="ltr">{result.request_id || "—"}</dd></div><div><dt className="text-xs text-muted-foreground">زمان ارسال</dt><dd className="mt-1">{formatDate(result.sent_at)}</dd></div><div><dt className="text-xs text-muted-foreground">کد وضعیت</dt><dd className="mt-1">{result.status}</dd></div>{result.home_collection_status && <div><dt className="text-xs text-muted-foreground">وضعیت نمونه‌گیری</dt><dd className="mt-1">{result.home_collection_status}</dd></div>}</dl>
+      <dl className="grid gap-3 rounded-xl bg-muted/30 p-4 text-sm sm:grid-cols-2"><div><dt className="text-xs text-muted-foreground">شناسه درخواست</dt><dd className="mt-1 break-all font-mono text-xs" dir="ltr">{result.request_id || "—"}</dd></div><div><dt className="text-xs text-muted-foreground">زمان ارسال</dt><dd className="mt-1">{formatPersianDateTime(result.sent_at)}</dd></div><div><dt className="text-xs text-muted-foreground">کد وضعیت</dt><dd className="mt-1">{result.status}</dd></div>{result.home_collection_status && <div><dt className="text-xs text-muted-foreground">وضعیت نمونه‌گیری</dt><dd className="mt-1">{result.home_collection_status}</dd></div>}</dl>
       {isHomeCollection && result.status === "dispatched" && <Button type="button" onClick={markCollected} disabled={busy} loading={busy}><CheckCircle2 aria-hidden="true" />{busy ? "در حال ثبت…" : "ثبت دریافت نمونه"}</Button>}
       {isHomeCollection && result.status === "collected" && <p className="flex items-center gap-2 text-sm text-status-normal"><Clipboard aria-hidden="true" />دریافت این نمونه قبلاً ثبت شده است.</p>}
     </section>}
