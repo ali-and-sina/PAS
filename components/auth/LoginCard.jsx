@@ -33,6 +33,7 @@ import {
 
 import RoleSelector from "./RoleSelector";
 import IdentityForm from "./IdentityForm";
+import CenterPasswordForm from "./CenterPasswordForm";
 import OtpForm from "./OtpForm";
 import Brand from "@/components/brand/Brand";
 
@@ -295,7 +296,7 @@ export default function LoginCard({
     },
     identity: {
       title: `ورود ${config?.label ?? ""}`.trim(),
-      description: "برای دریافت کد ورود، مشخصات خود را وارد کنید.",
+      description: role === "laboratory" ? "با نام کاربری و رمز عبور تعریف‌شده توسط مدیر وارد شوید." : "برای دریافت کد ورود، مشخصات خود را وارد کنید.",
     },
     otp: {
       title: "کد تأیید",
@@ -322,7 +323,7 @@ export default function LoginCard({
           ? 2
           : 3;
 
-  const totalSteps = fixedRole ? 2 : 3;
+  const totalSteps = role === "laboratory" ? (fixedRole ? 1 : 2) : fixedRole ? 2 : 3;
 
   return (
     <Card dir="rtl" className="w-full border-0 bg-transparent shadow-none">
@@ -379,7 +380,8 @@ export default function LoginCard({
             <div key={step} className={visualStyles.stepEnter}>
               {step === "role" && <RoleSelector onSelect={handleSelectRole} />}
 
-              {step === "identity" && config && (
+              {step === "identity" && role === "laboratory" && <CenterPasswordForm onBack={fixedRole ? null : handleBackToRole} />}
+              {step === "identity" && config && role !== "laboratory" && (
                 <IdentityForm
                   config={config}
                   values={values}
@@ -417,8 +419,7 @@ export default function LoginCard({
               />
 
               <p className="text-xs leading-6 text-muted-foreground">
-                کد ورود را فقط در همین صفحه وارد کنید و در اختیار دیگران
-                نگذارید.
+                اطلاعات ورود را فقط در همین صفحه وارد کنید و در اختیار دیگران نگذارید.
               </p>
             </div>
 
@@ -473,7 +474,7 @@ export default function LoginCard({
                         {[
                           ["بیمار", "1272511677", "patient"],
                           ["پزشک", "12345", "doctor"],
-                          ["آزمایشگاه", "LAB-1234", "laboratory"],
+                          ["مرکز درمانی", "LAB-1234", "laboratory"],
                           ["مدیر", "admin", "admin"],
                         ]
                           .filter(([, , itemRole]) =>

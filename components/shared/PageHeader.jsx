@@ -22,7 +22,7 @@ export default function PageHeader({ title, description, actions, className }) {
         ) : null}
       </div>
       {actions ? (
-        <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end [&>*]:max-w-full">
+        <div className="flex w-full min-w-0 flex-col items-stretch gap-2 sm:w-auto sm:shrink-0 sm:flex-row sm:flex-wrap sm:justify-end [&>*]:max-w-full [&>a]:w-full [&>button]:w-full sm:[&>a]:w-auto sm:[&>button]:w-auto">
           {actions}
         </div>
       ) : null}

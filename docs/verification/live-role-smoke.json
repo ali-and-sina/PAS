@@ -1,0 +1,27 @@
+{
+  "method": "Real Supabase Auth tokens and Data API RLS; read-only operations and a rejected unauthorized command.",
+  "results": [
+    {
+      "role": "patient",
+      "auth": true,
+      "new_tables_readable": true,
+      "own_identity_requests_only": true,
+      "directory": true,
+      "progress": true,
+      "privilege_escalation_denied": true
+    },
+    {
+      "role": "doctor",
+      "auth": true,
+      "new_tables_readable": true,
+      "own_identity_requests_only": true,
+      "own_consultations": true
+    },
+    {
+      "role": "laboratory",
+      "auth": true,
+      "new_tables_readable": true,
+      "own_identity_requests_only": true
+    }
+  ]
+}

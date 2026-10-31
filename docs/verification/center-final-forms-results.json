@@ -1,0 +1,84 @@
+{
+  "method": "Actual application components rendered with synthetic center records and isolated server action/navigation adapters. UI behavior only; database authorization and Auth provisioning validated in separate suites.",
+  "total": 19,
+  "passed": 19,
+  "cases": [
+    {
+      "case_id": "mri_dashboard_320",
+      "passed": true
+    },
+    {
+      "case_id": "mri_dashboard_390",
+      "passed": true
+    },
+    {
+      "case_id": "mri_dashboard_768",
+      "passed": true
+    },
+    {
+      "case_id": "mri_dashboard_1440",
+      "passed": true
+    },
+    {
+      "case_id": "mri_accessibility",
+      "passed": true
+    },
+    {
+      "case_id": "mri_specialist_report_submit",
+      "passed": true
+    },
+    {
+      "case_id": "mri_identity_readonly",
+      "passed": true
+    },
+    {
+      "case_id": "physiotherapy_dashboard_320",
+      "passed": true
+    },
+    {
+      "case_id": "physiotherapy_dashboard_390",
+      "passed": true
+    },
+    {
+      "case_id": "physiotherapy_dashboard_768",
+      "passed": true
+    },
+    {
+      "case_id": "physiotherapy_dashboard_1440",
+      "passed": true
+    },
+    {
+      "case_id": "physiotherapy_session_form",
+      "passed": true
+    },
+    {
+      "case_id": "physiotherapy_specialist_report_submit",
+      "passed": true
+    },
+    {
+      "case_id": "physiotherapy_identity_readonly",
+      "passed": true
+    },
+    {
+      "case_id": "public_center_password_login_form",
+      "passed": true
+    },
+    {
+      "case_id": "center_password_form_redirect_adapter",
+      "passed": true
+    },
+    {
+      "case_id": "admin_type_and_password_form_submit",
+      "passed": true
+    },
+    {
+      "case_id": "center_jalali_appointment_popup",
+      "passed": true
+    },
+    {
+      "case_id": "center_mobile_menu_type_and_focus",
+      "passed": true
+    }
+  ],
+  "console_errors": []
+}

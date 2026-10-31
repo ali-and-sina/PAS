@@ -11,7 +11,7 @@ export const metadata = { title: "مدیریت سیستم" };
 const stats = [
   { key: "patients", label: "بیماران", icon: Users },
   { key: "doctors", label: "پزشکان", icon: Stethoscope },
-  { key: "laboratories", label: "آزمایشگاه‌ها", icon: Building2 },
+  { key: "laboratories", label: "مراکز درمانی", icon: Building2 },
   { key: "pendingDoctors", label: "پزشکان در انتظار تأیید", icon: Clock3 },
 ];
 
@@ -20,7 +20,7 @@ export default async function AdminHomePage() {
 
   return (
     <div className="space-y-6">
-      <DashboardWelcome eyebrow="فضای مدیریت" title="مدیریت سامانه" description="نمای کلی کاربران، تأیید پزشکان و مدیریت آزمایشگاه‌ها." actions={<Button asChild><Link href="/admin/doctors/new">ثبت پزشک جدید</Link></Button>} />
+      <DashboardWelcome eyebrow="فضای مدیریت" title="مدیریت سامانه" description="نمای کلی کاربران، تأیید پزشکان و مدیریت مراکز درمانی." actions={<Button asChild><Link href="/admin/doctors/new">ثبت پزشک جدید</Link></Button>} />
       <section aria-labelledby="overview-title">
         <h2 id="overview-title" className="sr-only">نمای کلی</h2>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
@@ -33,7 +33,7 @@ export default async function AdminHomePage() {
         <CardHeader><CardTitle>عملیات سریع</CardTitle></CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-3">
           <Button asChild variant="outline" className="justify-between"><Link href="/admin/doctors">مدیریت پزشکان <ArrowLeft aria-hidden="true" /></Link></Button>
-          <Button asChild variant="outline" className="justify-between"><Link href="/admin/laboratories">مدیریت آزمایشگاه‌ها <ArrowLeft aria-hidden="true" /></Link></Button>
+          <Button asChild variant="outline" className="justify-between"><Link href="/admin/centers">مدیریت مراکز درمانی <ArrowLeft aria-hidden="true" /></Link></Button>
           <Button asChild variant="outline" className="justify-between"><Link href="/admin/users">مشاهده کاربران <ArrowLeft aria-hidden="true" /></Link></Button>
         </CardContent>
       </Card>

@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { getStatusLabel } from "@/lib/constants/status";
+import { MEDICAL_STATUS, SERVICE_KINDS } from "@/lib/care/constants";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePatient } from "@/features/patient/auth";
 import { recordPatientAudit } from "@/features/patient/audit";
@@ -14,6 +15,11 @@ const MAX_HISTORY = 100;
 const MAX_TIMELINE = 100;
 const MAX_HOME_RESULTS = 5;
 const MAX_HOME_PRESCRIPTIONS = 5;
+const MEDICAL_SERVICE_KIND_LABELS = new Map(SERVICE_KINDS);
+
+function getMedicalServiceLabel(kind) {
+  return MEDICAL_SERVICE_KIND_LABELS.get(kind) || "خدمت پزشکی";
+}
 
 function normalizeLimit(value, max, fallback) {
   const parsed = Number(value);
@@ -113,6 +119,7 @@ async function buildPatientTimeline(context, { limit = MAX_TIMELINE } = {}) {
   const [
     visitsResult,
     ordersResult,
+    medicalRequestsResult,
     reportsResult,
     interpretationsResult,
     prescriptionsResult,
@@ -131,6 +138,13 @@ async function buildPatientTimeline(context, { limit = MAX_TIMELINE } = {}) {
       .select("id, ordered_at, status, doctor_id, laboratory_id")
       .eq("patient_id", patientId)
       .order("ordered_at", { ascending: false })
+      .limit(safeLimit),
+
+    supabase
+      .from("pas_medical_requests")
+      .select("id, service_kind, service_name, status, provider_id, requested_at, scheduled_at")
+      .eq("patient_id", patientId)
+      .order("requested_at", { ascending: false })
       .limit(safeLimit),
 
     supabase
@@ -199,6 +213,7 @@ async function buildPatientTimeline(context, { limit = MAX_TIMELINE } = {}) {
   for (const result of [
     visitsResult,
     ordersResult,
+    medicalRequestsResult,
     reportsResult,
     interpretationsResult,
     prescriptionsResult,
@@ -232,6 +247,18 @@ async function buildPatientTimeline(context, { limit = MAX_TIMELINE } = {}) {
       summary: `وضعیت درخواست: ${getStatusLabel(item.status)}`,
       resource_id: item.id,
       resource_type: "lab_order",
+    })),
+
+    ...(medicalRequestsResult.data ?? []).map((item) => ({
+      id: `medical_service:${item.id}`,
+      type: "medical_service",
+      date: item.requested_at,
+      title: item.service_name,
+      summary: `${getMedicalServiceLabel(item.service_kind)} · ${item.status === "requested" && !item.provider_id ? "نیازمند انتخاب مرکز درمانی" : MEDICAL_STATUS[item.status] || "وضعیت نامشخص"}`,
+      resource_id: item.id,
+      resource_type: "medical_service",
+      service_kind: item.service_kind,
+      scheduled_at: item.scheduled_at,
     })),
 
     ...(reportsResult.data ?? []).map((item) => ({
@@ -310,6 +337,8 @@ export async function getPatientHome() {
     latestResultResult,
     recentResultsResult,
     recentPrescriptionsResult,
+    recentMedicalRequestsResult,
+    activeMedicalRequestsCountResult,
   ] = await Promise.all([
     buildPatientTimeline(context, { limit: 1 }),
 
@@ -393,6 +422,19 @@ export async function getPatientHome() {
       .eq("patient_id", patientId)
       .order("issued_at", { ascending: false })
       .limit(MAX_HOME_PRESCRIPTIONS),
+
+    supabase
+      .from("pas_medical_requests")
+      .select("id, service_kind, service_name, status, provider_id, requested_at, scheduled_at, completed_at")
+      .eq("patient_id", patientId)
+      .order("requested_at", { ascending: false })
+      .limit(5),
+
+    supabase
+      .from("pas_medical_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("patient_id", patientId)
+      .in("status", ["requested", "accepted", "in_progress"]),
   ]);
 
   for (const result of [
@@ -403,6 +445,8 @@ export async function getPatientHome() {
     latestResultResult,
     recentResultsResult,
     recentPrescriptionsResult,
+    recentMedicalRequestsResult,
+    activeMedicalRequestsCountResult,
   ]) {
     if (result.error) throw result.error;
   }
@@ -410,6 +454,12 @@ export async function getPatientHome() {
   const overdue = overdueFollowUpsResult.data ?? [];
   const pending = pendingFollowUpsResult.data ?? [];
   const unread = unreadResult.count ?? 0;
+  const recentMedicalRequests = Array.isArray(recentMedicalRequestsResult.data)
+    ? recentMedicalRequestsResult.data
+    : [];
+  const requestsNeedingCenterSelection = recentMedicalRequests.filter(
+    (request) => request.status === "requested" && !request.provider_id,
+  );
   const needsAttention = overdue.map((item) => ({
     type: "follow_up",
     resource_id: item.id,
@@ -417,6 +467,17 @@ export async function getPatientHome() {
     status: item.status,
     due_date: item.due_date,
   }));
+
+  for (const request of requestsNeedingCenterSelection.slice(0, 3)) {
+    needsAttention.push({
+      type: "medical_service",
+      resource_id: request.id,
+      service_kind: request.service_kind,
+      title: `برای ${request.service_name} مرکز درمانی انتخاب کنید`,
+      status: request.status,
+      due_date: request.scheduled_at,
+    });
+  }
 
   if (unread > 0) {
     needsAttention.push({
@@ -428,25 +489,33 @@ export async function getPatientHome() {
     });
   }
 
-  const nextStep = overdue[0]
-    ? {
-        type: "follow_up",
-        resource_id: overdue[0].id,
-        label: "پیگیری عقب‌افتاده را بررسی کنید",
-      }
-    : pending[0]
-      ? {
-          type: "follow_up",
-          resource_id: pending[0].id,
-          label: "پیگیری باز خود را بررسی کنید",
-        }
-      : unread > 0
-        ? {
-            type: "notification",
-            resource_id: null,
-            label: "اعلان‌های خوانده‌نشده را بررسی کنید",
-          }
-        : null;
+  let nextStep = null;
+  if (overdue[0]) {
+    nextStep = {
+      type: "follow_up",
+      resource_id: overdue[0].id,
+      label: "پیگیری عقب‌افتاده را بررسی کنید",
+    };
+  } else if (requestsNeedingCenterSelection[0]) {
+    nextStep = {
+      type: "medical_service",
+      resource_id: requestsNeedingCenterSelection[0].id,
+      service_kind: requestsNeedingCenterSelection[0].service_kind,
+      label: `مرکز درمانی ${requestsNeedingCenterSelection[0].service_name} را انتخاب کنید`,
+    };
+  } else if (pending[0]) {
+    nextStep = {
+      type: "follow_up",
+      resource_id: pending[0].id,
+      label: "پیگیری باز خود را بررسی کنید",
+    };
+  } else if (unread > 0) {
+    nextStep = {
+      type: "notification",
+      resource_id: null,
+      label: "اعلان‌های خوانده‌نشده را بررسی کنید",
+    };
+  }
 
   const recentResults = Array.isArray(recentResultsResult.data)
     ? recentResultsResult.data
@@ -466,9 +535,12 @@ export async function getPatientHome() {
     active_followups: activeFollowUps,
     recent_results: recentResults,
     recent_prescriptions: recentPrescriptions,
+    recent_medical_requests: recentMedicalRequests,
+    active_medical_requests_count: activeMedicalRequestsCountResult.count || 0,
     // Compatibility aliases for callers still using the earlier camelCase shape.
     recentResults,
     recentPrescriptions,
+    recentMedicalRequests,
     activeFollowUps,
   };
 }

@@ -1,0 +1,2 @@
+import {RECORD_SCOPES} from "@/lib/care/constants";
+export default function RecordAccessNotice({scopes=[]}){return <p className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-8">{scopes.length?"بخش‌های مجاز پرونده با انتخاب بیمار: "+RECORD_SCOPES.filter(([key])=>scopes.includes(key)).map(([,label])=>label).join("، "):"مجوز فعالی برای جزئیات پزشکی این پرونده وجود ندارد. بیمار می‌تواند از بخش دسترسی پرونده، مجوز مشاهده را تنظیم کند."}</p>}

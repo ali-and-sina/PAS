@@ -71,7 +71,10 @@ export async function createPatientDispatchQrToken(dispatchId) {
   }
 
   const result = await issueToken({ targetType: "dispatch", dispatchId });
-  if (result.ok) revalidatePath("/patient/lab-orders");
+  if (result.ok) {
+    revalidatePath("/patient/lab-orders");
+    revalidatePath("/patient/medical-services");
+  }
   return result;
 }
 
@@ -126,6 +129,7 @@ export async function collectHomeSampleFromQr({ homeCollectionRequestId, token }
   revalidatePath("/lab/home-collection");
   revalidatePath("/lab/orders");
   revalidatePath("/patient/lab-orders");
+  revalidatePath("/patient/medical-services");
   return { ok: true, data };
 }
 
@@ -150,6 +154,7 @@ export async function revokeLabWorkflowQrToken({ dispatchId = null, homeCollecti
     return { ok: false, message: "لغو کد پذیرش انجام نشد." };
   }
   revalidatePath("/patient/lab-orders");
+  revalidatePath("/patient/medical-services");
   revalidatePath("/lab/home-collection");
   return { ok: true, revokedCount: data };
 }

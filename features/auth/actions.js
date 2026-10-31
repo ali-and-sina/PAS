@@ -382,7 +382,8 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
 
         laboratory_profiles (
           license_number,
-          organization_id
+          organization_id,
+          pas_medical_centers(center_type,is_active)
         )
         `,
       )
@@ -568,7 +569,10 @@ export async function verifyLoginOtp({ role, identifier, phone, code } = {}) {
      * Therefore reaching this section for a patient means that
      * patient_profiles exists and onboarding is complete.
      */
+    const center = Array.isArray(laboratoryProfile?.pas_medical_centers) ? laboratoryProfile.pas_medical_centers[0] : laboratoryProfile?.pas_medical_centers;
     const redirectTo = await getPostLoginRedirect({
+      center_type: center?.center_type,
+      center_active: center?.is_active,
       id: profile.id,
       role: profile.role,
       full_name: profile.full_name,

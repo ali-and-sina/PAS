@@ -11,6 +11,7 @@ export default function DisclosureSection({
   meta,
   children,
   defaultOpen = false,
+  stickySummary = false,
   className,
   contentClassName,
 }) {
@@ -22,6 +23,7 @@ export default function DisclosureSection({
       <summary
         className={cn(
           "flex min-h-14 min-w-0 cursor-pointer list-none flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-4 transition-colors hover:bg-accent/20 sm:flex-nowrap sm:gap-4 sm:p-5",
+          stickySummary && "sticky top-16 z-30 bg-card shadow-sm backdrop-blur lg:top-20",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
           "[&::-webkit-details-marker]:hidden",
         )}
@@ -42,7 +44,7 @@ export default function DisclosureSection({
             </span>
           ) : null}
           <span className="hidden whitespace-nowrap text-xs font-medium text-primary group-open:inline sm:text-sm">
-            بستن جزئیات
+            مخفی‌کردن جزئیات
           </span>
           <span className="whitespace-nowrap text-xs font-medium text-primary group-open:hidden sm:text-sm">
             نمایش جزئیات

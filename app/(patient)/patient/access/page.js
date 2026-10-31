@@ -1,3 +1,6 @@
+import RecordAccessSettings from "@/features/care/components/RecordAccessSettings";
+import { getRecordAccessData } from "@/features/care/queries";
+import { tehranDayKey } from "@/lib/care/dates";
 import { Building2, ShieldCheck, Stethoscope } from "lucide-react";
 
 import EmptyState from "@/components/shared/EmptyState";
@@ -15,7 +18,7 @@ function formatDate(value) {
 }
 
 export default async function PatientAccessPage() {
-  const data = await getPatientAccessList();
+  const [data, access] = await Promise.all([getPatientAccessList(), getRecordAccessData()]);
 
   return (
     <div className="space-y-6">
@@ -33,6 +36,7 @@ export default async function PatientAccessPage() {
         </div>
       </div>
 
+      <RecordAccessSettings rows={access} today={tehranDayKey()} />
       <section className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>

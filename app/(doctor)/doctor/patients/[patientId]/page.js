@@ -1,3 +1,4 @@
+import { getCareOverview } from "@/features/care/queries";
 import { notFound, redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/auth/server";
@@ -16,5 +17,6 @@ export default async function DoctorPatientDetailPage({ params }) {
   const data = await getPhysicianPatientSnapshot(patientId);
   if (!data) notFound();
 
-  return <PatientSnapshot data={data} />;
+  const overview=await getCareOverview(patientId);
+  return <PatientSnapshot data={data} overview={overview} />;
 }

@@ -1,0 +1,9 @@
+{
+  "migration": "20261030113651_pas_care_platform_expansion.sql",
+  "source_sha256": "e3c26043074b6f07bea9d6ab5b846f7d4b428ee7a3e6dde260d07e6c4685f6c9",
+  "applied": true,
+  "new_tables": 15,
+  "all_new_tables_rls_enabled": true,
+  "existing_tables_preserved": 43,
+  "new_security_advisor_notices": 0
+}

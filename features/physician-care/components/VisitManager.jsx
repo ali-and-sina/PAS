@@ -1,9 +1,11 @@
 "use client";
 
+import { JalaliDateTimeField } from "@/components/care/JalaliCalendar";
+import VisitClosureForm from "@/features/care/components/VisitClosureForm";
 import { formatPersianDateTime } from "@/lib/utils/date-time";
 
 import { useState, useTransition } from "react";
-import { CalendarClock, CheckCircle2, Clock3 } from "lucide-react";
+import { CalendarClock, Clock3 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,15 +80,7 @@ export default function VisitManager({ patientId, visits = [] }) {
         <form onSubmit={createVisit} className="rounded-xl border border-dashed p-3">
           <label htmlFor={`visit-date-${patientId}`} className="text-sm font-medium">ثبت ویزیت جدید</label>
           <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-            <input
-              id={`visit-date-${patientId}`}
-              type="datetime-local"
-              value={visitDate}
-              onChange={(event) => setVisitDate(event.target.value)}
-              required
-              className="h-10 min-w-0 flex-1 rounded-md border bg-background px-3 text-sm"
-              disabled={pending}
-            />
+            <JalaliDateTimeField label="تاریخ و زمان ویزیت" value={visitDate} onChange={setVisitDate} required disabled={pending} />
             <Button type="submit" size="sm" disabled={pending || !visitDate} loading={pending && activeAction === "create"}>
               <CalendarClock className="size-4" aria-hidden="true" />
               ثبت ویزیت
@@ -117,9 +111,7 @@ export default function VisitManager({ patientId, visits = [] }) {
                 ) : null}
                 {visit.status === "in_progress" ? (
                   <div className="mt-3">
-                    <Button type="button" size="sm" variant="outline" disabled={pending} loading={pending && activeAction === `${visit.id}:completed`} onClick={() => changeStatus(visit.id, "completed")}>
-                      <CheckCircle2 className="size-4" aria-hidden="true" /> تکمیل ویزیت
-                    </Button>
+                    <VisitClosureForm visitId={visit.id} />
                   </div>
                 ) : null}
               </div>

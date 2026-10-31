@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { JalaliDateField } from "@/components/care/JalaliCalendar";
+import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,7 @@ function ActionMessage({ state }) {
 
 export function PhysicianFollowUpCreateForm({ patientOptions = [] }) {
   const [state, formAction, pending] = useActionState(createPhysicianFollowUp, initialState);
+  const [dueDate,setDueDate]=useState("");
 
   return (
     <form action={formAction} className="mt-4 grid gap-3 md:grid-cols-2">
@@ -41,16 +43,13 @@ export function PhysicianFollowUpCreateForm({ patientOptions = [] }) {
         عنوان
         <input name="title" required maxLength={200} className="h-10 rounded-md border bg-background px-3" placeholder="مثلاً پیگیری نتیجه آزمایش" />
       </label>
-      <label className="grid gap-1 text-sm">
-        تاریخ سررسید
-        <input type="date" name="due_date" required className="h-10 rounded-md border bg-background px-3" />
-      </label>
+      <JalaliDateField label="تاریخ سررسید" name="due_date" value={dueDate} onChange={setDueDate} required disabled={pending} />
       <label className="grid gap-1 text-sm">
         توضیحات (اختیاری)
         <input name="description" maxLength={3000} className="h-10 rounded-md border bg-background px-3" placeholder="توضیح کوتاه پیگیری" />
       </label>
       <div className="space-y-2 md:col-span-2">
-        <Button type="submit" disabled={pending}>{pending ? "در حال ثبت..." : "ثبت پیگیری"}</Button>
+        <Button type="submit" disabled={pending || !dueDate}>{pending ? "در حال ثبت..." : "ثبت پیگیری"}</Button>
         <ActionMessage state={state} />
       </div>
     </form>

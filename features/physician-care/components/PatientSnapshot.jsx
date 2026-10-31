@@ -1,3 +1,8 @@
+import RecordAccessNotice from "@/components/care/RecordAccessNotice";
+import CareProgress from "@/components/care/CareProgress";
+import { HealthCalendar } from "@/components/care/JalaliCalendar";
+import MedicationCard from "@/features/care/components/MedicationCard";
+import {tehranDayKey} from "@/lib/care/dates";
 import Link from "next/link";
 import {
   ArrowDown,
@@ -55,7 +60,7 @@ function valueText(value) {
   return String(value);
 }
 
-export default function PatientSnapshot({ data }) {
+export default function PatientSnapshot({ data, overview }) {
   const patient = data.patient;
   const age = getAge(patient.patientProfile?.date_of_birth);
   const latestVisit = data.latestVisit;
@@ -141,6 +146,8 @@ export default function PatientSnapshot({ data }) {
         </div>
       </section>
 
+      {overview && <RecordAccessNotice scopes={overview.accessScopes} />}
+      {overview && <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(260px,.8fr)_minmax(0,1.2fr)]"><CareProgress progress={overview.progress}/><HealthCalendar patientId={overview.patientId} initialMonth={overview.month} initialEvents={overview.events} today={overview.today}/></div>}
       <DisclosureSection
         title="پزشکان مرتبط با بیمار"
         description="فقط پزشکان دارای رابطه فعال و تأییدشده نمایش داده می‌شوند."
@@ -171,6 +178,7 @@ export default function PatientSnapshot({ data }) {
         title="تاریخچه و تغییرات آزمایش‌ها"
         description={`${data.labHistory.length} گزارش نهایی · ${data.changes.length} مورد قابل مقایسه`}
         meta={`${data.labHistory.length} گزارش`}
+        stickySummary
       >
         <div className="space-y-6">
       <section aria-labelledby="changes-heading">
@@ -512,48 +520,7 @@ export default function PatientSnapshot({ data }) {
             </div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
-              {data.prescriptions.map((prescription) => (
-                <div key={prescription.id} className="rounded-xl border p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-medium">نسخه</p>
-                    <StatusBadge
-                      label={
-                        prescription.status === "active"
-                          ? "فعال"
-                          : prescription.status === "completed"
-                            ? "تکمیل‌شده"
-                            : "لغوشده"
-                      }
-                      variant={
-                        prescription.status === "active"
-                          ? "normal"
-                          : prescription.status === "completed"
-                            ? "neutral"
-                            : "neutral"
-                      }
-                    />
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatDate(
-                      prescription.issued_at || prescription.created_at,
-                    )}
-                  </p>
-                  <div className="mt-4 space-y-2">
-                    {prescription.items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="rounded-lg bg-muted/30 p-3 text-sm"
-                      >
-                        <p className="font-medium">{item.medication_name}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {item.dosage} • {item.frequency}
-                          {item.duration ? ` • ${item.duration}` : ""}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+              {data.prescriptions.map((prescription) => <MedicationCard key={prescription.id} prescription={prescription} now={overview?.now || new Date().toISOString()} today={overview?.today || tehranDayKey()} />)}
             </div>
           )}
       </DisclosureSection>

@@ -41,6 +41,7 @@ export default async function LabReportPage({ params }) {
         title="نتایج آزمایش"
         description={attentionCount ? `${visible.length} مورد ثبت‌شده · ${attentionCount} مورد دارای پرچم خارج از محدوده` : "برای مشاهدهٔ مقادیر، محدوده‌های مرجع و وضعیت هر آزمایش، جزئیات را باز کنید."}
         meta={`${visible.length} مورد`}
+        stickySummary
       >
         <LabResultTable observations={visible} />
       </DisclosureSection>

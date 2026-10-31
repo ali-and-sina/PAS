@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 import { getPostLoginRedirect } from "@/lib/auth";
 
@@ -95,7 +96,17 @@ async function authenticateTestUser({
 
   await clearCurrentSession(supabase);
 
-  const authPhone = toAuthPhone(testUser.phone);
+  let authPhone = toAuthPhone(testUser.phone);
+  // A reviewed phone correction must not lock a reserved demo account out.
+  // Resolve only the pinned Auth identity, after validating the access code.
+  if (testUser.role !== "admin" && testUser.user_id &&
+      (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)) {
+    const {data:reserved,error:directoryError}=await createAdminClient().auth.admin.getUserById(testUser.user_id);
+    if(directoryError || reserved?.user?.id!==testUser.user_id || !reserved.user.phone_confirmed_at){
+      return {ok:false,code:"SERVER_ERROR"};
+    }
+    authPhone=toAuthPhone(reserved.user.phone);
+  }
 
   if (!authPhone) {
     return {
@@ -130,6 +141,11 @@ async function authenticateTestUser({
     };
   }
 
+  if(testUser.user_id && user.id!==testUser.user_id){
+    await clearCurrentSession(supabase);
+    return {ok:false,code:"INVALID_INPUT"};
+  }
+
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select(
@@ -146,7 +162,8 @@ async function authenticateTestUser({
         ),
         laboratory_profiles (
           license_number,
-          organization_id
+          organization_id,
+          pas_medical_centers(center_type,is_active)
         )
       `,
     )
@@ -184,7 +201,7 @@ async function authenticateTestUser({
     .trim()
     .replace(/^\+/, "");
 
-  if (storedPhone !== testUser.phone) {
+  if (storedPhone !== authPhone.replace(/^\+/, "")) {
     await clearCurrentSession(supabase);
 
     return {
@@ -269,7 +286,14 @@ async function authenticateTestUser({
     patientProfileCompleted = Boolean(patientProfile);
   }
 
+  const center = Array.isArray(laboratoryProfile?.pas_medical_centers) ? laboratoryProfile.pas_medical_centers[0] : laboratoryProfile?.pas_medical_centers;
+  if (testUser.role === "laboratory" && center?.is_active !== true) {
+    await clearCurrentSession(supabase);
+    return {ok:false,code:"NOT_AVAILABLE"};
+  }
   const redirectTo = await getPostLoginRedirect({
+    center_type: center?.center_type,
+    center_active: center?.is_active,
     ...profile,
     is_verified: doctorProfile?.is_verified ?? null,
     specialty: doctorProfile?.specialty ?? null,

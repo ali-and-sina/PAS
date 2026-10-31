@@ -1,3 +1,6 @@
+import CareProgress from "@/components/care/CareProgress";
+import { HealthCalendar } from "@/components/care/JalaliCalendar";
+import { getCareOverview } from "@/features/care/queries";
 import Link from "next/link";
 import {
   Activity,
@@ -38,10 +41,10 @@ function formatDate(value) {
 }
 
 export default async function PatientHealthRecordPage() {
-  const timeline = await getPatientTimeline({ limit: 100 });
+  const [timeline, overview] = await Promise.all([getPatientTimeline({ limit: 100 }), getCareOverview()]);
 
   const shortcuts = [
-    { href: "/patient/results", label: "نتایج آزمایش", icon: FileText },
+    { href: "/patient/medical-services", label: "مراکز درمانی", icon: FileText },
     { href: "/patient/trends", label: "روند نتایج", icon: LineChart },
     { href: "/patient/interpretations", label: "توضیحات پزشک", icon: NotebookPen },
     { href: "/patient/prescriptions", label: "نسخه‌ها", icon: Pill },
@@ -55,15 +58,19 @@ export default async function PatientHealthRecordPage() {
         description="یک مسیر زمانی از رویدادهای واقعی سلامت شما."
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(260px,.8fr)_minmax(0,1.2fr)]">
+        <CareProgress progress={overview.progress} />
+        <HealthCalendar patientId={overview.patientId} initialMonth={overview.month} initialEvents={overview.events} today={overview.today} />
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-5">
         {shortcuts.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
-            className="rounded-xl border bg-card p-4 transition hover:border-primary/30 hover:bg-accent/30"
+            className="rounded-xl border bg-card p-3 transition last:col-span-2 sm:p-4 lg:last:col-span-1 hover:border-primary/30 hover:bg-accent/30"
           >
             <Icon className="size-5 text-primary" aria-hidden="true" />
-            <p className="mt-3 text-sm font-medium">{label}</p>
+            <p className="mt-2 text-xs font-medium sm:text-sm">{label}</p>
           </Link>
         ))}
       </div>

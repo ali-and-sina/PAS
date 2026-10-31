@@ -76,6 +76,7 @@ export async function submitLabRequestToBranch(_previousState, formData) {
   if (!data?.ok || !data?.dispatch_id) return stateError("ارسال درخواست به آزمایشگاه انجام نشد.");
 
   revalidatePath("/patient/lab-orders");
+  revalidatePath("/patient/medical-services");
   revalidatePath("/patient/dashboard");
   revalidatePath("/lab/orders");
 
@@ -106,6 +107,7 @@ export async function cancelPatientLabDispatch(dispatchId) {
   }
 
   revalidatePath("/patient/lab-orders");
+  revalidatePath("/patient/medical-services");
   revalidatePath("/lab/orders");
   return { ok: true, data };
 }
@@ -124,7 +126,9 @@ export async function cancelPhysicianLabRequest(requestId) {
   }
 
   revalidatePath("/doctor/lab-orders");
+  revalidatePath("/doctor/medical-services");
   revalidatePath("/patient/lab-orders");
+  revalidatePath("/patient/medical-services");
   return { ok: true, data };
 }
 
@@ -145,7 +149,9 @@ export async function acceptLabDispatch(dispatchId) {
   revalidatePath("/lab/dispatches");
   revalidatePath("/lab/home-collection");
   revalidatePath("/doctor/lab-orders");
+  revalidatePath("/doctor/medical-services");
   revalidatePath("/patient/lab-orders");
+  revalidatePath("/patient/medical-services");
   return { ok: true, data };
 }
 
@@ -171,6 +177,8 @@ export async function rejectLabDispatch(_previousState, formData) {
   revalidatePath("/lab/dispatches");
   revalidatePath("/lab/home-collection");
   revalidatePath("/patient/lab-orders");
+  revalidatePath("/patient/medical-services");
   revalidatePath("/doctor/lab-orders");
+  revalidatePath("/doctor/medical-services");
   return { ok: true, message: "درخواست رد شد و بیمار می‌تواند آزمایشگاه دیگری انتخاب کند.", data };
 }

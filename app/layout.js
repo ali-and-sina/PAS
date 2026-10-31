@@ -19,7 +19,7 @@ export const metadata = {
     template: "%s | پاس",
   },
   description:
-    "پلتفرم مدیریت گردش‌کار سلامت برای پزشکان، آزمایشگاه‌ها و بیماران.",
+    "پلتفرم یکپارچهٔ مراقبت سلامت برای بیماران، پزشکان و مراکز درمانی.",
   applicationName: "پاس",
   openGraph: {
     type: "website",
@@ -46,7 +46,7 @@ export default async function RootLayout({ children }) {
   await connection();
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning>
-      <body className={`${vazirmatn.variable} min-h-screen bg-background font-sans text-foreground antialiased`}>
+      <body className={`${vazirmatn.variable} min-h-dvh bg-background font-sans text-foreground antialiased`}>
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:right-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"

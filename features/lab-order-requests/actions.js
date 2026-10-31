@@ -62,8 +62,10 @@ export async function createPhysicianLabRequest({ patientId, clinicalNote = "", 
   if (!data?.ok || !data?.request_id) return { ok: false, message: "ثبت درخواست آزمایش انجام نشد." };
 
   revalidatePath("/doctor/lab-orders");
+  revalidatePath("/doctor/medical-services");
   revalidatePath(`/doctor/patients/${patientId}`);
   revalidatePath("/patient/lab-orders");
+  revalidatePath("/patient/medical-services");
 
   return {
     ok: true,

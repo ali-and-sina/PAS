@@ -1,3 +1,5 @@
+import MedicationCard from "@/features/care/components/MedicationCard";
+import {tehranDayKey} from "@/lib/care/dates";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -12,23 +14,6 @@ import { getDoctorPatients } from "@/features/patients/queries";
 
 export const metadata = { title: "نسخه‌ها" };
 export const dynamic = "force-dynamic";
-
-const PRESCRIPTION_STATUS_LABELS = {
-  active: "فعال",
-  completed: "تکمیل‌شده",
-  cancelled: "لغوشده",
-  draft: "پیش‌نویس",
-};
-
-function formatDate(value) {
-  return value
-    ? new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium" }).format(new Date(value))
-    : "—";
-}
-
-function getStatusLabel(status) {
-  return PRESCRIPTION_STATUS_LABELS[status] || "نامشخص";
-}
 
 export default async function DoctorPrescriptionsPage({ searchParams }) {
   const user = await getSessionUser();
@@ -52,37 +37,7 @@ export default async function DoctorPrescriptionsPage({ searchParams }) {
         <SectionCard title="نسخه‌های ثبت‌شده">
           {prescriptions.length ? (
             <div className="space-y-3">
-              {prescriptions.map((prescription) => (
-                <article key={prescription.id} className="rounded-lg border p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <Link
-                        href={`/doctor/patients/${prescription.patient_id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {prescription.patient_name}
-                      </Link>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {formatDate(prescription.issued_at)} · {getStatusLabel(prescription.status)}
-                      </p>
-                    </div>
-                    <span className="text-sm">{prescription.items.length} قلم</span>
-                  </div>
-                  <ul className="mt-4 space-y-2 text-sm">
-                    {prescription.items.map((item) => (
-                      <li key={item.id} className="rounded-md bg-muted/40 p-3">
-                        <span className="font-medium">{item.medication_name}</span>
-                        <span className="mr-2 text-muted-foreground">
-                          {item.dosage} · {item.frequency}
-                        </span>
-                        {item.duration ? (
-                          <span className="mr-2 text-muted-foreground">· {item.duration}</span>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
+              {prescriptions.map((prescription) => <MedicationCard key={prescription.id} prescription={prescription} now={new Date().toISOString()} today={tehranDayKey()} />)}
             </div>
           ) : (
             <EmptyState

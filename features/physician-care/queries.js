@@ -1,6 +1,5 @@
 import "server-only";
 
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getTestDisplayName } from "@/lib/medical/test-name";
 import { getSessionUser } from "@/lib/auth/server";
@@ -123,13 +122,14 @@ async function getReportBundle(supabase, doctorId, patientId = null) {
     .select(
       "id, patient_id, laboratory_id, status, clinical_note, ordered_at, received_at, completed_at, cancelled_at",
     )
-    .eq("doctor_id", doctorId)
     .order("ordered_at", {
       ascending: false,
     });
 
   if (patientId) {
     ordersQuery = ordersQuery.eq("patient_id", patientId);
+  } else {
+    ordersQuery = ordersQuery.eq("doctor_id", doctorId);
   }
 
   const { data: orders, error: ordersError } = await ordersQuery;
@@ -213,9 +213,10 @@ async function getPhysicianVoiceNotes(supabase, doctorId, patientId) {
     return [];
   }
 
-  const admin = createAdminClient();
   const paths = data.map((note) => note.audio_path).filter(Boolean);
-  const { data: signed, error: signedError } = await admin.storage
+  // The caller's session must also pass the private bucket's read policy.
+  // Using the same client keeps record-access revocation effective here.
+  const { data: signed, error: signedError } = await supabase.storage
     .from("pab-voice-notes")
     .createSignedUrls(paths, 300);
 
@@ -319,6 +320,7 @@ export async function getPhysicianDashboard() {
         followUpsDue: 0,
         completedRequestedTests: 0,
         pendingRequestedTests: 0,
+        activeMedicalRequests: 0,
         overdueFollowUps: 0,
         doctorNotes: 0,
         unreadNotifications: 0,
@@ -327,6 +329,7 @@ export async function getPhysicianDashboard() {
       attention: [],
       recentPatients: [],
       recentOrders: [],
+      recentMedicalRequests: [],
       followUps: [],
       notificationPreview: [],
     };
@@ -338,6 +341,8 @@ export async function getPhysicianDashboard() {
   const [
     relationshipsResult,
     ordersBundle,
+    medicalRequestsResult,
+    activeMedicalRequestsCountResult,
     notificationsResult,
     unreadNotificationsCountResult,
     profileResult,
@@ -355,6 +360,19 @@ export async function getPhysicianDashboard() {
       .order("started_at", { ascending: false }),
 
     getReportBundle(supabase, user.id),
+
+    supabase
+      .from("pas_medical_requests")
+      .select("id, patient_id, provider_id, service_kind, service_name, status, requested_at, scheduled_at, completed_at")
+      .eq("doctor_id", user.id)
+      .order("requested_at", { ascending: false })
+      .limit(8),
+
+    supabase
+      .from("pas_medical_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("doctor_id", user.id)
+      .in("status", ["requested", "accepted", "in_progress"]),
 
     supabase
       .from("notifications")
@@ -413,6 +431,8 @@ export async function getPhysicianDashboard() {
     throw relationshipsResult.error;
   }
 
+  if (medicalRequestsResult.error) throw medicalRequestsResult.error;
+  if (activeMedicalRequestsCountResult.error) throw activeMedicalRequestsCountResult.error;
   if (notificationsResult.error) throw notificationsResult.error;
   if (unreadNotificationsCountResult.error) throw unreadNotificationsCountResult.error;
   if (profileResult.error) throw profileResult.error;
@@ -426,7 +446,11 @@ export async function getPhysicianDashboard() {
     ...new Set((relationshipsResult.data || []).map((row) => row.patient_id)),
   ];
   const activePatientIds = new Set(patientIds);
-  const patientNames = await getPatientNames(supabase, patientIds);
+  const medicalRequests = medicalRequestsResult.data || [];
+  const patientNames = await getPatientNames(supabase, [
+    ...patientIds,
+    ...medicalRequests.map((request) => request.patient_id),
+  ]);
 
   const orderIdsForCounts = ordersBundle.orders.map((order) => order.id);
   let orderItemsForCounts = [];
@@ -638,6 +662,7 @@ export async function getPhysicianDashboard() {
       followUpsDue,
       completedRequestedTests,
       pendingRequestedTests,
+      activeMedicalRequests: activeMedicalRequestsCountResult.count || 0,
       overdueFollowUps,
       doctorNotes: doctorNotesCountResult.count || 0,
       unreadNotifications,
@@ -646,6 +671,10 @@ export async function getPhysicianDashboard() {
     attention: attention.slice(0, 8),
     recentPatients,
     recentOrders: ordersBundle.orders.slice(0, 6),
+    recentMedicalRequests: medicalRequests.map((request) => ({
+      ...request,
+      patientName: patientNames.get(request.patient_id) || "بیمار",
+    })),
     followUps: followUps.slice(0, 12),
     notificationPreview: notificationsResult.data || [],
   };
@@ -729,7 +758,6 @@ export async function getPhysicianPatientSnapshot(patientId) {
       .select(
         "id, patient_id, doctor_id, diagnostic_report_id, status, issued_at, created_at",
       )
-      .eq("doctor_id", user.id)
       .eq("patient_id", patientId)
       .order("issued_at", {
         ascending: false,
@@ -844,7 +872,7 @@ export async function getPhysicianPatientSnapshot(patientId) {
       ? supabase
           .from("prescription_items")
           .select(
-            "id, prescription_id, medication_name, dosage, frequency, duration, instructions",
+            "id, prescription_id, medication_name, dosage, frequency, duration, instructions, quantity_units, units_per_day, unit_label, as_needed",
           )
           .in("prescription_id", prescriptionIds)
       : Promise.resolve({
@@ -1111,6 +1139,9 @@ export async function getPhysicianPatientSnapshot(patientId) {
     });
   }
 
+  const coverageItemIds = (prescriptionItems || []).map(item=>item.id);
+  const coverageReceipts = coverageItemIds.length ? await supabase.from("pas_medication_dispenses").select("id,prescription_item_id,quantity_units,received_at,source").in("prescription_item_id",coverageItemIds) : {data:[]};
+  if(coverageReceipts.error) throw coverageReceipts.error;
   timeline.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
   return {
@@ -1146,6 +1177,7 @@ export async function getPhysicianPatientSnapshot(patientId) {
 
     prescriptions: (prescriptions || []).map((prescription) => ({
       ...prescription,
+      receipts: (coverageReceipts.data || []).filter(receipt=>(prescriptionItems||[]).some(item=>item.prescription_id===prescription.id && item.id===receipt.prescription_item_id)),
 
       items: (prescriptionItems || []).filter(
         (item) => item.prescription_id === prescription.id,

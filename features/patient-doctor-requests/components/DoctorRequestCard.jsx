@@ -2,6 +2,7 @@
 
 import { formatPersianDateTime } from "@/lib/utils/date-time";
 
+import { RECORD_SCOPES } from "@/lib/care/constants";
 import { useActionState } from "react";
 import { UserCheck, UserX } from "lucide-react";
 
@@ -115,6 +116,10 @@ export default function DoctorRequestCard({
                 value={request.id}
               />
 
+              <fieldset className="mb-3 space-y-2">
+                <legend className="mb-2 text-sm font-medium">بخش‌های مجاز پرونده</legend>
+                {RECORD_SCOPES.map(([key,label]) => <label key={key} className="flex min-h-11 items-center gap-2 text-xs"><input type="checkbox" name="scopes" value={key} defaultChecked disabled={pending} />{label}</label>)}
+              </fieldset>
               <Button
                 type="submit"
                 className="w-full"

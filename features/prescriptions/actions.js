@@ -76,12 +76,24 @@ export async function createPrescription(_previousState, formData) {
         return fail("نام دارو، دوز و تعداد مصرف را کامل کنید و طول فیلدها را بررسی کنید.");
       }
 
+      const quantity = item.quantity_units === "" || item.quantity_units == null ? null : Number(item.quantity_units);
+      const perDay = item.units_per_day === "" || item.units_per_day == null ? null : Number(item.units_per_day);
+      if ((quantity !== null && (!Number.isFinite(quantity) || quantity <= 0 || quantity > 1000000)) ||
+          (perDay !== null && (!Number.isFinite(perDay) || perDay <= 0 || perDay > 1000))) {
+        return fail("مقدار دارو و مقدار مصرف روزانه معتبر نیست.");
+      }
+      const unitLabel = readOptionalText(item.unit_label || "عدد",30);
+      if (!unitLabel || (item.as_needed !== undefined && typeof item.as_needed !== "boolean")) return fail("واحد یا برنامهٔ مصرف معتبر نیست.");
       normalizedItems.push({
         medication_name: medicationName,
         dosage,
         frequency,
         duration,
         instructions,
+        quantity_units: quantity,
+        units_per_day: item.as_needed ? null : perDay,
+        unit_label: unitLabel,
+        as_needed: item.as_needed === true,
       });
     }
 

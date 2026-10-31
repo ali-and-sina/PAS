@@ -42,8 +42,8 @@ export const LOGIN_ROLE_CONFIG = {
 
   laboratory: {
     role: "laboratory",
-    label: "آزمایشگاه",
-    description: "پذیرش آزمایش‌ها و ثبت نتایج",
+    label: "مرکز درمانی",
+    description: "ورود به پنل اختصاصی مرکز با حساب تعریف‌شده توسط مدیر",
     identifier: {
       label: "شناسه آزمایشگاه",
       placeholder: "LAB-1234",

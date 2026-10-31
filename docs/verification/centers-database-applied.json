@@ -1,0 +1,15 @@
+{
+  "migration": "20261030131528_center_identity_and_specialist_workspaces.sql",
+  "applied": true,
+  "source_sha256": "ff5aaede348937265d3c7eaa632457655e811f8f237c5fb497c3968876930bfe",
+  "existing_tables_compared": 57,
+  "all_previous_values_preserved": true,
+  "new_tables": 2,
+  "new_tables_rls_enabled": true,
+  "new_advisor_findings": 0,
+  "existing_laboratory_preserved": true,
+  "anonymous_or_authenticated_can_provision_center": false,
+  "center_can_change_type": false,
+  "private_old_dispatcher_client_access": false,
+  "frontend_deployed": false
+}

@@ -413,6 +413,7 @@ export async function getAdminUser(userId) {
       laboratory_profiles (
         license_number,
         organization_id,
+        pas_medical_centers(center_type,display_name,is_active),
         organizations (
           id,
           name,

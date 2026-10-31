@@ -60,6 +60,7 @@ export async function saveLaboratoryBranch(_previousState, formData) {
   revalidatePath("/admin/laboratories");
   revalidatePath("/admin/laboratories/branches");
   revalidatePath("/patient/lab-orders");
+  revalidatePath("/patient/medical-services");
   return { ok: true, message: "اطلاعات شعبه آزمایشگاه ثبت شد.", branchId: data };
 }
 
@@ -99,6 +100,7 @@ export async function saveLaboratoryBranchMember(_previousState, formData) {
   revalidatePath("/admin/laboratories/branches");
   revalidatePath("/lab/orders");
   revalidatePath("/patient/lab-orders");
+  revalidatePath("/patient/medical-services");
   return {
     ok: true,
     message: isActive ? "عضویت حساب در شعبه فعال شد." : "عضویت حساب در شعبه غیرفعال شد.",

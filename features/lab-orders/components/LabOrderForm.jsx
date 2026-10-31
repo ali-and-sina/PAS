@@ -16,7 +16,7 @@ function itemLabel(item) {
   return item.label || "آزمایش";
 }
 
-export default function LabOrderForm({ patients, testPanels, testDefinitions = [], defaultPatientId = "" }) {
+export default function LabOrderForm({ patients, testPanels, testDefinitions = [], defaultPatientId = "", redirectTo = null }) {
   const [state, formAction, pending] = useActionState(createLabOrder, initialState);
   const router = useRouter();
   const [kind, setKind] = useState("panel");
@@ -26,9 +26,9 @@ export default function LabOrderForm({ patients, testPanels, testDefinitions = [
   const choices = useMemo(() => kind === "panel" ? testPanels : testDefinitions, [kind, testPanels, testDefinitions]);
   useEffect(() => {
     if (state.ok && state.requestId) {
-      router.push(`/doctor/lab-orders/${state.requestId}`);
+      router.push(redirectTo || `/doctor/lab-orders/${state.requestId}`);
     }
-  }, [state.ok, state.requestId, router]);
+  }, [state.ok, state.requestId, redirectTo, router]);
 
   const normalizedChoices = useMemo(() => choices.map((row) => ({
     id: row.id,
@@ -90,7 +90,7 @@ export default function LabOrderForm({ patients, testPanels, testDefinitions = [
       </fieldset>
 
       <div className="space-y-2"><Label htmlFor="clinical_note">یادداشت بالینی برای آزمایشگاه</Label><Textarea id="clinical_note" name="clinical_note" rows={4} maxLength={2000} placeholder="در صورت نیاز، توضیح بالینی مرتبط را بنویسید." /></div>
-      {state.message && <p className={`text-sm ${state.ok ? "text-status-normal" : "text-destructive"}`} role={state.ok ? "status" : "alert"}>{state.message}{state.ok && state.requestId ? <> <Link className="font-medium underline" href="/doctor/lab-orders">مشاهده درخواست‌ها</Link></> : null}</p>}
+      {state.message && <p className={`text-sm ${state.ok ? "text-status-normal" : "text-destructive"}`} role={state.ok ? "status" : "alert"}>{state.message}{state.ok && state.requestId ? <> <Link className="font-medium underline" href="/doctor/medical-services">مشاهدهٔ مراکز درمانی</Link></> : null}</p>}
       <Button type="submit" disabled={pending || selectedItems.length === 0} loading={pending}>{pending ? "در حال ثبت…" : "ثبت درخواست آزمایش"}</Button>
     </form>
   );

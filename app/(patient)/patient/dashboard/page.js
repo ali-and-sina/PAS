@@ -8,6 +8,7 @@ import {
   FileText,
   HeartPulse,
   ListChecks,
+  Scan,
 } from "lucide-react";
 
 import DashboardWelcome from "@/components/shared/DashboardWelcome";
@@ -24,10 +25,40 @@ export const dynamic = "force-dynamic";
 const dateFormatter = new Intl.DateTimeFormat("fa-IR", {
   dateStyle: "medium",
 });
+const dateTimeFormatter = new Intl.DateTimeFormat("fa-IR", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+const MEDICAL_SERVICE_LABELS = {
+  ct: "سی‌تی‌اسکن",
+  mri: "ام‌آر‌آی",
+  ecg: "نوار قلب",
+  ultrasound: "سونوگرافی",
+  mammography: "ماموگرافی",
+  xray: "رادیوگرافی",
+  physiotherapy: "فیزیوتراپی",
+  other: "سایر خدمات پزشکی",
+};
+
+const MEDICAL_STATUS_LABELS = {
+  requested: "در انتظار پذیرش مرکز",
+  accepted: "پذیرفته‌شده",
+  in_progress: "در حال انجام",
+  reported: "گزارش آماده است",
+  cancelled: "لغوشده",
+};
 
 function formatDate(value) {
   if (!value) return "—";
-  return dateFormatter.format(new Date(value));
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : dateFormatter.format(date);
+}
+
+function formatDateTime(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : dateTimeFormatter.format(date);
 }
 
 function getEventLabel(type) {
@@ -36,6 +67,7 @@ function getEventLabel(type) {
       visit: "ویزیت",
       lab_order: "درخواست آزمایش",
       lab_result: "نتیجه آزمایش",
+      medical_service: "درخواست مرکز درمانی",
       doctor_explanation: "توضیحات پزشک",
       prescription: "نسخه",
       follow_up: "پیگیری",
@@ -74,6 +106,11 @@ export default async function PatientDashboardPage() {
     : Array.isArray(data?.recentResults)
       ? data.recentResults
       : [];
+  const recentMedicalRequests = Array.isArray(data?.recent_medical_requests)
+    ? data.recent_medical_requests
+    : Array.isArray(data?.recentMedicalRequests)
+      ? data.recentMedicalRequests
+      : [];
 
   return (
     <div className="space-y-6">
@@ -83,9 +120,9 @@ export default async function PatientDashboardPage() {
         description="نتایج، پیگیری‌ها و قدم بعدی مراقبت را از اینجا دنبال کنید."
         actions={
           <Button asChild variant="outline">
-            <Link href="/patient/results">
+            <Link href="/patient/medical-services">
               <FileText aria-hidden="true" />
-              نتایج آزمایش
+              مراکز درمانی
             </Link>
           </Button>
         }
@@ -114,6 +151,84 @@ export default async function PatientDashboardPage() {
 
         <StatCard label="پیگیری فعال" value={activeFollowUps.length} icon={ListChecks} href="/patient/follow-ups" detail="مشاهده پیگیری‌ها" />
         <StatCard label="اعلان خوانده‌نشده" value={data.unread_notifications ?? 0} icon={Bell} href="/patient/notifications" detail="مشاهده اعلان‌ها" tone="neutral" />
+        <StatCard label="درخواست درمانی فعال" value={data.active_medical_requests_count ?? 0} icon={Scan} href="/patient/medical-services" detail="پیگیری درخواست‌ها" tone="info" />
+      </section>
+
+      <section aria-labelledby="medical-requests-heading">
+        <Card>
+          <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
+            <div>
+              <CardTitle id="medical-requests-heading">درخواست‌های مراکز درمانی</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                درخواست‌های تصویربرداری، نوار قلب، فیزیوتراپی و سایر خدمات ثبت‌شده برای شما.
+              </p>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/patient/medical-services">مشاهده همه</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {recentMedicalRequests.length === 0 ? (
+              <EmptyState
+                icon={Scan}
+                title="درخواستی از مراکز درمانی ثبت نشده است"
+                description="هر زمان پزشک برای شما تصویربرداری یا خدمت پزشکی دیگری ثبت کند، وضعیت آن در همین قسمت نمایش داده می‌شود."
+                action={{ label: "رفتن به مراکز درمانی", href: "/patient/medical-services" }}
+              />
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {recentMedicalRequests.slice(0, 4).map((request) => {
+                  const status = request.status;
+                  const needsCenterSelection = status === "requested" && !request.provider_id;
+                  const statusVariant = status === "reported"
+                    ? "normal"
+                    : status === "cancelled"
+                      ? "neutral"
+                      : status === "accepted"
+                        ? "normal"
+                        : "preliminary";
+                  const statusLabel = needsCenterSelection
+                    ? "نیازمند انتخاب مرکز"
+                    : MEDICAL_STATUS_LABELS[status] || "وضعیت نامشخص";
+                  const scheduledAt = formatDateTime(request.scheduled_at);
+
+                  return (
+                    <Link
+                      key={request.id}
+                      href={`/patient/medical-services#service-${request.service_kind || "other"}`}
+                      className="flex min-w-0 flex-col justify-between gap-3 rounded-xl border p-4 transition hover:border-primary/30 hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-primary">
+                            <Scan className="size-5" aria-hidden="true" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">
+                              {MEDICAL_SERVICE_LABELS[request.service_kind] || "خدمت پزشکی"}
+                            </p>
+                            <p className="mt-1 truncate font-semibold">{request.service_name}</p>
+                          </div>
+                        </div>
+                        <StatusBadge
+                          label={statusLabel}
+                          variant={statusVariant}
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs text-muted-foreground">
+                        <span>ثبت: {formatDateTime(request.requested_at) || formatDate(request.requested_at)}</span>
+                        {scheduledAt ? <span>زمان پیشنهادی: {scheduledAt}</span> : null}
+                      </div>
+                      {needsCenterSelection ? (
+                        <p className="text-sm font-medium text-primary">برای ادامه، مرکز درمانی را انتخاب کنید ←</p>
+                      ) : null}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
@@ -126,7 +241,7 @@ export default async function PatientDashboardPage() {
               <EmptyState
                 icon={ClipboardList}
                 title="هنوز فعالیتی در پرونده شما ثبت نشده است"
-                description="با ثبت اولین ویزیت یا نتیجه آزمایش، مسیر سلامت شما اینجا شروع می‌شود."
+                description="با ثبت اولین ویزیت، درخواست مرکز درمانی یا نتیجه آزمایش، مسیر سلامت شما اینجا نمایش داده می‌شود."
               />
             ) : (
               <div className="rounded-2xl border bg-muted/30 p-5">
@@ -167,6 +282,19 @@ export default async function PatientDashboardPage() {
                       </Link>
                     </Button>
                   )}
+                {latestEvent.type === "medical_service" && (
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                  >
+                    <Link href={`/patient/medical-services#service-${latestEvent.service_kind || "other"}`}>
+                      پیگیری درخواست مرکز درمانی
+                      <ArrowLeft aria-hidden="true" />
+                    </Link>
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
@@ -202,7 +330,9 @@ export default async function PatientDashboardPage() {
                   href={
                     item.type === "notification"
                       ? "/patient/notifications"
-                      : "/patient/follow-ups"
+                      : item.type === "medical_service"
+                        ? `/patient/medical-services#service-${item.service_kind || "other"}`
+                        : "/patient/follow-ups"
                   }
                   className="block rounded-xl border p-4 transition hover:border-primary/30 hover:bg-accent/40"
                 >
@@ -211,16 +341,20 @@ export default async function PatientDashboardPage() {
                       <p className="font-medium">{item.title}</p>
                       {item.due_date && (
                         <p className="mt-1 text-xs text-muted-foreground">
-                          سررسید: {formatDate(item.due_date)}
+                          {item.type === "medical_service" ? "زمان پیشنهادی:" : "سررسید:"} {formatDate(item.due_date)}
                         </p>
                       )}
                     </div>
                     {item.status && item.status !== "unread" && (
                       <StatusBadge
                         label={
-                          item.status === "overdue" ? "عقب‌افتاده" : "در انتظار"
+                          item.type === "medical_service"
+                            ? "انتخاب مرکز"
+                            : item.status === "overdue"
+                              ? "عقب‌افتاده"
+                              : "در انتظار"
                         }
-                        variant={getFollowUpVariant(item.status)}
+                        variant={item.type === "medical_service" ? "preliminary" : getFollowUpVariant(item.status)}
                       />
                     )}
                   </div>
@@ -229,23 +363,30 @@ export default async function PatientDashboardPage() {
             )}
 
             {data.next_step && (
-              <div className="rounded-xl border border-primary/15 bg-accent/50 p-4">
-                <p className="text-xs text-primary">قدم بعدی پیشنهادی</p>
-                <p className="mt-1 text-sm font-medium">
-                  {data.next_step.label}
-                </p>
-              </div>
+              data.next_step.type === "medical_service" ? (
+                <Link href={`/patient/medical-services#service-${data.next_step.service_kind || "other"}`} className="block rounded-xl border border-primary/15 bg-accent/50 p-4 transition hover:border-primary/30">
+                  <p className="text-xs text-primary">قدم بعدی پیشنهادی</p>
+                  <p className="mt-1 text-sm font-medium">{data.next_step.label}</p>
+                </Link>
+              ) : (
+                <div className="rounded-xl border border-primary/15 bg-accent/50 p-4">
+                  <p className="text-xs text-primary">قدم بعدی پیشنهادی</p>
+                  <p className="mt-1 text-sm font-medium">{data.next_step.label}</p>
+                </div>
+              )
             )}
           </CardContent>
         </Card>
       </section>
+
+
 
       <section className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle>آخرین نتایج</CardTitle>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/patient/results">همه نتایج</Link>
+              <Link href="/patient/medical-services">همه نتایج و خدمات</Link>
             </Button>
           </CardHeader>
           <CardContent>

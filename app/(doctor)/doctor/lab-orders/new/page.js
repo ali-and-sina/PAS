@@ -21,8 +21,8 @@ export default async function NewLabOrderPage({ searchParams }) {
 
   return (
     <>
-      <PageHeader title="ثبت درخواست آزمایش" description="آزمایش‌های لازم را در پرونده بیمار ثبت کنید. بیمار آزمایشگاه مقصد را انتخاب می‌کند." actions={<Link href="/doctor/lab-orders" className="text-sm text-muted-foreground hover:underline">بازگشت به درخواست‌ها</Link>} />
-      {patients.length === 0 ? <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">ابتدا یک بیمار با رابطهٔ فعال به فهرست خود اضافه کنید.</div> : (testPanels.length === 0 && testDefinitions.length === 0) ? <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">هنوز آزمایش یا پنل فعالی در کاتالوگ ثبت نشده است.</div> : <div className="max-w-3xl"><LabOrderForm patients={patients} testPanels={testPanels} testDefinitions={testDefinitions} defaultPatientId={params?.patientId || params?.patient || ""} /></div>}
+      <PageHeader title="ثبت درخواست آزمایش" description="آزمایش‌های لازم را در پرونده بیمار ثبت کنید. بیمار آزمایشگاه مقصد را انتخاب می‌کند." actions={<Link href="/doctor/medical-services" className="text-sm text-muted-foreground hover:underline">بازگشت به مراکز درمانی</Link>} />
+      {patients.length === 0 ? <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">ابتدا یک بیمار با رابطهٔ فعال به فهرست خود اضافه کنید.</div> : (testPanels.length === 0 && testDefinitions.length === 0) ? <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">هنوز آزمایش یا پنل فعالی در کاتالوگ ثبت نشده است.</div> : <div className="max-w-3xl"><LabOrderForm patients={patients} testPanels={testPanels} testDefinitions={testDefinitions} defaultPatientId={params?.patientId || params?.patient || ""} redirectTo="/doctor/medical-services" /></div>}
     </>
   );
 }

@@ -10,6 +10,7 @@ import {
   FileCheck2,
   FileText,
   Users,
+  Scan,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhysicianFollowUpStatusForm } from "@/features/physician-care/components/FollowUpForms";
 import DashboardWelcome from "@/components/shared/DashboardWelcome";
 import StatCard from "@/components/shared/StatCard";
+import { MEDICAL_STATUS, SERVICE_KINDS } from "@/lib/care/constants";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -27,10 +29,10 @@ function formatDate(value) {
 
 const statItems = [
   { key: "activePatients", label: "بیماران دارای ارتباط فعال", icon: Users, tone: "neutral", href: "/doctor/patients" },
-  { key: "newResults", label: "بیماران با نتیجه جدید", icon: FileCheck2, tone: "info", href: "/doctor/interpretations" },
+  { key: "newResults", label: "بیماران با نتیجه جدید آزمایش", icon: FileCheck2, tone: "info", href: "/doctor/medical-services" },
   { key: "followUpsDue", label: "پیگیری‌های امروز", icon: CalendarClock, tone: "warning", href: "/doctor/follow-ups?status=due" },
-  { key: "completedRequestedTests", label: "تست‌های تکمیل‌شده", icon: CheckCircle2, tone: "info", href: "/doctor/lab-orders?status=completed" },
-  { key: "pendingRequestedTests", label: "تست‌های انجام‌نشده", icon: ClipboardCheck, tone: "neutral", href: "/doctor/lab-orders?status=open" },
+  { key: "completedRequestedTests", label: "آزمایش‌های تکمیل‌شده", icon: CheckCircle2, tone: "info", href: "/doctor/medical-services" },
+  { key: "activeMedicalRequests", label: "خدمات مراکز درمانی در جریان", icon: Scan, tone: "neutral", href: "/doctor/medical-services" },
   { key: "overdueFollowUps", label: "پیگیری‌های عقب‌افتاده", icon: AlertCircle, tone: "warning", href: "/doctor/follow-ups?status=overdue" },
   { key: "doctorNotes", label: "یادداشت‌های پزشک", icon: FileText, tone: "neutral", href: "/doctor/notes" },
   { key: "unreadNotifications", label: "اعلان‌های خوانده‌نشده", icon: Bell, tone: "info", href: "/doctor/notifications" },
@@ -48,6 +50,9 @@ export default function PhysicianDashboard({ data }) {
   const followUps = Array.isArray(data.followUps) ? data.followUps : [];
   const attention = Array.isArray(data.attention) ? data.attention : [];
   const recentPatients = Array.isArray(data.recentPatients) ? data.recentPatients : [];
+  const recentMedicalRequests = Array.isArray(data.recentMedicalRequests)
+    ? data.recentMedicalRequests
+    : [];
 
   return (
     <div className="space-y-6">
@@ -56,7 +61,7 @@ export default function PhysicianDashboard({ data }) {
         title={`سلام، ${greetingName}`}
         description="بیماران، نتایج تازه و پیگیری‌های امروز را از اینجا دنبال کنید."
         actions={<>
-            <Button asChild><Link href="/doctor/lab-orders/new">ثبت درخواست آزمایش</Link></Button>
+            <Button asChild><Link href="/doctor/medical-services">ثبت درخواست درمانی</Link></Button>
             <Button asChild variant="outline"><Link href="/doctor/patients">مشاهده بیماران</Link></Button>
         </>}
       />
@@ -65,6 +70,71 @@ export default function PhysicianDashboard({ data }) {
         {statItems.map(({ key, label, icon: Icon, tone, href }) => (
           <StatCard key={key} href={href} label={label} value={data.counts?.[key] ?? 0} icon={Icon} tone={tone} />
         ))}
+      </section>
+
+      <section aria-labelledby="medical-requests-heading">
+        <Card>
+          <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
+            <div>
+              <CardTitle id="medical-requests-heading">درخواست‌های مراکز درمانی</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                تصویربرداری، نوار قلب، فیزیوتراپی و دیگر خدماتی که برای بیماران ثبت کرده‌اید.
+              </p>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/doctor/medical-services">مشاهده همه</Link>
+            </Button>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {recentMedicalRequests.length === 0 ? (
+              <div className="flex items-center gap-3 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                <Scan className="size-5 shrink-0" aria-hidden="true" />
+                <span>هنوز درخواست تصویربرداری یا خدمت دیگری برای بیماران ثبت نشده است.</span>
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {recentMedicalRequests.map((request) => {
+                  const serviceLabel = SERVICE_KINDS.find(([key]) => key === request.service_kind)?.[1]
+                    || "خدمت پزشکی";
+                  const needsCenterSelection = request.status === "requested" && !request.provider_id;
+                  const statusLabel = needsCenterSelection
+                    ? "در انتظار انتخاب مرکز توسط بیمار"
+                    : MEDICAL_STATUS[request.status] || "وضعیت نامشخص";
+                  const statusClass = request.status === "reported"
+                    ? toneClasses.info
+                    : request.status === "cancelled"
+                      ? toneClasses.neutral
+                      : request.status === "accepted"
+                        ? toneClasses.info
+                        : toneClasses.warning;
+
+                  return (
+                    <Link
+                      key={request.id}
+                      href={`/doctor/medical-services#service-${request.service_kind || "other"}`}
+                      className="flex min-w-0 flex-col justify-between gap-3 rounded-xl border p-4 transition hover:border-primary/30 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs text-muted-foreground">{serviceLabel}</p>
+                          <p className="mt-1 truncate font-semibold">{request.service_name}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">بیمار: {request.patientName}</p>
+                        </div>
+                        <span className={`max-w-44 shrink-0 rounded-full px-2.5 py-1 text-xs text-center ${statusClass}`}>
+                          {statusLabel}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs text-muted-foreground">
+                        <span>ثبت: {formatDate(request.requested_at)}</span>
+                        {request.scheduled_at ? <span>زمان پیشنهادی: {formatDate(request.scheduled_at)}</span> : null}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
@@ -138,6 +208,8 @@ export default function PhysicianDashboard({ data }) {
           </Card>
         </section>
       </div>
+
+
 
       <section id="follow-ups" aria-labelledby="followups-heading">
         <Card>

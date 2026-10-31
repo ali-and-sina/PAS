@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Search, UserRound } from "lucide-react";
 
 import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
+import Pagination from "@/components/shared/Pagination";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { getSessionUser } from "@/lib/auth/server";
 import { getDoctorPatientsPage } from "@/features/patients/queries";
-import Pagination from "@/components/shared/Pagination";
 
 export const metadata = { title: "بیماران" };
 
@@ -39,21 +41,46 @@ export default async function DoctorPatientsPage({ searchParams }) {
   if (!user) redirect("/login");
 
   const params = await searchParams;
-  const result = await getDoctorPatientsPage(user.id, { page: params?.page ?? 1 });
+  const search = typeof params?.q === "string" ? params.q.trim().slice(0, 100) : "";
+  const result = await getDoctorPatientsPage(user.id, {
+    page: params?.page ?? 1,
+    search,
+  });
   const patients = result.items;
 
   return (
-    <>
+    <div className="space-y-5">
       <PageHeader
         title="بیماران"
-        description="بیماران دارای رابطه فعال با شما."
+        description="فهرست بیمارانی که رابطهٔ فعال با شما دارند."
         actions={<Button asChild><Link href="/doctor/patients/new">افزودن بیمار</Link></Button>}
       />
 
+      <form action="/doctor/patients" method="get" role="search" className="flex flex-col gap-2 rounded-xl border bg-card p-3 sm:flex-row sm:items-center">
+        <label htmlFor="patient-search" className="text-sm font-medium sm:sr-only">جست‌وجوی بیماران</label>
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input
+            id="patient-search"
+            name="q"
+            type="search"
+            defaultValue={search}
+            placeholder="جست‌وجو با نام، کد ملی یا شمارهٔ موبایل"
+            autoComplete="off"
+            className="pe-10"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button type="submit" className="flex-1 sm:flex-none"><Search aria-hidden="true" />جست‌وجو</Button>
+          {search ? <Button asChild type="button" variant="outline" className="flex-1 sm:flex-none"><Link href="/doctor/patients">پاک‌کردن</Link></Button> : null}
+        </div>
+      </form>
+
       {patients.length === 0 ? (
         <EmptyState
-          title="هنوز بیماری اضافه نشده است."
-          description="از طریق کد ملی و شماره موبایل، بیمار ثبت‌شده را به فهرست خود اضافه کنید."
+          icon={UserRound}
+          title={search ? "بیماری با این مشخصات پیدا نشد." : "هنوز بیماری به فهرست شما اضافه نشده است."}
+          description={search ? "نام، کد ملی یا شمارهٔ موبایل را بررسی کنید؛ فقط بیماران دارای رابطهٔ فعال با شما نمایش داده می‌شوند." : "از طریق کد ملی و شمارهٔ موبایل، بیمار ثبت‌شده را به فهرست خود اضافه کنید."}
           action={{ href: "/doctor/patients/new", label: "افزودن بیمار" }}
         />
       ) : (
@@ -63,11 +90,11 @@ export default async function DoctorPatientsPage({ searchParams }) {
               <table className="w-full min-w-[720px] text-sm">
                 <thead className="border-b bg-muted/40 text-start">
                   <tr>
-                    <th className="p-4 text-start font-medium">بیمار</th>
-                    <th className="p-4 text-start font-medium">کد ملی</th>
-                    <th className="p-4 text-start font-medium">موبایل</th>
-                    <th className="p-4 text-start font-medium">تاریخ تولد</th>
-                    <th className="p-4 text-start font-medium">عملیات</th>
+                    <th scope="col" className="p-4 text-start font-medium">بیمار</th>
+                    <th scope="col" className="p-4 text-start font-medium">کد ملی</th>
+                    <th scope="col" className="p-4 text-start font-medium">موبایل</th>
+                    <th scope="col" className="p-4 text-start font-medium">تاریخ تولد</th>
+                    <th scope="col" className="p-4 text-start font-medium">عملیات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -100,13 +127,15 @@ export default async function DoctorPatientsPage({ searchParams }) {
           </div>
         </>
       )}
+
       <Pagination
         pathname="/doctor/patients"
         page={result.pagination.page}
         pageSize={result.pagination.pageSize}
         totalCount={result.pagination.totalCount}
         totalPages={result.pagination.totalPages}
+        query={{ q: search }}
       />
-    </>
+    </div>
   );
 }

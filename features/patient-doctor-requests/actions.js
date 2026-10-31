@@ -28,10 +28,14 @@ async function respondToDoctorRequest(formData, decision) {
 
   const supabase = await createClient();
   const { data: response, error } = await supabase.rpc(
-    "respond_to_doctor_request",
+    "pas_care_command",
     {
-      p_relationship_id: relationshipId,
-      p_decision: decision,
+      p_action: "relationship.respond",
+      p_payload: {
+        id: relationshipId,
+        decision,
+        scopes: decision === "accept" ? formData.getAll("scopes") : [],
+      },
     },
   );
 

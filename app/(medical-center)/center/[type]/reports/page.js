@@ -1,0 +1,6 @@
+import PageHeader from "@/components/shared/PageHeader";
+import CenterWorkspace from "@/features/centers/components/CenterWorkspace";
+import { getCenterWorklist } from "@/features/centers/queries";
+import { tehranDayKey } from "@/lib/care/dates";
+export const dynamic="force-dynamic";
+export default async function WorkspacePage({params,searchParams}){const {type}=await params;const filters=await searchParams;const data=await getCenterWorklist(type,null,{...filters,status:"reported"});return <div className="space-y-6"><PageHeader title={data.config.report} description={data.user.center_name+" · "+data.config.description} /><CenterWorkspace data={data} view="reports" today={tehranDayKey()} /></div>;}

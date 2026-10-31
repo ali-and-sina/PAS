@@ -1,5 +1,6 @@
 "use client";
 
+import { JalaliDateField } from "@/components/care/JalaliCalendar";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -61,10 +62,7 @@ export default function PatientProfileForm({ initialProfile, initialPatientProfi
             نام و نام خانوادگی
             <input name="full_name" required maxLength={150} value={form.full_name} onChange={(e) => setField("full_name", e.target.value)} className="h-10 rounded-md border bg-background px-3" />
           </label>
-          <label className="grid gap-1.5 text-sm">
-            تاریخ تولد
-            <input name="date_of_birth" type="date" required value={form.date_of_birth} onChange={(e) => setField("date_of_birth", e.target.value)} className="h-10 rounded-md border bg-background px-3" />
-          </label>
+          <JalaliDateField name="date_of_birth" label="تاریخ تولد" birthDate required value={form.date_of_birth} onChange={value=>setField("date_of_birth",value)} disabled={pending} />
           <label className="grid gap-1.5 text-sm">
             جنسیت
             <select name="sex" required value={form.sex} onChange={(e) => setField("sex", e.target.value)} className="h-10 rounded-md border bg-background px-3">

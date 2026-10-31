@@ -277,7 +277,9 @@ export async function updateLabOrderStatus(formData) {
     revalidatePath("/lab/results");
     revalidatePath("/lab/dashboard");
     revalidatePath("/doctor/lab-orders");
+    revalidatePath("/doctor/medical-services");
     revalidatePath("/patient/lab-orders");
+    revalidatePath("/patient/medical-services");
 
     return {
       ok: true,
@@ -418,6 +420,8 @@ export async function uploadLabReportAttachment(_previousState, formData) {
 
     revalidatePath(`/lab/results/${reportId}`);
     revalidatePath(`/lab/results/${reportId}/correct`);
+    revalidatePath("/doctor/medical-services");
+    revalidatePath("/patient/medical-services");
 
     return {
       ok: true,
@@ -683,6 +687,8 @@ export async function saveLabResults(_previousState, formData) {
     revalidatePath(`/lab/orders/${order.id}/results/new`);
     revalidatePath("/lab/results");
     revalidatePath("/lab/dashboard");
+    revalidatePath("/doctor/medical-services");
+    revalidatePath("/patient/medical-services");
 
     if (!finalize) {
       return {
@@ -695,6 +701,8 @@ export async function saveLabResults(_previousState, formData) {
     }
 
     revalidatePath(`/lab/results/${reportId}`);
+    revalidatePath("/doctor/medical-services");
+    revalidatePath("/patient/medical-services");
     if (attachmentWarning) {
       return {
         ok: true,
@@ -783,6 +791,8 @@ export async function correctLabResult(_previousState, formData) {
     revalidatePath("/lab/results");
     revalidatePath(`/lab/results/${reportId}`);
     revalidatePath(`/lab/results/${reportId}/correct`);
+    revalidatePath("/doctor/medical-services");
+    revalidatePath("/patient/medical-services");
     revalidatePath("/lab/dashboard");
 
     return {

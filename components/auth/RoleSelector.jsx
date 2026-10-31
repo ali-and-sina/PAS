@@ -1,6 +1,6 @@
 import {
   ChevronLeft,
-  FlaskConical,
+  Building2,
   Stethoscope,
   User,
 } from "lucide-react";
@@ -11,7 +11,7 @@ import visualStyles from "./auth-card.module.css";
 const ROLE_ICONS = {
   patient: User,
   doctor: Stethoscope,
-  laboratory: FlaskConical,
+  laboratory: Building2,
 };
 
 export default function RoleSelector({ onSelect }) {

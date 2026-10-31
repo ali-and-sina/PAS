@@ -65,6 +65,7 @@ export async function advanceHomeCollectionRequest(_previousState, formData) {
   revalidatePath("/lab/home-collection");
   revalidatePath("/lab/orders");
   revalidatePath("/patient/lab-orders");
+  revalidatePath("/patient/medical-services");
   revalidatePath("/patient/notifications");
   return { ok: true, message: "وضعیت نمونه‌گیری به‌روزرسانی شد.", data };
 }
@@ -111,6 +112,7 @@ export async function updateOwnHomeCollectionAddress(_previousState, formData) {
   }
 
   revalidatePath("/patient/lab-orders");
+  revalidatePath("/patient/medical-services");
   return { ok: true, message: "نشانی نمونه‌گیری ثبت شد.", data };
 }
 

@@ -1,14 +1,14 @@
 "use client";
 
 import { useSessionUser } from "@/components/providers/SessionProvider";
-import { NAVIGATION_BY_ROLE } from "@/lib/constants/navigation";
+import { getWorkspaceNavigation } from "@/lib/constants/navigation";
 import SidebarNav from "./SidebarNav";
 import Brand from "@/components/brand/Brand";
 
 /** @param {{ onNavigate: () => void }} props */
 export default function MobileNav({ onNavigate }) {
   const user = useSessionUser();
-  const items = NAVIGATION_BY_ROLE[user?.role] ?? [];
+  const items = getWorkspaceNavigation(user);
 
   return (
     <div className="flex h-full flex-col">

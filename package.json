@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:security": "node tests/security/database.mjs && node --experimental-vm-modules tests/security/source.mjs && node --experimental-vm-modules tests/security/test-login.mjs && node --test tests/security/http-policy.mjs"
+    "test:security": "node tests/security/database.mjs && node --experimental-vm-modules tests/security/source.mjs && node --experimental-vm-modules tests/security/test-login.mjs && node --test tests/security/http-policy.mjs && node tests/security/care-platform.mjs && node --test tests/security/bridge.mjs && node tests/security/centers.mjs && node --experimental-vm-modules tests/security/center-auth.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "5.9.1",

@@ -1,4 +1,5 @@
 "use client";
+import { JalaliDateField } from "@/components/care/JalaliCalendar";
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -170,27 +171,7 @@ export default function ProfileCompletionForm({ redirectTo }) {
 
           {/* Date of birth */}
           <div className="space-y-2">
-            <Label htmlFor="date_of_birth">تاریخ تولد</Label>
-
-            <Input
-              id="date_of_birth"
-              name="date_of_birth"
-              ref={dateOfBirthRef}
-              type="date"
-              value={dateOfBirth}
-              onChange={(event) => {
-                setDateOfBirth(event.target.value);
-                clearFieldError("date_of_birth");
-              }}
-              aria-invalid={fieldErrors.date_of_birth ? true : undefined}
-              aria-describedby={
-                fieldErrors.date_of_birth ? "date_of_birth-error" : undefined
-              }
-              className={cn(
-                "h-11",
-                fieldErrors.date_of_birth && "border-destructive",
-              )}
-            />
+            <JalaliDateField id="date_of_birth" name="date_of_birth" label="تاریخ تولد" birthDate buttonRef={dateOfBirthRef} value={dateOfBirth} onChange={value=>{setDateOfBirth(value);clearFieldError("date_of_birth");}} invalid={Boolean(fieldErrors.date_of_birth)} describedBy={fieldErrors.date_of_birth?"date_of_birth-error":undefined} />
 
             {fieldErrors.date_of_birth && (
               <FieldError

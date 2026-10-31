@@ -73,8 +73,10 @@ export async function createLabOrder(_previousState, formData) {
   if (!data?.ok || !requestId) return fail("ثبت درخواست آزمایش انجام نشد.");
 
   revalidatePath("/doctor/lab-orders");
+  revalidatePath("/doctor/medical-services");
   revalidatePath(`/doctor/patients/${patientId}`);
   revalidatePath("/patient/lab-orders");
+  revalidatePath("/patient/medical-services");
   return {
     ok: true,
     requestId,

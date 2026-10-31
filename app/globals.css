@@ -288,3 +288,13 @@ input[readonly], textarea[readonly] { background-color: hsl(var(--muted) / .5); 
 .pas-result-actions { bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
 @media (min-width: 1024px) { .pas-result-actions { bottom: 1rem; } }
 input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) { min-height: 2.75rem; }
+
+
+/* Keep form controls readable and prevent mobile-browser focus zoom. */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

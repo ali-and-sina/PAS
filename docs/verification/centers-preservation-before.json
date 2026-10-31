@@ -1,0 +1,287 @@
+[
+  {
+    "table_name": "admin_profiles",
+    "row_count": 2,
+    "fingerprint": "1e9da49658858b0e94a1d3ac602df3df"
+  },
+  {
+    "table_name": "ai_analyses",
+    "row_count": 1,
+    "fingerprint": "f291a21f38b0d768c12d4e54c3520bf6"
+  },
+  {
+    "table_name": "attachments",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "audit_logs",
+    "row_count": 121,
+    "fingerprint": "c710fb86567740f658cc9eb27e25aed6"
+  },
+  {
+    "table_name": "consents",
+    "row_count": 1,
+    "fingerprint": "9cfcc281cbd6fac3057e3980211c62c9"
+  },
+  {
+    "table_name": "diagnostic_reports",
+    "row_count": 4,
+    "fingerprint": "6c0fa36eba659610556b7c2f92c737ea"
+  },
+  {
+    "table_name": "doctor_interpretations",
+    "row_count": 1,
+    "fingerprint": "e0bb089081377a45071f30d887340cd4"
+  },
+  {
+    "table_name": "doctor_notes",
+    "row_count": 1,
+    "fingerprint": "ea9b33700d70b4cb8103a8d7d2ee705e"
+  },
+  {
+    "table_name": "doctor_profiles",
+    "row_count": 2,
+    "fingerprint": "0c6f90cd4132dd9cbabdf7ff35c09978"
+  },
+  {
+    "table_name": "follow_ups",
+    "row_count": 3,
+    "fingerprint": "d4ad82705240919b7211dcf57011c6c7"
+  },
+  {
+    "table_name": "guest_result_accesses",
+    "row_count": 4,
+    "fingerprint": "d32398741bc46aa498ee080fb072b9fe"
+  },
+  {
+    "table_name": "home_collection_private_details",
+    "row_count": 1,
+    "fingerprint": "5fcc5663adc66b5f25d26db15ce7d7f3"
+  },
+  {
+    "table_name": "home_collection_requests",
+    "row_count": 1,
+    "fingerprint": "56d46e834cafc8eb7651807b732f55d6"
+  },
+  {
+    "table_name": "lab_dispatches",
+    "row_count": 4,
+    "fingerprint": "4371769036f8ffe9ff734214674256af"
+  },
+  {
+    "table_name": "lab_order_items",
+    "row_count": 5,
+    "fingerprint": "6142f0c0dce225820839b12fa899fc16"
+  },
+  {
+    "table_name": "lab_orders",
+    "row_count": 5,
+    "fingerprint": "911c4fad5afb67816c160e8cb5878e1a"
+  },
+  {
+    "table_name": "lab_workflow_events",
+    "row_count": 24,
+    "fingerprint": "07412be6fb5abb64fdeb499843c6ef25"
+  },
+  {
+    "table_name": "lab_workflow_qr_tokens",
+    "row_count": 1,
+    "fingerprint": "c80f902f1d357590b9f23d2f78f76fe2"
+  },
+  {
+    "table_name": "laboratory_branch_members",
+    "row_count": 1,
+    "fingerprint": "b404a0b633464ede826780370ac7045f"
+  },
+  {
+    "table_name": "laboratory_branches",
+    "row_count": 1,
+    "fingerprint": "26c310cc9280f4c6f6f8370a0970a135"
+  },
+  {
+    "table_name": "laboratory_profiles",
+    "row_count": 1,
+    "fingerprint": "f6fb41080f1c437fa32675600bb47fa0"
+  },
+  {
+    "table_name": "notifications",
+    "row_count": 20,
+    "fingerprint": "da9bdc17c72be16b274051bcfce6bbda"
+  },
+  {
+    "table_name": "observations",
+    "row_count": 89,
+    "fingerprint": "9d84f9b9c36a646639aaeb0e87551196"
+  },
+  {
+    "table_name": "organization_members",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "organizations",
+    "row_count": 1,
+    "fingerprint": "866f91cc61b006e9c3b36c1e90498f6e"
+  },
+  {
+    "table_name": "pas_consultation_messages",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "pas_consultations",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "pas_doctor_availability",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "pas_external_health_records",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "pas_external_record_versions",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "pas_identity_requests",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "pas_integration_connections",
+    "row_count": 3,
+    "fingerprint": "0f9e480c7b3ba59f9d49e72d16a7b588"
+  },
+  {
+    "table_name": "pas_integration_events",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "pas_medical_requests",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "pas_medical_results",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "pas_medication_dispenses",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "pas_pharmacy_requests",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "pas_provider_services",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "pas_record_access",
+    "row_count": 1,
+    "fingerprint": "6e22f79b72ff1123ca44278116bdd64b"
+  },
+  {
+    "table_name": "pas_visit_closures",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "patient_doctor_relationships",
+    "row_count": 1,
+    "fingerprint": "d74aebe6b95ef5e348d76b3b54fe01b0"
+  },
+  {
+    "table_name": "patient_profiles",
+    "row_count": 1,
+    "fingerprint": "04c23f9025f653442cd300e88746a7a6"
+  },
+  {
+    "table_name": "physician_lab_request_items",
+    "row_count": 4,
+    "fingerprint": "1449220359a5676b4ce4d893d3feb1a2"
+  },
+  {
+    "table_name": "physician_lab_requests",
+    "row_count": 4,
+    "fingerprint": "e7364b9f9822002414e8de4eb353d67d"
+  },
+  {
+    "table_name": "prescription_items",
+    "row_count": 2,
+    "fingerprint": "536d42cb61e628fe139d41877920dcb1"
+  },
+  {
+    "table_name": "prescriptions",
+    "row_count": 2,
+    "fingerprint": "58aec939d35fe529d2f0dae6571a51e0"
+  },
+  {
+    "table_name": "profiles",
+    "row_count": 7,
+    "fingerprint": "d1431dcb410e15676e0b99a15ba8fa84"
+  },
+  {
+    "table_name": "reference_range_templates",
+    "row_count": 33,
+    "fingerprint": "16282e2a2a6f0dca422014de207bb8d3"
+  },
+  {
+    "table_name": "test_aliases",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "test_definitions",
+    "row_count": 23,
+    "fingerprint": "63cefcfe2af111dbfa9a8460bfe2eba9"
+  },
+  {
+    "table_name": "test_panel_items",
+    "row_count": 22,
+    "fingerprint": "dcac91501eabad135fbf0eca6660b8f0"
+  },
+  {
+    "table_name": "test_panels",
+    "row_count": 1,
+    "fingerprint": "d8a2733c3341244692be83f1a6034078"
+  },
+  {
+    "table_name": "transcripts",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "trend_analyses",
+    "row_count": 2,
+    "fingerprint": "5b119a64525edc2ccad82528845b8c65"
+  },
+  {
+    "table_name": "visit_summaries",
+    "row_count": 0,
+    "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "table_name": "visits",
+    "row_count": 3,
+    "fingerprint": "09813559dbf567272f75f441a1412d8d"
+  },
+  {
+    "table_name": "voice_notes",
+    "row_count": 1,
+    "fingerprint": "31ea26d3d0ad335f7761decff579f6e3"
+  }
+]

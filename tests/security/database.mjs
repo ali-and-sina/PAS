@@ -54,6 +54,7 @@ async function fixtures(){
  await insert('public.notifications',{id:f.notification,recipient_id:a.p1,type:'audit',title:'AUDIT_NOTIFICATION'});
  await insert('public.attachments',{id:f.attachment,diagnostic_report_id:f.r1,uploaded_by:a.lab1,storage_path:`${a.lab1}/${f.r1}/audit.pdf`,file_name:'audit.pdf',file_type:'application/pdf',file_size_bytes:128});
  await insert('public.guest_result_accesses',{id:f.guest,diagnostic_report_id:f.r1,created_by:a.lab1,token_hash:'a'.repeat(64),expires_at:'2099-01-01T00:00:00Z'});
+ await db.exec("insert into public.pas_record_access(patient_id,doctor_id,scopes) select patient_id,doctor_id,array['labs','medications','visits','follow_ups','diagnostics'] from public.patient_doctor_relationships where status='active' on conflict do nothing");
  await db.exec('commit;');
 }
 
@@ -81,7 +82,7 @@ async function test(name,actor,sql,expect,after=null){
   if(after){const check=await db.query(after);out.after=check.rows;out.passed&&=Boolean(check.rows[0]?.ok);}
  }catch(e){
   out.sqlstate=e.code??null;out.message=e.message;
-  out.passed=expect==='denied'&&['42501','P0001'].includes(e.code);
+  out.passed=expect && typeof expect==='object' && Array.isArray(expect.errors) ? (expect.errors.includes(e.code) && (!expect.messageIncludes || e.message.includes(expect.messageIncludes))) : expect==='denied'&&['42501','P0001'].includes(e.code);
  }finally{await db.exec('rollback; set session authorization postgres; reset role;');}
  results.push(out);
  console.log(JSON.stringify(out));
@@ -89,8 +90,10 @@ async function test(name,actor,sql,expect,after=null){
 const count=(table,where='true')=>`select count(*)::integer as n from public.${table} where ${where}`;
 const eq=(col,val)=>`${col}=${lit(val)}`;
 
+if (!process.env.PAS_SECURITY_IMPORT_ONLY) {
 try{
  await db.exec(fs.readFileSync(path.join(root,'tests/security/fixtures/schema.sql'),'utf8'));
+ await db.exec('set check_function_bodies=on;');
  for(const file of fs.readdirSync(path.join(root,'supabase/migrations')).filter(f=>f.endsWith('.sql')).sort()) {
   await db.exec(fs.readFileSync(path.join(root,'supabase/migrations',file),'utf8'));
  }
@@ -174,3 +177,6 @@ try{
  console.log(JSON.stringify({total:results.length,passed:results.filter(r=>r.passed).length,failed:results.filter(r=>!r.passed).map(r=>r.case_id),rollback_verified:before===after}));
 }catch(e){console.log(JSON.stringify({fatal:true,code:e.code,message:e.message,detail:e.detail,where:e.where,query:e.query?.slice(0,300)}));process.exitCode=1;try{await db.exec('rollback;');}catch{}}
 finally{await db.close();}
+
+}
+export {db,a,f,id,insert,fixtures,snapshot,test,results};

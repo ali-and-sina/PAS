@@ -1,0 +1,103 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+process.env.PAS_SECURITY_IMPORT_ONLY='1';
+const {db,a,f,id,insert,fixtures,snapshot,test,results}=await import('./database.mjs');
+const root=path.resolve(import.meta.dirname,'../..');
+const q=value=>"'"+String(value).replaceAll("'","''")+"'";
+const cmd=(name,payload)=>`select public.pas_care_command(${q(name)},${q(JSON.stringify(name==='medical.finish'?{measurements:{findings:"AUDIT supplied findings",impression:"AUDIT supplied impression"},...payload}:payload))}::jsonb) as data`;
+const ok=r=>Boolean(r.rows[0]?.data?.id);
+const claims=actor=>`select set_config('request.jwt.claims',${q(JSON.stringify({sub:a[actor],role:'authenticated',aal:'aal1'}))},true)`;
+let before;
+try {
+ await db.exec(fs.readFileSync(root+'/tests/security/fixtures/schema.sql','utf8'));
+ await db.exec('set check_function_bodies=on;');
+ for(const file of fs.readdirSync(root+'/supabase/migrations').filter(f=>f.endsWith('.sql')).sort()) await db.exec(fs.readFileSync(root+'/supabase/migrations/'+file,'utf8'));
+ await fixtures();
+ a.mri1=id(91);
+ await insert('auth.users',{id:a.mri1});
+ await insert('public.profiles',{id:a.mri1,role:'laboratory',full_name:'AUDIT MRI'});
+ await db.query("select public.pas_provision_center($1,$2,'mri','AUDIT MRI center','AUDIT_MRI_LICENSE')",[a.mri1,a.admin]);
+ await insert('public.pas_doctor_availability',{doctor_id:a.d1,is_available:true,expires_at:'2099-01-01',capacity:1});
+ await insert('public.visits',{id:id(100),patient_id:a.p1,doctor_id:a.d1,status:'in_progress'});
+ await insert('public.pas_consultations',{id:id(101),patient_id:a.p1,doctor_id:a.d1,relationship_id:f.rel1,visit_id:id(100),reason:'AUDIT consult',status:'accepted',accepted_at:new Date().toISOString(),consent_scopes:'{visits}'});
+ await insert('public.pas_consultations',{id:id(104),patient_id:a.p2,doctor_id:a.d1,relationship_id:f.pending,reason:'AUDIT waiting capacity',status:'requested'});
+ await insert('public.pas_consultation_messages',{id:id(102),consultation_id:id(101),sender_id:a.p1,body:'AUDIT private chat'});
+ await db.exec(`update public.prescription_items set quantity_units=100,units_per_day=1 where id=${q(f.rxItem)};`);
+ await insert('public.pas_medical_requests',{id:id(110),patient_id:a.p1,doctor_id:a.d1,provider_id:a.mri1,service_kind:'mri',service_name:'AUDIT MRI',status:'accepted'});
+ await insert('public.pas_medication_dispenses',{id:id(120),prescription_item_id:f.rxItem,patient_id:a.p1,quantity_units:10,received_at:new Date().toISOString(),source:'patient',recorded_by:a.p1});
+ await insert('public.pas_pharmacy_requests',{id:id(130),patient_id:a.p1,prescription_id:f.rx,delivery_address:'AUDIT delivery address',contact_phone:'989120000000'});
+ await insert('public.pas_identity_requests',{id:id(140),profile_id:a.p1,requested_national_id:'1272511677'});
+ await db.exec(`update public.profiles set national_id='1272511677' where id=${q(a.p1)}; update public.pas_integration_connections set enabled=true where provider_key='tamin';`);
+ before=await snapshot();
+ await test('care_anonymous_command_denied','anon',cmd('profile.update',{full_name:'AUDIT'}),'denied');
+ await test('care_patient_cannot_set_doctor_availability','p1',cmd('availability.set',{is_available:true}),'denied');
+ await test('care_verified_doctor_sets_availability','d1',cmd('availability.set',{is_available:true,capacity:2}),ok);
+ await test('care_unverified_doctor_rejected','unverified',cmd('availability.set',{is_available:true}),'denied');
+ await test('care_patient_submits_identity_correction','p2',cmd('identity.request',{phone:'989160000001'}),ok);
+ await test('care_patient_cannot_review_identity','p1',cmd('identity.review',{id:id(140),decision:'approve'}),'denied');
+ await test('care_authenticated_cannot_call_service_identity_commit','admin',`select public.pas_finish_identity_request(${q(id(140))},${q(a.admin)})`,'denied');
+ await test('care_patient_cannot_grant_another_patient','p2',cmd('access.set',{doctor_id:a.d1,scopes:['labs']}),'denied');
+ await test('care_unknown_scope_rejected','p1',cmd('access.set',{doctor_id:a.d1,scopes:['all_records']}),{errors:['23514']});
+ await test('care_labs_revocation_blocks_legacy_report_policy','p1',[cmd('access.set',{doctor_id:a.d1,scopes:['visits']}),claims('d1'),`select count(*)::int as n from public.observations where id=${q(f.obs1)}`],'zero');
+ await test('care_medication_revocation_blocks_old_item_policy','p1',[cmd('access.set',{doctor_id:a.d1,scopes:['labs']}),claims('d1'),`select count(*)::int as n from public.prescription_items where id=${q(f.rxItem)}`],'zero');
+ const clinicalAudio=`select count(*)::int as n from storage.objects where bucket_id='pab-voice-notes' and name=${q(a.d1+'/'+f.voice+'/'+a.p1+'.webm')}`;
+ await test('care_clinical_audio_own_doctor_can_sign','d1',clinicalAudio,'one');
+ await test('care_clinical_audio_unrelated_doctor_denied','d2',clinicalAudio,'zero');
+ await test('care_clinical_audio_remains_physician_private','p1',clinicalAudio,'zero');
+ await test('care_clinical_audio_revocation_blocks_signing','p1',[cmd('access.set',{doctor_id:a.d1,scopes:['labs']}),claims('d1'),clinicalAudio],'zero');
+ await test('care_other_doctor_cannot_read_chat','d2',`select count(*)::int as n from public.pas_consultation_messages where consultation_id=${q(id(101))}`,'zero');
+ await test('care_other_patient_cannot_read_chat','p2',`select count(*)::int as n from public.pas_consultation_messages where consultation_id=${q(id(101))}`,'zero');
+ await test('care_patient_posts_own_chat','p1',cmd('consultation.message',{id:id(103),consultation_id:id(101),body:'AUDIT hello'}),ok);
+ await test('care_nonparticipant_chat_send_denied','p2',cmd('consultation.message',{id:id(103),consultation_id:id(101),body:'AUDIT injection'}),'denied');
+ await test('care_patient_cannot_accept_consultation','p1',cmd('consultation.accept',{id:id(101)}),'denied');
+ await test('care_doctor_capacity_is_enforced','d1',cmd('consultation.accept',{id:id(104)}),{errors:['P0001'],messageIncludes:'capacity'});
+ await test('care_patient_request_then_doctor_accepts','p2',[cmd('consultation.request',{doctor_id:a.d2,reason:'AUDIT request for my doctor',scopes:['visits']}),claims('d2'),"select public.pas_care_command('consultation.accept',jsonb_build_object('id',(select id from public.pas_consultations where patient_id="+q(a.p2)+" and doctor_id="+q(a.d2)+" and status='requested'))) as data"],r=>Boolean(r.rows[0]?.data?.visit_id));
+ await test('care_text_summary_closes_visit_and_consultation','d1',[cmd('visit.close',{visit_id:id(100),summary:'AUDIT final visit summary'}),`select (select status='completed' from public.visits where id=${q(id(100))}) and (select status='completed' from public.pas_consultations where id=${q(id(101))}) as ok`],r=>r.rows[0]?.ok===true);
+ await test('care_other_doctor_cannot_close_visit','d2',cmd('visit.close',{visit_id:id(100),summary:'AUDIT stolen summary'}),'denied');
+ await test('care_patient_cannot_write_clinical_summary','p1',cmd('visit.close',{visit_id:id(100),summary:'AUDIT forged summary'}),'denied');
+ await test('care_nonpatient_medical_identity_rejected','d1',cmd('medical.request',{patient_id:a.d1,service_kind:'mri',service_name:'AUDIT invalid'}),'denied');
+ await test('care_doctor_creates_diagnostic_request','d1',cmd('medical.request',{patient_id:a.p1,provider_id:a.mri1,service_kind:'mri',service_name:'AUDIT requested MRI'}),ok);
+ await test('care_provider_capability_is_checked','d1',cmd('medical.request',{patient_id:a.p1,provider_id:a.mri1,service_kind:'ct',service_name:'AUDIT unsupported CT'}),'denied');
+ await test('care_wrong_provider_cannot_finalize','lab2',cmd('medical.finish',{id:id(110),conclusion:'AUDIT unauthorized report'}),'denied');
+ await test('care_assigned_provider_finalizes','mri1',cmd('medical.finish',{id:id(110),conclusion:'AUDIT completed report'}),ok);
+ await test('care_correction_cannot_overwrite_original','mri1',[cmd('medical.finish',{id:id(110),conclusion:'AUDIT original report'}),cmd('medical.finish',{id:id(110),conclusion:'AUDIT overwritten report'})],'denied');
+ await test('care_other_patient_cannot_read_medical_request','p2',`select count(*)::int as n from public.pas_medical_requests where id=${q(id(110))}`,'zero');
+ await test('care_prescription_receipt_ownership','p2',cmd('medication.received',{id:id(121),item_id:f.rxItem,quantity_units:10,received_at:new Date().toISOString()}),'denied');
+ await test('care_patient_records_real_quantity','p1',cmd('medication.received',{id:id(121),item_id:f.rxItem,quantity_units:10,received_at:new Date().toISOString()}),ok);
+ await test('care_receipt_replay_does_not_double_count','p1',[cmd('medication.received',{id:id(121),item_id:f.rxItem,quantity_units:10,received_at:new Date().toISOString()}),cmd('medication.received',{id:id(121),item_id:f.rxItem,quantity_units:10,received_at:new Date().toISOString()}),`select count(*)::int as n from public.pas_medication_dispenses where id=${q(id(121))}`],'one');
+ await test('care_direct_receipt_write_forbidden','p1',`insert into public.pas_medication_dispenses(id,prescription_item_id,patient_id,quantity_units,received_at,source,recorded_by) values(${q(id(121))},${q(f.rxItem)},${q(a.p1)},10,now(),'provider',${q(a.p1)})`,'denied');
+ await test('care_other_doctor_cannot_see_delivery_address','d1',`select count(*)::int as n from public.pas_pharmacy_requests where id=${q(id(130))}`,'zero');
+ await test('care_patient_cannot_dispatch_drugs','p1',cmd('pharmacy.advance',{id:id(130),status:'dispatched',pharmacy_name:'AUDIT pharmacy'}),'denied');
+ await test('care_delivery_state_cannot_skip_steps','admin',cmd('pharmacy.advance',{id:id(130),status:'delivered',pharmacy_name:'AUDIT pharmacy'}),'denied');
+ await test('care_admin_records_dispatch_and_actual_delivery','admin',[cmd('pharmacy.advance',{id:id(130),status:'reviewing'}),cmd('pharmacy.advance',{id:id(130),status:'preparing',pharmacy_name:'AUDIT pharmacy'}),cmd('pharmacy.advance',{id:id(130),status:'dispatched'}),cmd('pharmacy.advance',{id:id(130),status:'delivered',items:[{item_id:f.rxItem,quantity_units:30}]})],ok);
+ await test('care_unsigned_client_cannot_import_external_record','p1',`select public.pas_ingest_external_event('tamin','{}'::jsonb,${q('a'.repeat(64))})`,'denied');
+ await test('care_nonadmin_cannot_enable_integration','d1',cmd('integration.configure',{provider_key:'tamin',enabled:true}),'denied');
+ await test('care_own_progress_counts_are_available','p1',`select public.pas_care_progress(${q(a.p1)}) as data`,r=>Number(r.rows[0]?.data?.total)>0);
+ await test('care_unrelated_progress_denied','p2',`select public.pas_care_progress(${q(a.p1)})`,'denied');
+
+ await test('care_storage_audio_wrong_participant_denied','p2',`insert into storage.objects(bucket_id,name,metadata) values('pas-consultations',${q(id(101)+'/'+a.p2+'/'+id(170)+'.webm')},'{"size":100,"mimetype":"audio/webm"}')`,'denied');
+ await test('care_storage_audio_own_upload_allowed','p1',`insert into storage.objects(bucket_id,name,metadata) values('pas-consultations',${q(id(101)+'/'+a.p1+'/'+id(170)+'.webm')},'{"size":100,"mimetype":"audio/webm"}') returning id`,'mutation');
+ await test('care_storage_medical_other_provider_denied','lab2',`insert into storage.objects(bucket_id,name,metadata) values('pas-medical-documents',${q(id(110)+'/'+a.lab2+'/'+id(170)+'.pdf')},'{"size":100,"mimetype":"application/pdf"}')`,'denied');
+ await test('care_atomic_prescription_structured_quantity','d1',[
+  `select public.create_prescription_with_items(${q(a.p1)},null,'[{"medication_name":"AUDIT_STRUCTURED","dosage":"1 tablet","frequency":"daily","quantity_units":100,"units_per_day":1,"unit_label":"عدد","as_needed":false}]'::jsonb)`,
+  `select count(*)::int as n from public.prescription_items where medication_name='AUDIT_STRUCTURED' and quantity_units=100 and units_per_day=1`],'one');
+ async function serviceTest(name,work){
+  let passed=false;let detail;
+  await db.exec('begin;set local session authorization authenticator;set local role service_role;');
+  await db.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({role:'service_role'})]);
+  try{assert.equal((await db.query('select current_user')).rows[0].current_user,'service_role');await work();passed=true}catch(error){detail={code:error.code,message:error.message}}finally{await db.exec('rollback;set session authorization postgres;reset role;')}
+  results.push({case_id:name,passed,...(detail?{detail}:{})});
+ }
+ const external={event_id:id(180),version:1,external_record_id:'AUDIT_NEW_EXTERNAL',patient_national_id:'1272511677',resource_kind:'imaging',title:'AUDIT report',summary:'AUDIT supplied by trusted test bridge',occurred_at:new Date().toISOString(),clinical_data:{modality:'MRI'}};
+ const ingest=async(event,hash='a'.repeat(64))=>(await db.query('select public.pas_ingest_external_event($1,$2::jsonb,$3) as data',['tamin',JSON.stringify(event),hash])).rows[0].data;
+ await serviceTest('care_bridge_replay_is_idempotent',async()=>{const first=await ingest(external);const second=await ingest(external);assert.equal(second.duplicate,true);assert.equal(second.record_id,first.record_id);assert.equal(Number((await db.query("select count(*) as n from public.pas_external_health_records where external_record_id='AUDIT_NEW_EXTERNAL'")).rows[0].n),1)});
+ await serviceTest('care_bridge_conflicting_event_rejected',async()=>{await ingest(external);await assert.rejects(()=>ingest({...external,title:'AUDIT tampered'},'b'.repeat(64)),/reused/)});
+ await serviceTest('care_bridge_old_revision_cannot_overwrite_new',async()=>{await ingest({...external,version:2},'b'.repeat(64));await ingest({...external,event_id:id(181),version:1},'a'.repeat(64));assert.equal(Number((await db.query("select source_version as n from public.pas_external_health_records where external_record_id='AUDIT_NEW_EXTERNAL'")).rows[0].n),2);assert.equal(Number((await db.query('select count(*) as n from public.pas_external_record_versions')).rows[0].n),2)});
+ const after=await snapshot();assert.equal(after,before,'Isolated test state must roll back');
+ const report={tests:results,rollback_verified:after===before,total:results.length,passed:results.filter(r=>r.passed).length};
+ fs.writeFileSync(root+'/.security-results/care-platform.json',JSON.stringify(report,null,2));
+ console.log(JSON.stringify({total:report.total,passed:report.passed,failed:results.filter(r=>!r.passed),rollback_verified:report.rollback_verified}));
+ if(report.passed!==report.total)process.exitCode=1;
+} catch(error){console.error(JSON.stringify({fatal:true,code:error.code,message:error.message,query:error.query?.slice(0,500)}));process.exitCode=1}
+finally{await db.close()}

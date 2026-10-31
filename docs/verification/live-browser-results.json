@@ -1,0 +1,146 @@
+{
+  "method": "Actual built Next.js app and real Supabase Auth/Data API; old dashboard redirects stubbed only for authentication isolation; no clinical writes.",
+  "results": [
+    {
+      "role": "patient",
+      "case": "real_test_login",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "/patient/settings",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "one_mobile_menu_and_focus_return",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "/patient/health-record",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "responsive_320",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "responsive_768",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "responsive_1440",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "jalali_event_dialog",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "/patient/profile",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "jalali_birth_picker",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "/patient/consultations",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "/patient/prescriptions",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "/patient/medical-services",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "/patient/pharmacy",
+      "passed": true
+    },
+    {
+      "role": "patient",
+      "case": "server_center_type_and_role_boundary",
+      "passed": true
+    },
+    {
+      "role": "doctor",
+      "case": "real_test_login",
+      "passed": true
+    },
+    {
+      "role": "doctor",
+      "case": "/doctor/settings",
+      "passed": true
+    },
+    {
+      "role": "doctor",
+      "case": "one_mobile_menu_and_focus_return",
+      "passed": true
+    },
+    {
+      "role": "doctor",
+      "case": "/doctor/calendar",
+      "passed": true
+    },
+    {
+      "role": "doctor",
+      "case": "/doctor/consultations",
+      "passed": true
+    },
+    {
+      "role": "doctor",
+      "case": "/doctor/prescriptions",
+      "passed": true
+    },
+    {
+      "role": "doctor",
+      "case": "/doctor/medical-services",
+      "passed": true
+    },
+    {
+      "role": "doctor",
+      "case": "/doctor/patients/2297e01b-5dd6-4c75-874b-3587f8579a4b",
+      "passed": true
+    },
+    {
+      "role": "doctor",
+      "case": "server_center_type_and_role_boundary",
+      "passed": true
+    },
+    {
+      "role": "laboratory",
+      "case": "real_test_login",
+      "passed": true
+    },
+    {
+      "role": "laboratory",
+      "case": "/lab/settings",
+      "passed": true
+    },
+    {
+      "role": "laboratory",
+      "case": "one_mobile_menu_and_focus_return",
+      "passed": true
+    },
+    {
+      "role": "laboratory",
+      "case": "server_center_type_and_role_boundary",
+      "passed": true
+    }
+  ],
+  "errors": []
+}

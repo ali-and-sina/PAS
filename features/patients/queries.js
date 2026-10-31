@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePatient } from "@/features/patient/auth";
 import { recordPatientAudit } from "@/features/patient/audit";
 import { requireVerifiedDoctor } from "@/features/doctor/access";
+import { normalizeDigits, normalizeIranianMobile } from "@/lib/utils/validation";
 import {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
@@ -32,18 +33,89 @@ const EMPTY_DOCTOR_PATIENT_PAGE = {
  * Reads one bounded page of patients linked to the authenticated, verified doctor.
  * Relationship rows are paged first; patient profile data is loaded only for that page.
  */
-async function queryDoctorPatientsPage(supabase, doctorId, { page = 1, pageSize = DEFAULT_PAGE_SIZE } = {}) {
+function normalizePatientSearch(value) {
+  const raw = typeof value === "string" ? value.trim().slice(0, 100) : "";
+  const digits = normalizeDigits(raw).replace(/\D/g, "");
+  const name = raw
+    .replace(/[يى]/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+  const arabicName = name.replace(/ی/g, "ي").replace(/ک/g, "ك");
+  const canonicalMobile = normalizeIranianMobile(raw);
+  const mobileDigits = canonicalMobile?.slice(1) || "";
+  const nationalMobile = mobileDigits ? `0${mobileDigits.slice(2)}` : "";
+  const mobileSearchTerms = [...new Set([
+    digits,
+    canonicalMobile,
+    mobileDigits,
+    nationalMobile,
+    mobileDigits ? mobileDigits.slice(2) : "",
+    mobileDigits ? `0098${mobileDigits.slice(2)}` : "",
+  ].filter(Boolean))];
+
+  return {
+    raw,
+    filters: [
+      ...new Set([name, arabicName].filter(Boolean)),
+    ].map((term) => `full_name.ilike.%${term}%`),
+    digitFilters: digits
+      ? [
+          `national_id.ilike.%${digits}%`,
+          ...mobileSearchTerms.map((term) => `phone.ilike.%${term}%`),
+        ]
+      : [],
+  };
+}
+
+async function queryDoctorPatientsPage(supabase, doctorId, { page = 1, pageSize = DEFAULT_PAGE_SIZE, search = "" } = {}) {
   const safePageSize = normalizePageSize(pageSize, DEFAULT_PAGE_SIZE);
   let safePage = normalizePage(page);
   const bounds = getPageBounds(safePage, safePageSize);
+  const normalizedSearch = normalizePatientSearch(search);
+  let matchingPatientIds = null;
 
-  const makeQuery = () => supabase
-    .from("patient_doctor_relationships")
-    .select("patient_id, started_at", { count: "exact" })
-    .eq("doctor_id", doctorId)
-    .eq("status", "active")
-    .order("started_at", { ascending: false })
-    .order("patient_id", { ascending: true });
+  if (normalizedSearch.raw) {
+    const filters = [...normalizedSearch.filters, ...normalizedSearch.digitFilters];
+    if (!filters.length) {
+      return {
+        items: [],
+        pagination: makePagination({ page: 1, pageSize: safePageSize, totalCount: 0 }),
+      };
+    }
+
+    // Search only returns profile IDs. The active relationship query below is
+    // still the authority for which patients belong to this doctor.
+    const { data: matchingProfiles, error: searchError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("role", "patient")
+      .or(filters.join(","))
+      .limit(1000);
+    if (searchError) throw searchError;
+    matchingPatientIds = [...new Set((matchingProfiles ?? []).map((row) => row.id).filter(Boolean))];
+    if (!matchingPatientIds.length) {
+      return {
+        items: [],
+        pagination: makePagination({ page: 1, pageSize: safePageSize, totalCount: 0 }),
+      };
+    }
+  }
+
+  const makeQuery = () => {
+    let query = supabase
+      .from("patient_doctor_relationships")
+      .select("patient_id, started_at", { count: "exact" })
+      .eq("doctor_id", doctorId)
+      .eq("status", "active");
+    if (matchingPatientIds) query = query.in("patient_id", matchingPatientIds);
+    return query
+      .order("started_at", { ascending: false })
+      .order("patient_id", { ascending: true });
+  };
 
   let { data: relationships, count, error } = await makeQuery().range(bounds.from, bounds.to);
   if (error) throw error;

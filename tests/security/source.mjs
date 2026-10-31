@@ -72,6 +72,30 @@ check('demo_1234_does_not_grant_admin',shortCodeDemo.getTestUserCredentials('adm
 check('demo_1234_only_when_configured',demo.getTestUserCredentials(demo.TEST_USERS.patient.identifier,'1234'),null);
 check('demo_short_auth_secret_rejected',(await moduleFrom('lib/auth/test-session.js',{...adminEnv,PAS_TEST_LOGIN_PASSWORD:'1234',PAS_TEST_AUTH_PASSWORD:'1234'})).isTestLoginEnabled(),false);
 check('demo_three_digit_code_rejected',(await moduleFrom('lib/auth/test-session.js',{...adminEnv,PAS_TEST_LOGIN_PASSWORD:'123'})).isTestLoginEnabled(),false);
+const dates=await moduleFrom('lib/care/dates.js');
+for(const [name,key,want] of [['new_year_1404','2025-03-21','1404/1/1'],['leap_esfand','2025-03-20','1403/12/30'],['new_year_1403','2024-03-20','1403/1/1']]){
+ const p=dates.persianParts(key);check('jalali_'+name,[p.year,p.month,p.day].join('/'),want);
+}
+check('jalali_next_month',dates.moveMonth('2025-03-21',1),'2025-04-21');
+check('jalali_previous_month',dates.moveMonth('2025-03-21',-1),'2025-02-19');
+check('jalali_year_month_selection',dates.persianMonthKey(1404,1),'2025-03-21');
+check('jalali_invalid_gregorian_rejected',dates.dayDate('2025-02-30'),null);
+check('tehran_midnight_boundary',dates.tehranDayKey('2026-10-30T20:30:00Z'),'2026-10-31');
+check('tehran_time_storage',dates.tehranDateTimeToISO('2026-10-30','12:00'),'2026-10-30T08:30:00.000Z');
+const med=await moduleFrom('lib/care/medication.js');
+const medItem={id:'AUDIT_RX_ITEM',units_per_day:1,as_needed:false};
+const startDate=Date.parse('2026-01-01T08:00:00Z'),dayMs=86400000;
+const receipt=(day,quantity)=>({prescription_item_id:medItem.id,received_at:new Date(startDate+day*dayMs).toISOString(),quantity_units:quantity});
+check('med_no_receipt_is_orange',med.medicationCoverage(medItem,[],startDate).status,'not_received');
+check('med_received_dose_active',med.medicationCoverage(medItem,[receipt(0,100)],startDate+10*dayMs).status,'active');
+check('med_100_units_one_daily_end',med.medicationCoverage(medItem,[receipt(0,100)],startDate+10*dayMs).endAt,new Date(startDate+100*dayMs).toISOString());
+check('med_exact_end_inactive',med.medicationCoverage(medItem,[receipt(0,100)],startDate+100*dayMs).status,'inactive');
+check('med_refill_adds_remaining_stock',med.medicationCoverage(medItem,[receipt(0,100),receipt(5,5)],startDate+10*dayMs).endAt,new Date(startDate+105*dayMs).toISOString());
+check('med_gap_restarts_coverage',med.medicationCoverage(medItem,[receipt(0,10),receipt(20,5)],startDate+21*dayMs).endAt,new Date(startDate+25*dayMs).toISOString());
+check('med_future_receipt_not_received',med.medicationCoverage(medItem,[receipt(20,5)],startDate).status,'not_received');
+check('med_prn_unknown_duration',med.medicationCoverage({...medItem,as_needed:true},[receipt(0,10)],startDate).status,'unknown');
+check('med_missing_daily_rate_unknown',med.medicationCoverage({...medItem,units_per_day:null},[receipt(0,10)],startDate).status,'unknown');
+check('med_active_prescription_without_receipt_not_received',med.prescriptionCoverage({status:'active'},[medItem],[],startDate).status,'not_received');
 const pdfSource=fs.readFileSync(sourceRoot+'/features/lab-results/actions.js','utf8');
 const start=pdfSource.indexOf('async function isPdfFile(');
 const end=pdfSource.indexOf('\nasync function saveLabReportAttachment',start);

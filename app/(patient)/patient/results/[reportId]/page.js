@@ -84,11 +84,11 @@ export default async function PatientResultDetailPage({ params }) {
   return (
     <div className="space-y-6">
       <Link
-        href="/patient/results"
+        href="/patient/medical-services"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowRight aria-hidden="true" />
-        بازگشت به نتایج
+        بازگشت به مراکز درمانی
       </Link>
 
       <PageHeader
@@ -146,6 +146,7 @@ export default async function PatientResultDetailPage({ params }) {
         title="نتایج ساختاریافته"
         description={attentionCount ? `${observations.length} مورد ثبت‌شده · ${attentionCount} مورد دارای پرچم بالا، پایین یا بحرانی` : "مقادیر، واحدها و محدوده‌های مرجع هر آزمایش در جزئیات قابل مشاهده‌اند."}
         meta={`${observations.length} مورد`}
+        stickySummary
       >
           {observations.length === 0 ? (
             <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">

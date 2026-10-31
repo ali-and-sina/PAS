@@ -13,7 +13,7 @@ import {
 const PRESCRIPTION_FIELDS =
   "id, patient_id, doctor_id, diagnostic_report_id, status, issued_at, created_at";
 const PRESCRIPTION_ITEM_FIELDS =
-  "id, prescription_id, medication_name, dosage, frequency, duration, instructions";
+  "id, prescription_id, medication_name, dosage, frequency, duration, instructions, quantity_units, units_per_day, unit_label, as_needed";
 
 async function getPrescriptionPage({ ownerColumn, ownerId, patientId = null, page = 1, pageSize = DEFAULT_PAGE_SIZE, peopleColumn }) {
   const safePageSize = normalizePageSize(pageSize);
@@ -64,6 +64,9 @@ async function getPrescriptionPage({ ownerColumn, ownerId, patientId = null, pag
   if (peopleResult.error) throw peopleResult.error;
   if (itemsResult.error) throw itemsResult.error;
 
+  const itemIds = (itemsResult.data || []).map(item=>item.id);
+  const receipts = itemIds.length ? await supabase.from("pas_medication_dispenses").select("id,prescription_item_id,quantity_units,received_at,source").in("prescription_item_id",itemIds).order("received_at") : {data:[]};
+  if(receipts.error) throw receipts.error;
   const peopleById = new Map((peopleResult.data || []).map((person) => [person.id, person]));
   const itemsByPrescription = new Map();
   for (const item of itemsResult.data || []) {
@@ -75,6 +78,7 @@ async function getPrescriptionPage({ ownerColumn, ownerId, patientId = null, pag
   return {
     items: prescriptions.map((prescription) => ({
       ...prescription,
+      receipts: (receipts.data || []).filter(r=>(itemsByPrescription.get(prescription.id)||[]).some(i=>i.id===r.prescription_item_id)),
       ...(peopleColumn === "patient_id"
         ? { patient_name: peopleById.get(prescription.patient_id)?.full_name || "بیمار", items: itemsByPrescription.get(prescription.id) || [] }
         : { doctor_profiles: peopleById.get(prescription.doctor_id) || null, prescription_items: itemsByPrescription.get(prescription.id) || [] }),

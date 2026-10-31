@@ -1,3 +1,4 @@
+import { CENTER_TYPES } from "@/lib/centers/config";
 import Link from "next/link";
 import { ArrowRight, UserRound } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
@@ -10,7 +11,7 @@ import { getOrganizationTypeLabel, getSexLabel } from "@/lib/constants/status";
 const roleLabels = {
   patient: "بیمار",
   doctor: "پزشک",
-  laboratory: "آزمایشگاه",
+  laboratory: "مرکز درمانی",
   admin: "مدیر",
 };
 
@@ -88,7 +89,8 @@ export default async function AdminUserDetailPage({ params }) {
 
       {user.role === "laboratory" && user.laboratory && (
         <Card>
-          <CardHeader><CardTitle>پروفایل آزمایشگاه</CardTitle></CardHeader>
+          <CardHeader><CardTitle>پروفایل مرکز درمانی</CardTitle></CardHeader>
+          <p className="px-6 text-sm text-muted-foreground">{CENTER_TYPES[(Array.isArray(user.laboratory?.pas_medical_centers)?user.laboratory.pas_medical_centers[0]:user.laboratory?.pas_medical_centers)?.center_type]?.label || "مرکز درمانی"}</p>
           <CardContent className="grid gap-6 sm:grid-cols-2">
             <Field label="شماره مجوز" value={user.laboratory.license_number} dir="ltr" />
             <Field label="نام سازمان" value={user.laboratory.organizations?.name} />

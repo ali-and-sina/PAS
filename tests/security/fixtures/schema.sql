@@ -8359,3 +8359,8 @@ CREATE TRIGGER trg_audit_physician_care_event AFTER INSERT OR UPDATE ON public.t
 CREATE TRIGGER trg_audit_physician_care_event AFTER INSERT OR UPDATE ON public.visit_summaries FOR EACH ROW EXECUTE FUNCTION audit_physician_care_event();
 
 CREATE TRIGGER trg_guard_visit_summary BEFORE INSERT OR UPDATE ON public.visit_summaries FOR EACH ROW EXECUTE FUNCTION guard_visit_summary();
+
+-- Supabase Storage bucket metadata used by the care-platform tests.
+create table if not exists storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+alter table auth.users add column if not exists phone text,add column if not exists phone_confirmed_at timestamptz;
+create function storage.foldername(name text) returns text[] language sql immutable as $$ select (string_to_array(name,'/'))[1:array_length(string_to_array(name,'/'),1)-1] $$;

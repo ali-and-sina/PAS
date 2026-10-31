@@ -9,7 +9,7 @@ export default function DashboardWelcome({ title, description, eyebrow, actions 
         <h1 className="text-2xl font-bold leading-relaxed sm:text-3xl">{title}</h1>
         {description && <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">{description}</p>}
       </div>
-      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center [&>a]:w-full [&>button]:w-full sm:[&>a]:w-auto sm:[&>button]:w-auto">{actions}</div>}
     </div>
   </section>;
 }

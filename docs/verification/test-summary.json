@@ -1,0 +1,30 @@
+{
+  "database": {
+    "total": 74,
+    "passed": 74,
+    "rollback_verified": true
+  },
+  "source": {
+    "total": 89,
+    "passed": 89,
+    "rollback_verified": null
+  },
+  "test-login": {
+    "total": 26,
+    "passed": 26,
+    "rollback_verified": null
+  },
+  "care-platform": {
+    "total": 51,
+    "passed": 51,
+    "rollback_verified": true
+  },
+  "http_policy": {
+    "total": 5,
+    "passed": 5
+  },
+  "bridge": {
+    "total": 7,
+    "passed": 7
+  }
+}
