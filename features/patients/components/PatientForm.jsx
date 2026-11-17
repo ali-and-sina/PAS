@@ -26,7 +26,7 @@ export default function PatientForm() {
       </div>
 
       {state.message ? (
-        <p className={state.ok ? "text-sm text-emerald-600" : "text-sm text-destructive"} role="alert">
+        <p className={state.ok ? "text-sm text-status-normal" : "text-sm text-destructive"} role="alert">
           {state.message}
         </p>
       ) : null}

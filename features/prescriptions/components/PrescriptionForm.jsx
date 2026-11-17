@@ -39,7 +39,7 @@ export default function PrescriptionForm({ patientId }) {
         </div>)}
       </fieldset>
       <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={addItem} disabled={items.length >= 20}>افزودن دارو</Button><Button type="submit" disabled={pending} loading={pending}>{pending ? "در حال ثبت..." : "ثبت نسخه"}</Button></div>
-      {state.message ? <p className={state.ok ? "text-sm text-emerald-600" : "text-sm text-destructive"} role="alert">{state.message}</p> : null}
+      {state.message ? <p className={state.ok ? "text-sm text-status-normal" : "text-sm text-destructive"} role="alert">{state.message}</p> : null}
     </form>
   );
 }

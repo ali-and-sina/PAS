@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getPatientResults } from "@/features/patient/queries";
 import Pagination from "@/components/shared/Pagination";
+import { getPatientInsuranceReferralResults } from "@/features/insurance-prescriptions/queries";
+import { PatientReferralResults } from "@/features/insurance-prescriptions/components/PatientReferralResults";
 
 export const dynamic = "force-dynamic";
 
@@ -19,14 +21,17 @@ function formatDate(value) {
 
 export default async function PatientResultsPage({ searchParams }) {
   const params = await searchParams;
-  const result = await getPatientResults({ page: params?.page ?? 1 });
+  const [result, insuranceResults] = await Promise.all([
+    getPatientResults({ page: params?.page ?? 1 }),
+    getPatientInsuranceReferralResults(50),
+  ]);
   const reports = result.items;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="نتایج آزمایش‌ها"
-        description="نتایج نهایی و اصلاح‌شده‌ای که در پرونده سلامت شما ثبت شده‌اند."
+        title="نتایج خدمات پزشکی"
+        description="نتایج نهایی آزمایش‌ها و سایر خدمات درمانی که در پرونده سلامت شما ثبت شده‌اند."
         actions={
           <Button asChild variant="outline">
             <Link href="/patient/trends">
@@ -42,8 +47,8 @@ export default async function PatientResultsPage({ searchParams }) {
           <CardContent className="p-0">
             <EmptyState
               icon={FileText}
-              title="هنوز نتیجه نهایی ثبت نشده است"
-              description="به‌محض نهایی‌شدن نتیجه آزمایش، گزارش شما در این بخش نمایش داده می‌شود."
+              title="نتیجه‌ای در این بخش ثبت نشده است"
+              description="نتایج مسیر عادی آزمایش در این قسمت نمایش داده می‌شود؛ گزارش‌های بیمه‌ای در بخش جداگانه پایین صفحه قرار دارند."
             />
           </CardContent>
         </Card>
@@ -72,8 +77,8 @@ export default async function PatientResultsPage({ searchParams }) {
                   </p>
                 </div>
 
-                <span className="text-sm font-medium text-primary transition group-hover:translate-x-0.5">
-                  مشاهده نتیجه ←
+                <span className="text-sm font-medium text-primary">
+                  مشاهده نتیجه
                 </span>
               </div>
             </Link>
@@ -81,6 +86,13 @@ export default async function PatientResultsPage({ searchParams }) {
         </div>
       )}
       <Pagination pathname="/patient/results" page={result.pagination.page} pageSize={result.pagination.pageSize} totalCount={result.pagination.totalCount} totalPages={result.pagination.totalPages} />
+      <section className="space-y-3" aria-labelledby="insurance-results-title">
+        <div>
+          <h2 id="insurance-results-title" className="text-lg font-semibold">نتایج خدمات بیمه‌ای</h2>
+          <p className="mt-1 text-sm text-muted-foreground">نتایج نهایی و منتشرشده‌ای که مراکز درمانی از مسیر ارجاع بیمه‌ای ارسال کرده‌اند.</p>
+        </div>
+        <PatientReferralResults items={insuranceResults} />
+      </section>
     </div>
   );
 }

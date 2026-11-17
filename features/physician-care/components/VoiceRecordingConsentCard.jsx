@@ -50,7 +50,7 @@ export default function VoiceRecordingConsentCard({ initialGranted = false, gran
           این رضایت به پزشک تأییدشده اجازه می‌دهد یادداشت صوتی ۳۰ تا ۶۰ ثانیه‌ای مرتبط با ویزیت شما را در پرونده ثبت کند. فایل صوتی خصوصی است و فقط از مسیر مجاز قابل دسترسی خواهد بود. می‌توانید رضایت را هر زمان لغو کنید؛ لغو رضایت مانع ایجاد یادداشت صوتی جدید می‌شود.
         </p>
         <div className="flex flex-wrap items-center gap-3">
-          <span className={`rounded-full px-3 py-1 text-xs ${granted ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+          <span className={`rounded-full px-3 py-1 text-xs ${granted ? "bg-status-normal-bg text-status-normal" : "bg-muted text-muted-foreground"}`}>
             {granted ? `رضایت فعال${formatPersianDateTime(consentDate) ? ` · ${formatPersianDateTime(consentDate)}` : ""}` : "رضایت ثبت نشده یا لغو شده"}
           </span>
           <Button type="button" variant={granted ? "outline" : "default"} onClick={changeConsent} disabled={pending} loading={pending}>

@@ -1,3 +1,4 @@
+"use client"
 import Link from "next/link";
 import { ArrowLeft, ChevronLeft } from "lucide-react";
 import OrderStatusBadge from "./OrderStatusBadge";
@@ -50,7 +51,7 @@ export default function OrderQueueTable({ orders = [] }) {
                 <TableCell>
                   <div className="min-w-36">
                     <p className="font-medium">{order.patient?.full_name || "بدون نام"}</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground" dir="ltr">{String(order.id).slice(0, 8)}…</p>
+                    <p className="mt-1 text-[0.6875rem] text-muted-foreground" dir="ltr">{String(order.id).slice(0, 8)}…</p>
                   </div>
                 </TableCell>
                 <TableCell>{order.doctor?.full_name || "بدون نام"}</TableCell>

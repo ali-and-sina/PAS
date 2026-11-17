@@ -2,7 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionUser } from "@/lib/auth/server";
-import { normalizeIranianMobile } from "@/lib/utils/validation";
+import { getNationalIdSearchVariants, normalizeIranianMobile } from "@/lib/utils/validation";
 
 function normalizeStoredPhone(phone) {
   return normalizeIranianMobile(String(phone ?? ""));
@@ -19,6 +19,12 @@ export async function findPatientForDoctor({ doctorId, nationalId, phone }) {
   if (actor?.id !== doctorId || actor?.role !== "doctor" || actor?.is_verified !== true) {
     return null;
   }
+
+  const nationalIdVariants = getNationalIdSearchVariants(nationalId, {
+    minLength: 10,
+    maxLength: 10,
+  });
+  if (!nationalIdVariants.length) return null;
 
   const admin = createAdminClient();
 
@@ -54,7 +60,7 @@ export async function findPatientForDoctor({ doctorId, nationalId, phone }) {
     .from("profiles")
     .select("id, full_name, phone, national_id")
     .eq("role", "patient")
-    .eq("national_id", nationalId);
+    .in("national_id", nationalIdVariants);
 
   if (profileError) {
     throw profileError;

@@ -10,13 +10,14 @@ import { CheckCircle2, Clock3, MapPin, QrCode, XCircle } from "lucide-react";
 import { submitLabRequestToBranch } from "@/features/lab-dispatch/actions";
 import { createPatientDispatchQrToken } from "@/features/lab-intake/actions";
 import { Button } from "@/components/ui/button";
+import Spinner from "@/components/shared/Spinner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 const QRCodeSvg = dynamic(() => import("@/components/shared/QRCodeSvg"), {
   ssr: false,
-  loading: () => <div className="flex size-56 items-center justify-center rounded-lg border bg-muted/20 text-sm text-muted-foreground">در حال آماده‌سازی کد…</div>,
+  loading: () => <div role="status" aria-live="polite" className="flex size-56 items-center justify-center gap-2 rounded-lg border bg-muted/20 text-sm text-muted-foreground"><Spinner size="sm" decorative label="در حال آماده‌سازی کد…" /><span>در حال آماده‌سازی کد…</span></div>,
 });
 
 const initialState = { ok: false, message: "" };

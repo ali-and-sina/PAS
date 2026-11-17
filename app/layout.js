@@ -1,8 +1,23 @@
-import { Toaster } from "sonner";
+import { headers } from "next/headers";
+import { Toaster } from "@/components/ui/sonner";
 import { connection } from "next/server";
 import localFont from "next/font/local";
 import NavigationFeedback from "@/components/providers/NavigationFeedback";
 import "./globals.css";
+
+const themeInitScript = `(() => {
+  try {
+    const saved = window.localStorage.getItem("pas-theme");
+    const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+    const useDark = saved === "dark" || (saved !== "light" && prefersDark);
+    document.documentElement.classList.toggle("dark", useDark);
+    document.documentElement.style.colorScheme = useDark ? "dark" : "light";
+  } catch {
+    const useDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+    document.documentElement.classList.toggle("dark", useDark);
+    document.documentElement.style.colorScheme = useDark ? "dark" : "light";
+  }
+})();`;
 
 const vazirmatn = localFont({
   src: "./fonts/Vazirmatn-Variable.woff2",
@@ -44,8 +59,13 @@ export const viewport = {
 export default async function RootLayout({ children }) {
   // Framework scripts must receive the fresh nonce from the incoming request.
   await connection();
+  const requestHeaders = await headers();
+  const nonce = requestHeaders.get("x-nonce") || undefined;
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning>
+      <head>
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className={`${vazirmatn.variable} min-h-dvh bg-background font-sans text-foreground antialiased`}>
         <a
           href="#main-content"

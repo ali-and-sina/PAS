@@ -30,11 +30,11 @@ function statusLabel(status) {
 function statusClasses(status) {
   switch (status) {
     case "active":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      return "border-status-normal-border bg-status-normal-bg text-status-normal";
     case "inactive":
-      return "border-slate-200 bg-slate-50 text-slate-600";
+      return "border-status-superseded-border bg-status-superseded-bg text-status-superseded";
     default:
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "border-status-low-border bg-status-low-bg text-status-low";
   }
 }
 
@@ -65,11 +65,11 @@ export default function DoctorRequestCard({
   const pending = accepting || rejecting;
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-none">
+    <article className="rounded-2xl border bg-card p-5 shadow-none">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-base font-semibold text-slate-900">
+            <h2 className="text-base font-semibold text-card-foreground">
               {doctor.full_name
                 ? `دکتر ${doctor.full_name}`
                 : "پزشک"}
@@ -84,7 +84,7 @@ export default function DoctorRequestCard({
             </span>
           </div>
 
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
             {doctor.specialty ? (
               <span>{doctor.specialty}</span>
             ) : null}
@@ -96,13 +96,13 @@ export default function DoctorRequestCard({
             ) : null}
           </div>
 
-          <p className="mt-3 text-sm leading-6 text-slate-600">
+          <p className="mt-3 text-sm leading-6 text-card-foreground">
             این پزشک درخواست برقراری ارتباط با پرونده پزشکی شما را ارسال کرده
             است. پس از تأیید، پزشک می‌تواند فقط به اطلاعاتی دسترسی داشته باشد
             که مجوزهای سامانه برای رابطه فعال اجازه می‌دهند.
           </p>
 
-          <time className="mt-3 block text-xs text-slate-400">
+          <time className="mt-3 block text-xs text-muted-foreground">
             زمان درخواست: {formatPersianDateTime(request.created_at)}
           </time>
         </div>
@@ -155,8 +155,8 @@ export default function DoctorRequestCard({
         <p
           className={`mt-4 rounded-lg border px-3 py-2 text-sm ${
             acceptState.ok || rejectState.ok
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-red-200 bg-red-50 text-red-700"
+              ? "border-status-normal-border bg-status-normal-bg text-status-normal"
+              : "border-status-critical-border bg-status-critical-bg text-status-critical"
           }`}
           role={
             acceptState.ok || rejectState.ok

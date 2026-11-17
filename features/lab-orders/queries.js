@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/auth/server";
 import { DEFAULT_PAGE_SIZE, makePagination, normalizePage, normalizePageSize } from "@/lib/pagination";
 
 export async function getTestPanels() {
@@ -189,7 +190,7 @@ export async function getDoctorLabOrder(doctorId, orderId) {
 
   const { data: patient, error: patientError } = await supabase
     .from("profiles")
-    .select("id, full_name, phone, national_id")
+    .select("id, full_name")
     .eq("id", order.patient_id)
     .maybeSingle();
   if (patientError) throw patientError;
@@ -216,28 +217,106 @@ export async function getDoctorLabOrder(doctorId, orderId) {
   const testIds = (items || []).map((item) => item.test_definition_id).filter(Boolean);
 
   const [panelsResult, testsResult, reportsResult] = await Promise.all([
-    panelIds.length ? supabase.from("test_panels").select("id, name").in("id", panelIds) : Promise.resolve({ data: [] }),
-    testIds.length ? supabase.from("test_definitions").select("id, name, internal_code, category").in("id", testIds) : Promise.resolve({ data: [] }),
-    supabase.from("diagnostic_reports").select("id, status, laboratory_id, entered_by, finalized_by, finalized_at, created_at, updated_at").eq("lab_order_id", orderId).order("created_at", { ascending: false }),
+    panelIds.length
+      ? supabase.from("test_panels").select("id, name, name_fa").in("id", panelIds)
+      : Promise.resolve({ data: [], error: null }),
+    testIds.length
+      ? supabase.from("test_definitions").select("id, name, name_fa, internal_code, value_type, default_unit, decimal_precision").in("id", testIds)
+      : Promise.resolve({ data: [], error: null }),
+    supabase
+      .from("diagnostic_reports")
+      .select("id, lab_order_id, status, laboratory_id, entered_by, finalized_by, finalized_at, created_at, updated_at")
+      .eq("lab_order_id", orderId)
+      .in("status", ["final", "amended"])
+      .order("created_at", { ascending: false }),
   ]);
 
   if (panelsResult.error) throw panelsResult.error;
   if (testsResult.error) throw testsResult.error;
   if (reportsResult.error) throw reportsResult.error;
 
+  const reports = reportsResult.data || [];
+  const reportIds = reports.map((report) => report.id);
+  const observationsResult = reportIds.length
+    ? await supabase
+        .from("observations")
+        .select("id, diagnostic_report_id, test_definition_id, value_numeric, value_text, value_boolean, unit, reference_min, reference_max, reference_text, reference_source, flag, status, observed_at, created_at, test_definitions(id, name, name_fa, internal_code, value_type, default_unit, decimal_precision)")
+        .in("diagnostic_report_id", reportIds)
+        .in("status", ["final", "corrected"])
+        .order("observed_at", { ascending: true })
+        .order("created_at", { ascending: true })
+    : { data: [], error: null };
+
+  if (observationsResult.error) throw observationsResult.error;
+
   const panels = new Map((panelsResult.data || []).map((row) => [row.id, row]));
   const tests = new Map((testsResult.data || []).map((row) => [row.id, row]));
+  const observationsByReport = new Map();
+  for (const observation of observationsResult.data || []) {
+    const rows = observationsByReport.get(observation.diagnostic_report_id) || [];
+    rows.push(observation);
+    observationsByReport.set(observation.diagnostic_report_id, rows);
+  }
 
   return {
     ...order,
-    patient,
+    patient: patient || null,
     laboratory,
     items: (items || []).map((item) => ({
       ...item,
       panel: item.test_panel_id ? panels.get(item.test_panel_id) || null : null,
       test: item.test_definition_id ? tests.get(item.test_definition_id) || null : null,
     })),
-    reports: reportsResult.data || [],
+    reports: reports.map((report) => ({
+      ...report,
+      observations: observationsByReport.get(report.id) || [],
+    })),
+  };
+}
+
+export async function getDoctorReviewableReportDetail(reportId) {
+  const user = await getSessionUser();
+  if (!user?.id || user.role !== "doctor" || user.is_verified !== true) return null;
+  const id = typeof reportId === "string" ? reportId : "";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return null;
+
+  const supabase = await createClient();
+  const { data: report, error: reportError } = await supabase
+    .from("diagnostic_reports")
+    .select("id, lab_order_id, status, laboratory_id, finalized_at, created_at, updated_at")
+    .eq("id", id)
+    .in("status", ["final", "amended"])
+    .maybeSingle();
+  if (reportError) throw reportError;
+  if (!report) return null;
+
+  const { data: order, error: orderError } = await supabase
+    .from("lab_orders")
+    .select("id, patient_id, doctor_id, laboratory_id, ordered_at")
+    .eq("id", report.lab_order_id)
+    .eq("doctor_id", user.id)
+    .maybeSingle();
+  if (orderError) throw orderError;
+  if (!order) return null;
+
+  const [observationsResult, patientResult] = await Promise.all([
+    supabase
+      .from("observations")
+      .select("id, diagnostic_report_id, test_definition_id, value_numeric, value_text, value_boolean, unit, reference_min, reference_max, reference_text, reference_source, flag, status, observed_at, created_at, test_definitions(id, name, name_fa, internal_code, value_type, default_unit, decimal_precision)")
+      .eq("diagnostic_report_id", report.id)
+      .in("status", ["final", "corrected"])
+      .order("observed_at", { ascending: true })
+      .order("created_at", { ascending: true }),
+    supabase.from("profiles").select("id, full_name").eq("id", order.patient_id).maybeSingle(),
+  ]);
+  if (observationsResult.error) throw observationsResult.error;
+  if (patientResult.error) throw patientResult.error;
+
+  return {
+    ...report,
+    order,
+    patient_name: patientResult.data?.full_name || "بیمار",
+    observations: observationsResult.data || [],
   };
 }
 

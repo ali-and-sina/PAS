@@ -10,12 +10,13 @@ import { CalendarClock, CheckCircle2, MapPin, QrCode, Truck } from "lucide-react
 import { advanceHomeCollectionRequest, getHomeCollectionPrivateDetailsAction } from "@/features/home-collection/actions";
 import { createHomeCollectionQrToken } from "@/features/lab-intake/actions";
 import { Button } from "@/components/ui/button";
+import Spinner from "@/components/shared/Spinner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 const QRCodeSvg = dynamic(() => import("@/components/shared/QRCodeSvg"), {
   ssr: false,
-  loading: () => <div className="flex size-56 items-center justify-center rounded-lg border bg-muted/20 text-sm text-muted-foreground">در حال آماده‌سازی کد…</div>,
+  loading: () => <div role="status" aria-live="polite" className="flex size-56 items-center justify-center gap-2 rounded-lg border bg-muted/20 text-sm text-muted-foreground"><Spinner size="sm" decorative label="در حال آماده‌سازی کد…" /><span>در حال آماده‌سازی کد…</span></div>,
 });
 
 const initialState = { ok: false, message: "" };
@@ -30,7 +31,7 @@ function StatusForm({ requestId, nextStatus, formAction, pending, collectorProfi
     <input type="hidden" name="home_collection_request_id" value={requestId} />
     <input type="hidden" name="next_status" value={nextStatus} />
     {showSchedule && <><label className="block text-xs font-medium" htmlFor={`schedule-${requestId}`}>زمان مراجعه (به وقت محلی شما)</label><Input id={`schedule-${requestId}`} type="datetime-local" name="scheduled_for" required /><input type="hidden" name="timezone_offset_minutes" value={timezoneOffset} />{collectorProfileId && <input type="hidden" name="collector_profile_id" value={collectorProfileId} />}</>}
-    {nextStatus === "rejected" && <Textarea name="note" rows={2} maxLength={1000} placeholder="دلیل رد (اختیاری)" />}
+    {nextStatus === "rejected" && <label className="block space-y-1 text-xs font-medium"><span>دلیل رد (اختیاری)</span><Textarea name="note" rows={2} maxLength={1000} placeholder="مثلاً: تجهیز نمونه‌گیر در این ساعت فعال نیست" /></label>}
     {children || <Button type="submit" size="sm" variant="outline" disabled={pending}>{pending ? "در حال ثبت…" : "ثبت وضعیت"}</Button>}
   </form>;
 }

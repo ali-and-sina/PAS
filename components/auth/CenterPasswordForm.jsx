@@ -19,8 +19,8 @@ export default function CenterPasswordForm({ onBack }) {
     finally { setPending(false); }
   }
   return <form className="space-y-4" onSubmit={submit} aria-label="ورود مرکز درمانی">
-    <label className="block space-y-2 text-sm"><span>نام کاربری، شمارهٔ همراه ثبت‌شده</span><Input autoComplete="username" inputMode="tel" dir="ltr" required value={phone} onChange={(e) => setPhone(normalizeDigits(e.target.value))} disabled={pending} maxLength={16} /></label>
-    <label className="block space-y-2 text-sm"><span>رمز عبور مرکز</span><Input autoComplete="current-password" type="password" dir="ltr" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={pending} maxLength={128} /></label>
+    <label className="block space-y-2 text-sm"><span>نام کاربری یا شمارهٔ همراه ثبت‌شده</span><Input name="username" autoComplete="username" inputMode="text" dir="ltr" required value={phone} onChange={(e) => setPhone(e.target.value.trim())} disabled={pending} maxLength={32} /></label>
+    <label className="block space-y-2 text-sm"><span>رمز عبور مرکز</span><Input name="password" autoComplete="current-password" type="password" dir="ltr" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={pending} maxLength={128} /></label>
     <p className="text-sm leading-7 text-muted-foreground">حساب و نوع مرکز را مدیر پلتفرم تعیین می‌کند. پس از ورود، به پنل اختصاصی مرکز خود منتقل می‌شوید.</p>
     {error && <p role="alert" className="text-sm leading-7 text-destructive">{error}</p>}
     <Button type="submit" className="w-full" loading={pending} disabled={pending}>ورود به پنل مرکز</Button>

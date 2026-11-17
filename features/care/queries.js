@@ -56,7 +56,7 @@ export async function readCalendarEvents(patientId, from, to) {
   const [visits, orders, reports, followUps, prescriptions, services, external, closures, medicalResults, therapySessions] = await Promise.all([
     db.from("visits").select("id,visit_date,status").eq("patient_id", target).gte("visit_date", start).lt("visit_date", end).limit(500),
     db.from("lab_orders").select("id,ordered_at,status,clinical_note").eq("patient_id", target).gte("ordered_at", start).lt("ordered_at", end).limit(500),
-    db.from("diagnostic_reports").select("id,finalized_at,status,lab_orders!inner(patient_id)").eq("lab_orders.patient_id", target).in("status", ["final", "amended"]).gte("finalized_at", start).lt("finalized_at", end).limit(500),
+    db.from("diagnostic_reports").select("id,lab_order_id,finalized_at,status,lab_orders!inner(patient_id)").eq("lab_orders.patient_id", target).in("status", ["final", "amended"]).gte("finalized_at", start).lt("finalized_at", end).limit(500),
     db.from("follow_ups").select("id,title,description,due_date,status").eq("patient_id", target).gte("due_date", from).lt("due_date", to).limit(500),
     db.from("prescriptions").select("id,issued_at,status").eq("patient_id", target).gte("issued_at", start).lt("issued_at", end).limit(500),
     db.from("pas_medical_requests").select("id,service_name,requested_at,scheduled_at,status,clinical_note").eq("patient_id", target)
@@ -67,6 +67,41 @@ export async function readCalendarEvents(patientId, from, to) {
     db.from("pas_therapy_sessions").select("id,request_id,session_number,occurred_at,progress_note").eq("patient_id",target).gte("occurred_at",start).lt("occurred_at",end).limit(500),
   ]);
   const records = [visits, orders, reports, followUps, prescriptions, services, external, closures, medicalResults, therapySessions].map(unwrap);
+
+  // Resolve the actual test/panel names for the timeline instead of presenting
+  // every laboratory result with the same generic title.
+  const resultOrderIds = [...new Set([
+    ...records[1].map((row) => row.id),
+    ...records[2].map((row) => row.lab_order_id),
+  ].filter(Boolean))];
+  const { data: orderItems, error: orderItemsError } = resultOrderIds.length
+    ? await db.from("lab_order_items").select("id,lab_order_id,test_panel_id,test_definition_id").in("lab_order_id", resultOrderIds)
+    : { data: [], error: null };
+  if (orderItemsError && orderItemsError.code !== "42501") throw orderItemsError;
+  const readableOrderItems = orderItemsError ? [] : (orderItems || []);
+  const panelIds = [...new Set(readableOrderItems.map((row) => row.test_panel_id).filter(Boolean))];
+  const testIds = [...new Set(readableOrderItems.map((row) => row.test_definition_id).filter(Boolean))];
+  const [panelsResult, testsResult] = await Promise.all([
+    panelIds.length
+      ? db.from("test_panels").select("id,name,name_fa").in("id", panelIds)
+      : Promise.resolve({ data: [], error: null }),
+    testIds.length
+      ? db.from("test_definitions").select("id,name,name_fa").in("id", testIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (panelsResult.error && panelsResult.error.code !== "42501") throw panelsResult.error;
+  if (testsResult.error && testsResult.error.code !== "42501") throw testsResult.error;
+  const panelNames = new Map((panelsResult.error ? [] : (panelsResult.data || [])).map((row) => [row.id, row.name_fa || row.name]).filter(([, name]) => name));
+  const testNames = new Map((testsResult.error ? [] : (testsResult.data || [])).map((row) => [row.id, row.name_fa || row.name]).filter(([, name]) => name));
+  const namesByOrder = new Map();
+  for (const item of readableOrderItems) {
+    const name = (item.test_panel_id && panelNames.get(item.test_panel_id)) || (item.test_definition_id && testNames.get(item.test_definition_id));
+    if (!name) continue;
+    const list = namesByOrder.get(item.lab_order_id) || [];
+    if (!list.includes(name)) list.push(name);
+    namesByOrder.set(item.lab_order_id, list);
+  }
+
   const prefix = user.role === "patient" ? "/patient" : "/doctor";
   const events = [];
   const add = (kind, id, date, title, summary = "", href = null) => {
@@ -75,7 +110,20 @@ export async function readCalendarEvents(patientId, from, to) {
   };
   for (const r of records[0]) add("visit", r.id, r.visit_date, "ویزیت پزشک", r.status === "completed" ? "ویزیت مختومه شده است." : r.status === "cancelled" ? "ویزیت لغو شده است." : "ویزیت برنامه‌ریزی‌شده");
   for (const r of records[1]) add("lab", r.id, r.ordered_at, "درخواست آزمایش", r.clinical_note, prefix + "/medical-services");
-  for (const r of records[2]) add("result", r.id, r.finalized_at, "نتیجهٔ آزمایش آماده شد", "", user.role === "patient" ? "/patient/results/" + r.id : "/doctor/patients/" + target);
+  for (const r of records[2]) {
+    const testNames = namesByOrder.get(r.lab_order_id) || [];
+    const resultTitle = testNames[0] || "نتیجهٔ آزمایش";
+    const otherCount = Math.max(0, testNames.length - 1);
+    const resultSummary = otherCount
+      ? `${otherCount.toLocaleString("fa-IR")} مورد دیگر در این گزارش ثبت شده است.`
+      : "نتیجهٔ نهایی آزمایش در پرونده ثبت شده است.";
+    const resultHref = user.role === "patient"
+      ? "/patient/results/" + r.id
+      : r.lab_order_id
+        ? "/doctor/lab-orders/" + r.lab_order_id + "#report-" + r.id
+        : "/doctor/patients/" + target;
+    add("result", r.id, r.finalized_at, resultTitle, resultSummary, resultHref);
+  }
   for (const r of records[3]) add("follow_up", r.id, r.due_date, r.title, r.description, prefix + "/follow-ups");
   for (const r of records[4]) add("prescription", r.id, r.issued_at, "نسخهٔ پزشک", "", prefix + "/prescriptions");
   for (const r of records[5]) {
@@ -108,7 +156,8 @@ export async function getCareOverview(patientId) {
 export async function getMedicalServicesData(role, patientId) {
   const user = await requireCareUser(role);
   const db = await createClient();
-  let query = db.from("pas_medical_requests").select("*,pas_medical_results(*),pas_therapy_sessions(*)").order("requested_at", { ascending: false }).limit(100);
+  const requestLimit = 100;
+  let query = db.from("pas_medical_requests").select("*,pas_medical_results(*),pas_therapy_sessions(*)").order("requested_at", { ascending: false }).limit(requestLimit);
   if (role === "patient") query = query.eq("patient_id", user.id);
   if (role === "laboratory") query = query.eq("provider_id", user.id);
   if (role === "doctor" && UUID.test(String(patientId))) query = query.eq("patient_id", patientId);
@@ -117,7 +166,7 @@ export async function getMedicalServicesData(role, patientId) {
   const providers = unwrap(providersResult);
 
   if (role !== "doctor" || !requests.length) {
-    return { user, requests, providers };
+    return { user, requests, providers, requestLimit };
   }
 
   const patientIds = [...new Set(requests.map((request) => request.patient_id).filter(Boolean))];
@@ -134,6 +183,7 @@ export async function getMedicalServicesData(role, patientId) {
       patient_name: patientNames.get(request.patient_id) || "بیمار",
     })),
     providers,
+    requestLimit,
   };
 }
 export async function getPharmacyRequests(role) {

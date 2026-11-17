@@ -1,9 +1,5 @@
-import Sppiner from "@/components/shared/Sppiner";
+import LoadingOverlay from "@/components/shared/LoadingOverlay";
 
 export default function Loading() {
-  return (
-    <div className="flex min-h-[40vh] items-center justify-center">
-      <Sppiner />
-    </div>
-  );
+  return <LoadingOverlay fullScreen label="در حال بارگذاری صفحه…" size="xl" />;
 }

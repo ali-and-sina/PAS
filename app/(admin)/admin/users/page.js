@@ -36,7 +36,7 @@ export default async function AdminUsersPage({ searchParams }) {
           <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(10rem,auto)_auto] md:items-end" method="get" data-navigation-feedback="true">
             <label htmlFor="admin-user-search" className="grid min-w-0 gap-2 text-sm font-medium">
               جست‌وجوی کاربر
-              <Input id="admin-user-search" name="q" defaultValue={search} placeholder="نام یا شمارهٔ همراه" autoComplete="off" />
+              <Input id="admin-user-search" name="q" defaultValue={search} placeholder="نام، کد ملی یا شمارهٔ همراه" autoComplete="off" />
             </label>
             <label htmlFor="admin-user-role" className="grid gap-2 text-sm font-medium">
               نقش کاربر
@@ -62,7 +62,7 @@ export default async function AdminUsersPage({ searchParams }) {
               <article key={user.id} className="min-w-0 rounded-2xl border bg-card p-4">
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <Link href={`/admin/users/${user.id}`} className="break-words font-semibold hover:text-primary hover:underline">
+                    <Link prefetch={false} href={`/admin/users/${user.id}`} className="break-words font-semibold hover:text-primary hover:underline">
                       {user.full_name || "بدون نام"}
                     </Link>
                     <p dir="ltr" className="mt-1 break-all text-start text-sm text-muted-foreground tabular-nums">{user.phone || "شماره همراه ثبت نشده"}</p>
@@ -80,7 +80,7 @@ export default async function AdminUsersPage({ searchParams }) {
                   </div>
                 </dl>
                 <Button asChild variant="outline" className="mt-4 w-full">
-                  <Link href={`/admin/users/${user.id}`}>مشاهدهٔ حساب</Link>
+                  <Link prefetch={false} href={`/admin/users/${user.id}`}>مشاهدهٔ حساب</Link>
                 </Button>
               </article>
             ))}
@@ -100,7 +100,7 @@ export default async function AdminUsersPage({ searchParams }) {
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-medium"><Link href={`/admin/users/${user.id}`} className="hover:underline">{user.full_name || "بدون نام"}</Link></TableCell>
+                    <TableCell className="font-medium"><Link prefetch={false} href={`/admin/users/${user.id}`} className="hover:underline">{user.full_name || "بدون نام"}</Link></TableCell>
                     <TableCell dir="ltr" className="text-right tabular-nums">{user.phone || "—"}</TableCell>
                     <TableCell>{roleLabels[user.role] || "نامشخص"}</TableCell>
                     <TableCell>{statusLabels[user.status] || "—"}</TableCell>

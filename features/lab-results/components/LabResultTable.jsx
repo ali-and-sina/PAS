@@ -62,7 +62,7 @@ export default function LabResultTable({ observations = [] }) {
       </div>
       <div className="hidden overflow-hidden rounded-xl border bg-card lg:block">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="w-full min-w-[47.5rem] text-sm">
             <thead>
               <tr className="border-b bg-muted/40">
                 <th scope="col" className="p-3 text-start">آزمایش</th>

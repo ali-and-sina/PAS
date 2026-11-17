@@ -16,7 +16,7 @@ export default async function GuestResultLandingPage({ params }) {
         @keyframes paFadeUp {
           from {
             opacity: 0;
-            transform: translateY(10px);
+            transform: translateY(0.625rem);
           }
 
           to {
@@ -28,7 +28,7 @@ export default async function GuestResultLandingPage({ params }) {
         @keyframes paButtonIn {
           from {
             opacity: 0;
-            transform: translateY(12px);
+            transform: translateY(0.75rem);
           }
 
           to {
@@ -44,7 +44,7 @@ export default async function GuestResultLandingPage({ params }) {
           }
 
           50% {
-            box-shadow: 0 0 0 5px rgba(20, 184, 166, 0.045);
+            box-shadow: 0 0 0 0.3125rem rgba(20, 184, 166, 0.045);
           }
         }
 
@@ -80,7 +80,7 @@ export default async function GuestResultLandingPage({ params }) {
         >
           {/* Large soft line structure */}
           <svg
-            className="absolute -right-24 -top-24 h-[420px] w-[420px] text-primary/[0.075]"
+            className="absolute -right-24 -top-24 h-[26.25rem] w-[26.25rem] text-primary/[0.075]"
             viewBox="0 0 420 420"
             fill="none"
           >
@@ -108,7 +108,7 @@ export default async function GuestResultLandingPage({ params }) {
 
           {/* Bottom-left structure */}
           <svg
-            className="absolute -bottom-28 -left-20 h-[360px] w-[360px] text-primary/[0.06]"
+            className="absolute -bottom-28 -left-20 h-[22.5rem] w-[22.5rem] text-primary/[0.06]"
             viewBox="0 0 360 360"
             fill="none"
           >
@@ -185,7 +185,7 @@ export default async function GuestResultLandingPage({ params }) {
                 />
               </div>
 
-              <h1 className="mt-8 text-2xl font-semibold tracking-tight text-foreground sm:text-[28px]">
+              <h1 className="mt-8 text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
                 نتیجه آزمایش شما آماده است.
               </h1>
 
@@ -225,7 +225,7 @@ export default async function GuestResultLandingPage({ params }) {
               </span>
             </div>
 
-            <p className="mt-12 text-[11px] text-muted-foreground/45">
+            <p className="mt-12 text-[0.6875rem] text-muted-foreground/45">
               پاس؛ ساده‌تر برای دسترسی به اطلاعات سلامت
             </p>
           </section>

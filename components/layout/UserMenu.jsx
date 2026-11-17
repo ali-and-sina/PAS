@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { centerSettings } from "@/lib/centers/config";
 import { ACCOUNT_PATHS } from "@/lib/care/constants";
-import { ChevronDown, LogOut, Settings, UserRound } from "lucide-react";
+import { ChevronDown, LogOut, Moon, Settings, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,21 @@ import {
 import { auth } from "@/lib/auth/client";
 import { LOGIN_PATH } from "@/lib/auth";
 import { getWorkspaceBrand } from "@/lib/constants/navigation";
+import { SpinnerGraphic, useDelayedLoading } from "@/components/shared/Spinner";
+
+function toggleThemePreference() {
+  const root = document.documentElement;
+  const nextTheme = root.classList.contains("dark") ? "light" : "dark";
+
+  root.classList.toggle("dark", nextTheme === "dark");
+  root.style.colorScheme = nextTheme;
+
+  try {
+    window.localStorage.setItem("pas-theme", nextTheme);
+  } catch {
+    // The active tab still receives the theme change when storage is unavailable.
+  }
+}
 
 function initialsOf(name) {
   const trimmed = (name ?? "").trim();
@@ -30,6 +45,7 @@ function initialsOf(name) {
 export default function UserMenu({ user }) {
   const [pending, startTransition] = useTransition();
   const [signingOut, setSigningOut] = useState(false);
+  const showSignOutSpinner = useDelayedLoading(signingOut, 250, 400);
   const settingsPath = user?.role === "medical_center" || user?.role === "laboratory"
     ? centerSettings(user)
     : ACCOUNT_PATHS[user?.role];
@@ -106,16 +122,22 @@ export default function UserMenu({ user }) {
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={toggleThemePreference} className="min-h-11 px-3">
+          <Moon aria-hidden="true" />
+          تغییر حالت روشن / تیره
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={(event) => {
             event.preventDefault();
             handleSignOut();
           }}
-          disabled={pending || signingOut}
+          disabled={pending || signingOut || showSignOutSpinner}
+          aria-busy={signingOut || showSignOutSpinner || undefined}
           className="min-h-11 px-3 text-destructive focus:bg-destructive/10 focus:text-destructive"
         >
-          {signingOut ? <span className="pas-button-spinner" aria-hidden="true" /> : <LogOut aria-hidden="true" />}
-          {signingOut ? "در حال خروج..." : "خروج از حساب"}
+          {showSignOutSpinner ? <SpinnerGraphic size="sm" /> : <LogOut aria-hidden="true" />}
+          {signingOut || showSignOutSpinner ? "در حال خروج..." : "خروج از حساب"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

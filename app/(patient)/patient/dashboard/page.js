@@ -115,7 +115,6 @@ export default async function PatientDashboardPage() {
   return (
     <div className="space-y-6">
       <DashboardWelcome
-        eyebrow="مسیر سلامت شما"
         title={firstName ? `سلام، ${firstName}` : "سلام"}
         description="نتایج، پیگیری‌ها و قدم بعدی مراقبت را از اینجا دنبال کنید."
         actions={
@@ -220,7 +219,7 @@ export default async function PatientDashboardPage() {
                         {scheduledAt ? <span>زمان پیشنهادی: {scheduledAt}</span> : null}
                       </div>
                       {needsCenterSelection ? (
-                        <p className="text-sm font-medium text-primary">برای ادامه، مرکز درمانی را انتخاب کنید ←</p>
+                        <p className="text-sm font-medium text-primary">برای ادامه، مرکز درمانی را انتخاب کنید</p>
                       ) : null}
                     </Link>
                   );
@@ -248,8 +247,7 @@ export default async function PatientDashboardPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">
-                      {getEventLabel(latestEvent.type)} ·{" "}
-                      {formatDate(latestEvent.date)}
+                      {getEventLabel(latestEvent.type)}، {formatDate(latestEvent.date)}
                     </p>
                     <h2 className="mt-2 text-lg font-semibold">
                       {latestEvent.title}

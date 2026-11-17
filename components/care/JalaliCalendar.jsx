@@ -2,9 +2,9 @@
 
 import { useId, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronRight, ChevronLeft, CalendarDays } from "lucide-react";
+import { ChevronRight, ChevronLeft, CalendarDays, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { faNumber, monthStart, moveMonth, monthDays, persianParts, persianMonthKey, persianDateLabel, tehranDayKey, tehranDateTimeToISO } from "@/lib/care/dates";
 import { PERSIAN_MONTHS } from "@/lib/care/constants";
 import { loadCalendarEvents } from "@/features/care/actions";
@@ -41,6 +41,53 @@ export function CalendarMonth({ month, onMonthChange, onSelect, selected, today,
     </div>
   </div>;
 }
+function eventDateLabel(event) {
+  const dayKey = event.day || tehranDayKey(event.date);
+  const parts = dayKey ? persianParts(dayKey) : null;
+  return parts
+    ? `${faNumber(parts.day)}.${faNumber(parts.month)}.${faNumber(parts.year)}`
+    : "—";
+}
+
+function HealthTimelineList({ events = [] }) {
+  const orderedEvents = [...events].sort(
+    (a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime(),
+  );
+
+  return (
+    <section className="mt-6 border-t pt-5" aria-labelledby="health-timeline-heading">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <h3 id="health-timeline-heading" className="font-semibold">فهرست پرونده سلامت</h3>
+        <p className="text-xs text-muted-foreground">{faNumber(orderedEvents.length)} رویداد در ماه انتخاب‌شده</p>
+      </div>
+      {orderedEvents.length ? (
+        <ol className="relative space-y-4 border-s border-dashed ps-5">
+          {orderedEvents.map((event) => (
+            <li key={event.id} className="relative min-w-0">
+              <span aria-hidden="true" className="absolute -start-[1.5625rem] top-1.5 size-2.5 rounded-full border-2 border-primary bg-background ring-4 ring-card" />
+              <time className="block text-sm font-semibold tabular-nums text-foreground">{eventDateLabel(event)}</time>
+              {event.href ? (
+                <Link
+                  href={event.href}
+                  prefetch={false}
+                  className="mt-1 inline-flex min-h-8 max-w-full items-center text-sm font-normal leading-6 text-primary underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <span className="break-words">{event.title}</span>
+                </Link>
+              ) : (
+                <p className="mt-1 text-sm font-normal leading-6 text-muted-foreground">{event.title}</p>
+              )}
+              {event.summary ? <p className="mt-0.5 whitespace-pre-line break-words text-xs leading-5 text-muted-foreground">{event.summary}</p> : null}
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">در ماه انتخاب‌شده رویدادی برای فهرست پرونده سلامت ثبت نشده است.</p>
+      )}
+    </section>
+  );
+}
+
 export function HealthCalendar({ patientId, initialMonth, initialEvents = [], today }) {
   const [month, setMonth] = useState(initialMonth);
   const [events, setEvents] = useState(initialEvents);
@@ -64,11 +111,34 @@ export function HealthCalendar({ patientId, initialMonth, initialEvents = [], to
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-semibold">تقویم پرونده</h2><p className="mt-1 text-xs leading-6 text-muted-foreground">روزهای دارای نقطه، رویداد ثبت‌شده دارند.</p></div><Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => changeMonth(monthStart(today))}>امروز</Button></div>
     <CalendarMonth month={month} today={today} events={events} selected={selected} onSelect={setSelected} onMonthChange={changeMonth} pending={pending} />
     {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
+    <HealthTimelineList events={events} />
     <Dialog open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelected(null); }}>
-      <DialogContent dir="rtl" className="max-h-[85dvh] w-[calc(100%_-_2rem)] overflow-y-auto rounded-2xl text-start">
-        <DialogTitle className="pe-7">{selected ? persianDateLabel(selected) : "رویدادها"}</DialogTitle>
-        <DialogDescription className="text-start">{faNumber(selectedEvents.length)} رویداد در پروندهٔ قابل مشاهده</DialogDescription>
-        {selectedEvents.length ? <ul className="space-y-3">{selectedEvents.map((event) => <li key={event.id} className="rounded-xl border p-4"><h3 className="font-semibold">{event.title}</h3>{event.summary && <p className="mt-2 whitespace-pre-line break-words text-sm leading-7 text-muted-foreground">{event.summary}</p>}{event.href && <Link href={event.href} className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary">مشاهدهٔ جزئیات</Link>}</li>)}</ul> : <p className="py-4 text-sm text-muted-foreground">برای این روز رویدادی ثبت نشده است.</p>}
+      <DialogContent dir="rtl" className="flex max-h-[85dvh] w-[calc(100%_-_1rem)] max-w-3xl flex-col gap-0 overflow-hidden rounded-2xl p-0 text-start sm:w-[calc(100%_-_2rem)] [&>button:last-child]:hidden">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b bg-background/95 px-4 py-3 backdrop-blur sm:px-5">
+          <div className="min-w-0">
+            <DialogTitle className="pt-1">{selected ? persianDateLabel(selected) : "رویدادها"}</DialogTitle>
+            <DialogDescription className="mt-2 text-start">{faNumber(selectedEvents.length)} رویداد در پروندهٔ قابل مشاهده</DialogDescription>
+          </div>
+          <DialogClose asChild>
+            <Button type="button" variant="ghost" size="icon" aria-label="بستن جزئیات">
+              <X aria-hidden="true" />
+            </Button>
+          </DialogClose>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
+          {selectedEvents.length ? (
+            <ol className="relative space-y-4 border-s ps-5">
+              {selectedEvents.map((event) => (
+                <li key={event.id} className="relative min-w-0">
+                  <span aria-hidden="true" className="absolute -start-[1.5625rem] top-1.5 size-2.5 rounded-full border-2 border-primary bg-background" />
+                  <p className="text-sm font-medium">{event.title}</p>
+                  {event.summary ? <p className="mt-1 whitespace-pre-line break-words text-sm leading-6 text-muted-foreground">{event.summary}</p> : null}
+                  {event.href ? <Link href={event.href} prefetch={false} className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary">مشاهدهٔ جزئیات</Link> : null}
+                </li>
+              ))}
+            </ol>
+          ) : <p className="py-4 text-sm text-muted-foreground">برای این روز رویدادی ثبت نشده است.</p>}
+        </div>
       </DialogContent>
     </Dialog>
   </section>;
@@ -97,7 +167,7 @@ function dayDateSafe(value) { return typeof value === "string" && /^\d{4}-\d{2}-
 export function JalaliDateTimeField({ value, onChange, label, today, required, disabled }) {
   const dateKey = value ? tehranDayKey(value) : "";
   const time = value ? new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tehran", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(value)) : "12:00";
-  return <div className="grid min-w-0 gap-3 sm:grid-cols-[1fr_110px]">
+  return <div className="grid min-w-0 gap-3 sm:grid-cols-[1fr_6.875rem]">
     <JalaliDateField value={dateKey} today={today} onChange={(key) => onChange(tehranDateTimeToISO(key, time))} label={label} required={required} disabled={disabled} />
     <label className="block space-y-2 text-sm font-medium"><span>ساعت تهران</span><input aria-label="ساعت تهران" type="time" value={time} disabled={disabled} className="h-11 w-full rounded-xl border bg-card px-3" onChange={(event) => { if (event.target.value && dateKey) onChange(tehranDateTimeToISO(dateKey, event.target.value)); }} /></label>
   </div>;

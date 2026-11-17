@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Mic, Trash2, Upload, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
 import {
   completePhysicianVoiceNote,
   createVoiceNoteUpload,
@@ -246,6 +245,7 @@ export default function VoiceVisitNoteRecorder({ patientId, visits = [] }) {
         return;
       }
 
+      const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
       const { error: uploadError } = await supabase.storage
         .from("pab-voice-notes")

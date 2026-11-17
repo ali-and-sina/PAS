@@ -23,7 +23,7 @@ export default async function PatientMedicalCentersPage({ searchParams }) {
     <div className="space-y-6">
       <PageHeader
         title="مراکز درمانی"
-        description="درخواست‌ها و گزارش‌های آزمایش، تصویربرداری و دیگر خدمات درمانی را در یک بخش پیگیری کنید."
+        description="درخواست پزشک را از فهرست به مرکز ارائه‌دهندهٔ خدمت ارجاع دهید؛ یا در صورت فعال‌بودن پذیرش مستقیم مرکز، درخواست مستقلی ثبت کنید. گزارش‌ها نیز همین‌جا نمایش داده می‌شوند."
       />
       <MedicalCentersWorkspace
         role="patient"

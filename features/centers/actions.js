@@ -65,3 +65,39 @@ export async function loginMedicalCenter(input) {
     return { ok: false, code: "SERVER_ERROR", message: "ورود انجام نشد؛ دوباره تلاش کنید." };
   }
 }
+
+
+export async function setCenterPatientRequestPolicy(input) {
+  const schema = z.object({
+    centerType: z.enum(Object.keys(CENTER_TYPES)),
+    serviceKind: z.enum(["ct", "mri", "ecg", "ultrasound", "mammography", "xray", "physiotherapy", "other"]),
+    enabled: z.boolean(),
+  }).strict();
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "تنظیم انتخاب‌شده معتبر نیست." };
+  try {
+    await requireCenter(parsed.data.centerType);
+    const expectedService = CENTER_TYPES[parsed.data.centerType]?.service;
+    if (!expectedService || expectedService !== parsed.data.serviceKind) {
+      return { ok: false, message: "این خدمت با نوع مرکز مطابقت ندارد." };
+    }
+    const db = await createClient();
+    const { data, error } = await db.rpc("pas_center_set_patient_request_policy", {
+      p_service_kind: parsed.data.serviceKind,
+      p_enabled: parsed.data.enabled,
+    });
+    if (error) {
+      console.error("[center patient request policy]", { code: error.code });
+      return { ok: false, message: error.code === "42501"
+        ? "مرکز فعال یا مجوز لازم برای این خدمت وجود ندارد."
+        : "تنظیم پذیرش درخواست مستقیم ذخیره نشد." };
+    }
+    revalidatePath(`/center/${parsed.data.centerType}/settings`);
+    revalidatePath("/patient/medical-services");
+    return { ok: true, message: parsed.data.enabled
+      ? "پذیرش درخواست مستقیم بیمار برای این خدمت فعال شد."
+      : "پذیرش درخواست مستقیم بیمار برای این خدمت غیرفعال شد.", data };
+  } catch {
+    return { ok: false, message: "دسترسی تنظیمات مرکز تأیید نشد." };
+  }
+}

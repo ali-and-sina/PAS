@@ -1,10 +1,13 @@
 import { cn } from "@/lib/utils";
 
+// Status colors read from the design tokens in globals.css so semantic
+// colors stay aligned with the brand palette (teal) instead of competing
+// with it through parallel Tailwind greens/ambers/violets.
 const VARIANTS = {
   neutral: "bg-muted text-muted-foreground border-border",
   normal: "bg-status-normal-bg text-status-normal border-status-normal-border",
-  preliminary: "bg-amber-50 text-amber-700 border-amber-200",
-  amended: "bg-violet-50 text-violet-700 border-violet-200",
+  preliminary: "bg-status-low-bg text-status-low border-status-low-border",
+  amended: "bg-status-superseded-bg text-status-superseded border-status-superseded-border",
   low: "bg-status-low-bg text-status-low border-status-low-border",
   high: "bg-status-high-bg text-status-high border-status-high-border",
   critical:

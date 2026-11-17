@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCareAction, CareFeedback } from "@/components/care/ActionControls";
 import { createCareUpload } from "@/features/care/actions";
-import { createClient } from "@/lib/supabase/client";
 
 export default function SpecialistReportForm({ request, current, config = null, onSaved }) {
   const [measurements, setMeasurements] = useState(() => ({...(current?.measurements || {})}));
@@ -25,6 +24,7 @@ export default function SpecialistReportForm({ request, current, config = null, 
       try {
         const upload = await createCareUpload({ kind: "medical-document", resourceId: request.id, mimeType: file.type, fileSize: file.size });
         if (!upload.ok) return setError(upload.message);
+        const { createClient } = await import("@/lib/supabase/client");
         const db = createClient();
         const { error: uploadError } = await db.storage.from(upload.bucket).uploadToSignedUrl(upload.path, upload.token, file, { contentType: file.type });
         if (uploadError) return setError("پیوست بارگذاری نشد.");

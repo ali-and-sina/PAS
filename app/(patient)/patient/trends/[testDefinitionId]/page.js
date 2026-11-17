@@ -186,7 +186,7 @@ export default async function PatientTrendDetailPage({ params }) {
               </div>
 
               <div className="hidden overflow-x-auto lg:block">
-                <table className="w-full min-w-[760px] text-right text-sm">
+                <table className="w-full min-w-[47.5rem] text-right text-sm">
                   <thead>
                     <tr className="border-b">
                       <th scope="col" className="px-3 py-3 font-medium">تاریخ</th>

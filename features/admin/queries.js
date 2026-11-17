@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AdminAuthorizationError, requireAdmin } from "@/lib/auth/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_PAGE_SIZE, makePagination, normalizePage, normalizePageSize } from "@/lib/pagination";
+import { getNationalIdSearchVariants, normalizeDigits } from "@/lib/utils/validation";
 
 function unwrap(row) {
   if (Array.isArray(row)) return row[0] ?? null;
@@ -69,7 +70,9 @@ export async function getAdminUsers({ role = "all", search = "", page: requested
   const supabase = createAdminClient();
   const pageSize = normalizePageSize(requestedPageSize);
   let page = normalizePage(requestedPage);
-  const normalizedSearch = String(search ?? "").trim();
+  const normalizedSearch = String(search ?? "").trim().slice(0, 100);
+  const normalizedDigits = normalizeDigits(normalizedSearch).replace(/\D/g, "");
+  const nationalIdVariants = getNationalIdSearchVariants(normalizedSearch);
 
   const makeQuery = () => {
     let query = supabase
@@ -104,8 +107,16 @@ export async function getAdminUsers({ role = "all", search = "", page: requested
     }
 
     if (normalizedSearch) {
-      const escaped = normalizedSearch.replace(/[%_,]/g, (char) => "\\" + char);
-      query = query.or(`full_name.ilike.%${escaped}%,phone.ilike.%${escaped}%`);
+      const escaped = normalizedSearch.replace(/[\\%_,]/g, (char) => "\\" + char);
+      const filters = [
+        `full_name.ilike.%${escaped}%`,
+        `phone.ilike.%${escaped}%`,
+      ];
+      if (normalizedDigits) filters.push(`phone.ilike.%${normalizedDigits}%`);
+      for (const variant of nationalIdVariants) {
+        filters.push(`national_id.ilike.%${variant}%`);
+      }
+      query = query.or([...new Set(filters)].join(","));
     }
     return query;
   };

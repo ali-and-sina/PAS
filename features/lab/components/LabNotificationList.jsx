@@ -58,7 +58,7 @@ export default function LabNotificationList({ notifications = [] }) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <span className="text-[11px] font-medium text-muted-foreground">
+                    <span className="text-[0.6875rem] font-medium text-muted-foreground">
                       {TYPE_LABELS[notification.type] || "اعلان"}
                     </span>
                     <h2 className="mt-1 font-medium">{notification.title}</h2>

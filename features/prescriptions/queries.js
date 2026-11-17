@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { requirePatient } from "@/features/patient/auth";
+import { requireVerifiedDoctor } from "@/features/doctor/access";
 import {
   DEFAULT_PAGE_SIZE,
   getPageBounds,
@@ -85,6 +86,90 @@ async function getPrescriptionPage({ ownerColumn, ownerId, patientId = null, pag
     })),
     pagination,
   };
+}
+
+const EXTERNAL_PRESCRIPTION_FIELDS =
+  "id, patient_id, provider_key, external_record_id, title, summary, occurred_at, received_at";
+
+async function getExternalPrescriptionPage({
+  patientId = null,
+  includePatientNames = false,
+  page = 1,
+  pageSize = 10,
+}) {
+  const safePageSize = normalizePageSize(pageSize, 10);
+  let safePage = normalizePage(page);
+  const supabase = await createClient();
+
+  const makeQuery = () => {
+    let query = supabase
+      .from("pas_external_health_records")
+      .select(EXTERNAL_PRESCRIPTION_FIELDS, { count: "exact" })
+      .eq("resource_kind", "prescription");
+
+    if (patientId) query = query.eq("patient_id", patientId);
+
+    return query.order("received_at", { ascending: false }).order("id", { ascending: false });
+  };
+
+  const bounds = getPageBounds(safePage, safePageSize);
+  let result = await makeQuery().range(bounds.from, bounds.to);
+  if (result.error) throw result.error;
+
+  const totalCount = result.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
+  if (safePage > totalPages) {
+    safePage = totalPages;
+    const corrected = getPageBounds(safePage, safePageSize);
+    result = await makeQuery().range(corrected.from, corrected.to);
+    if (result.error) throw result.error;
+  }
+
+  const records = result.data || [];
+  const pagination = makePagination({ page: safePage, pageSize: safePageSize, totalCount });
+  if (!records.length) return { items: [], pagination };
+
+  const patientIds = includePatientNames
+    ? [...new Set(records.map((record) => record.patient_id).filter(Boolean))]
+    : [];
+  const peopleResult = patientIds.length
+    ? await supabase.from("profiles").select("id, full_name").in("id", patientIds)
+    : { data: [], error: null };
+
+  if (peopleResult.error) throw peopleResult.error;
+
+  const peopleById = new Map((peopleResult.data || []).map((person) => [person.id, person]));
+  return {
+    items: records.map((record) => ({
+      ...record,
+      ...(includePatientNames
+        ? { patient_name: peopleById.get(record.patient_id)?.full_name || "بیمار" }
+        : {}),
+    })),
+    pagination,
+  };
+}
+
+export async function getDoctorExternalPrescriptions(doctorId, options = {}) {
+  const doctor = await requireVerifiedDoctor();
+  if (!doctor?.id || doctor.id !== doctorId) {
+    throw new Error("DOCTOR_ACCESS_DENIED");
+  }
+
+  return getExternalPrescriptionPage({
+    includePatientNames: true,
+    page: options.page,
+    pageSize: options.pageSize,
+  });
+}
+
+export async function getPatientExternalPrescriptions({ page = 1, pageSize = 10 } = {}) {
+  const context = await requirePatient();
+  return getExternalPrescriptionPage({
+    patientId: context.patient_id,
+    page,
+    pageSize,
+  });
 }
 
 export async function getDoctorPrescriptions(doctorId, options = {}) {

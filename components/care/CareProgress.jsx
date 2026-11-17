@@ -5,7 +5,13 @@ export default function CareProgress({ progress }) {
   const total = Math.max(0, Number(progress?.total) || 0);
   const done = Math.min(total, Math.max(0, Number(progress?.completed) || 0));
   const percent = total ? Math.round(done / total * 100) : null;
-  const color = percent === null ? "#94a3b8" : percent >= 80 ? "#059669" : percent >= 40 ? "#d97706" : "#dc2626";
+  const color = percent === null
+    ? "hsl(var(--muted-foreground))"
+    : percent >= 80
+    ? "hsl(var(--status-normal))"
+    : percent >= 40
+    ? "hsl(var(--status-low))"
+    : "hsl(var(--status-critical))";
   return <section className="rounded-2xl border bg-card p-5" aria-label="میزان انجام پیگیری‌های درمان">
     <h2 className="font-semibold">میزان انجام پیگیری‌های درمان</h2>
     <div className="mt-5 flex items-center gap-5">

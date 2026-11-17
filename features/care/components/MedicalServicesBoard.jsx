@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import CenterProviderPicker from "@/features/care/components/CenterProviderPicker";
+import Link from "next/link";
 
 import DisclosureSection from "@/components/shared/DisclosureSection";
 import { Button } from "@/components/ui/button";
@@ -40,7 +42,15 @@ function MedicalRequestCard({ request, data }) {
             {" · "}
             {providerName || "مرکز هنوز انتخاب نشده است"}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">ثبت درخواست: {formatDate(request.requested_at)}</p>
+          {request.request_source === "patient" ? (
+            <p className="mt-1 text-xs font-medium text-primary">درخواست مستقیم بیمار</p>
+          ) : null}
+          <p className="mt-1 text-xs text-muted-foreground">
+            ثبت درخواست: {formatDate(request.requested_at)}
+            {request.scheduled_at ? ` · نوبت تأییدشده: ${formatDate(request.scheduled_at)}` : null}
+            {!request.scheduled_at && request.patient_preferred_at ? ` · زمان پیشنهادی بیمار: ${formatDate(request.patient_preferred_at)}` : null}
+            {!request.scheduled_at && !request.patient_preferred_at && request.doctor_preferred_at ? ` · زمان پیشنهادی پزشک: ${formatDate(request.doctor_preferred_at)}` : null}
+          </p>
         </div>
         <span className="shrink-0 rounded-full bg-muted px-3 py-1 text-xs">
           {MEDICAL_STATUS[request.status] || "وضعیت نامشخص"}
@@ -53,30 +63,22 @@ function MedicalRequestCard({ request, data }) {
 
       {data.user.role === "patient" && !request.provider_id && request.status === "requested" ? (
         <div className="space-y-2 rounded-xl bg-muted/30 p-3">
-          <label className="block space-y-2 text-sm">
-            <span>انتخاب مرکز ارائه‌دهنده</span>
-            <select
-              value={provider}
-              onChange={(event) => setProvider(event.target.value)}
-              className="min-h-11 w-full rounded-xl border bg-card px-3"
-            >
-              <option value="">انتخاب مرکز</option>
-              {providers.map((item) => (
-                <option key={item.provider_id} value={item.provider_id}>{item.display_name}</option>
-              ))}
-            </select>
-          </label>
-          {providers.length ? (
-            <CommandButton
-              action="medical.assign"
-              payload={{ id: request.id, provider_id: provider }}
-              disabled={!provider}
-            >
-              ارسال درخواست به مرکز انتخاب‌شده
-            </CommandButton>
-          ) : (
-            <p className="text-xs text-muted-foreground">هنوز مرکزی برای این خدمت در فهرست ثبت نشده است.</p>
-          )}
+          <CenterProviderPicker
+            key={`assign-${request.id}-${request.service_kind}`}
+            serviceKind={request.service_kind}
+            initialProviders={providers}
+            value={provider}
+            onChange={setProvider}
+            label="انتخاب مرکز ارائه‌دهنده"
+            emptyLabel="انتخاب مرکز"
+          />
+          <CommandButton
+            action="medical.assign"
+            payload={{ id: request.id, provider_id: provider }}
+            disabled={!provider}
+          >
+            ارسال درخواست به مرکز انتخاب‌شده
+          </CommandButton>
         </div>
       ) : null}
 
@@ -219,14 +221,16 @@ function MedicalServiceRequestForm({ data, patients, today, defaultPatientId = "
         <Input value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={200} required disabled={pending} placeholder="برای نمونه: سی‌تی‌اسکن قفسهٔ سینه" />
       </label>
 
-      <label className="block space-y-2 text-sm">
-        <span>مرکز درمانی ارائه‌دهنده</span>
-        <select value={provider} onChange={(event) => setProvider(event.target.value)} className="min-h-11 w-full rounded-xl border bg-card px-3" disabled={pending}>
-          <option value="">انتخاب مرکز توسط بیمار</option>
-          {availableProviders.map((item) => <option key={item.provider_id} value={item.provider_id}>{item.display_name}</option>)}
-        </select>
-        {!availableProviders.length ? <p className="text-xs text-muted-foreground">در حال حاضر مرکز فعالی برای این خدمت در فهرست نیست؛ بیمار می‌تواند بعداً مرکز را انتخاب کند.</p> : null}
-      </label>
+      <CenterProviderPicker
+        key={`doctor-${kind}`}
+        serviceKind={kind}
+        initialProviders={availableProviders}
+        value={provider}
+        onChange={setProvider}
+        disabled={pending}
+        label="مرکز درمانی ارائه‌دهنده"
+        emptyLabel="انتخاب مرکز توسط بیمار در ادامهٔ مسیر"
+      />
 
       {kind === "physiotherapy" ? (
         <label className="block space-y-2 text-sm">
@@ -253,6 +257,117 @@ function MedicalServiceRequestForm({ data, patients, today, defaultPatientId = "
   );
 }
 
+function PatientMedicalServiceRequestForm({ data, today, initialKind = "ct" }) {
+  const [provider, setProvider] = useState("");
+  const [name, setName] = useState("");
+  const [note, setNote] = useState("");
+  const [preferredAt, setPreferredAt] = useState("");
+  const [bodyRegion, setBodyRegion] = useState("");
+  const [preparation, setPreparation] = useState("");
+  const [sessions, setSessions] = useState(10);
+  const [idempotencyKey, setIdempotencyKey] = useState(null);
+  const { run, pending, feedback } = useCareAction();
+  const providers = (Array.isArray(data.providers) ? data.providers : []).filter((item) => {
+    if (!item.services?.includes(initialKind)) return false;
+    if (Array.isArray(item.patient_request_services)) return item.patient_request_services.includes(initialKind);
+    return item.supports_patient_requests === true;
+  });
+
+  function changed(setter, value) {
+    setter(value);
+    setIdempotencyKey(null);
+  }
+
+  function submitRequest(event) {
+    event.preventDefault();
+    if (!provider || name.trim().length < 2) return;
+    const key = idempotencyKey || crypto.randomUUID();
+    setIdempotencyKey(key);
+    run("medical.patient_request", {
+      provider_id: provider,
+      service_kind: initialKind,
+      service_name: name.trim(),
+      clinical_note: note.trim() || null,
+      preferred_at: preferredAt || null,
+      idempotency_key: key,
+      service_details: initialKind === "physiotherapy"
+        ? { requested_sessions: Number(sessions), ...(bodyRegion.trim() ? { body_region: bodyRegion.trim() } : {}), ...(preparation.trim() ? { preparation: preparation.trim() } : {}) }
+        : { ...(bodyRegion.trim() ? { body_region: bodyRegion.trim() } : {}), ...(preparation.trim() ? { preparation: preparation.trim() } : {}) },
+    }, (result) => {
+      setName("");
+      setNote("");
+      setPreferredAt("");
+      setBodyRegion("");
+      setPreparation("");
+      setProvider("");
+      setIdempotencyKey(null);
+      if (result?.data?.duplicate) return;
+    });
+  }
+
+  if (data.user.patient_profile_completed !== true) {
+    return (
+      <div className="rounded-xl border border-dashed p-4 text-sm leading-6 text-muted-foreground">
+        برای ثبت درخواست مستقیم، ابتدا مشخصات پروندهٔ بیمار را تکمیل کنید.
+        <Link href="/patient/settings" className="mr-2 font-medium text-primary underline underline-offset-4">تکمیل پرونده</Link>
+      </div>
+    );
+  }
+
+  return (
+    <form className="space-y-4 rounded-xl border bg-card p-4 sm:p-5" onSubmit={submitRequest}>
+      <div>
+        <h4 className="font-semibold">ثبت درخواست مستقیم بیمار</h4>
+        <p className="mt-1 text-xs leading-6 text-muted-foreground">این درخواست پس از بررسی مرکز پذیرفته یا رد می‌شود. ثبت درخواست به‌معنای رزرو قطعی نوبت نیست.</p>
+      </div>
+      {!providers.length ? (
+        <p className="text-xs leading-6 text-muted-foreground">
+          در فهرست اولیه مرکزی برای پذیرش مستقیم این خدمت دیده نشد. نام مرکز یا شمارهٔ مجوز را جستجو کنید؛ فقط مراکزی نمایش داده می‌شوند که پذیرش مستقیم همین خدمت را فعال کرده‌اند.
+        </p>
+      ) : null}
+      <CenterProviderPicker
+        key={`patient-${initialKind}`}
+        serviceKind={initialKind}
+        initialProviders={providers}
+        value={provider}
+        onChange={(value) => changed(setProvider, value)}
+        patientRequestsOnly
+        required
+        disabled={pending}
+        label="مرکز پذیرنده"
+        emptyLabel="انتخاب مرکز پذیرنده"
+      />
+      <label className="block space-y-2 text-sm">
+        <span>عنوان خدمت</span>
+        <Input value={name} onChange={(event) => changed(setName, event.target.value)} minLength={2} maxLength={200} required disabled={pending} placeholder="عنوان دقیق خدمت" />
+      </label>
+      {initialKind === "physiotherapy" ? (
+        <label className="block space-y-2 text-sm">
+          <span>تعداد جلسات درخواستی</span>
+          <Input type="number" min={1} max={100} value={sessions} onChange={(event) => changed(setSessions, event.target.value)} required disabled={pending} />
+        </label>
+      ) : null}
+      <label className="block space-y-2 text-sm">
+        <span>ناحیه یا موضوع خدمت، اختیاری</span>
+        <Input value={bodyRegion} onChange={(event) => changed(setBodyRegion, event.target.value)} maxLength={2000} disabled={pending} />
+      </label>
+      <label className="block space-y-2 text-sm">
+        <span>آمادگی یا توضیح تکمیلی، اختیاری</span>
+        <Textarea value={preparation} onChange={(event) => changed(setPreparation, event.target.value)} maxLength={2000} rows={2} disabled={pending} />
+      </label>
+      <JalaliDateTimeField value={preferredAt} onChange={(value) => changed(setPreferredAt, value)} label="زمان ترجیحی مراجعه، اختیاری" today={today || tehranDayKey()} disabled={pending} />
+      <label className="block space-y-2 text-sm">
+        <span>توضیحات بیمار، اختیاری</span>
+        <Textarea value={note} onChange={(event) => changed(setNote, event.target.value)} maxLength={2500} rows={3} disabled={pending} />
+      </label>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" loading={pending} disabled={pending || !provider || name.trim().length < 2}>ثبت درخواست</Button>
+        <CareFeedback value={feedback} />
+      </div>
+    </form>
+  );
+}
+
 export default function MedicalServicesBoard({
   data,
   patients = [],
@@ -270,7 +385,11 @@ export default function MedicalServicesBoard({
     ? data.requests.filter((request) => !serviceKind || request.service_kind === serviceKind)
     : [];
   const serviceLabel = SERVICE_KINDS.find(([key]) => key === serviceKind)?.[1] || "خدمت پزشکی";
-  const requestForm = (
+  const isDoctor = data.user.role === "doctor";
+  const isPatient = data.user.role === "patient";
+  const requestForm = isPatient ? (
+    <PatientMedicalServiceRequestForm data={data} today={today} initialKind={serviceKind || "ct"} />
+  ) : isDoctor ? (
     <MedicalServiceRequestForm
       data={data}
       patients={patients}
@@ -279,7 +398,7 @@ export default function MedicalServicesBoard({
       initialKind={serviceKind || "ct"}
       lockKind={Boolean(serviceKind)}
     />
-  );
+  ) : null;
   const requestList = requests.length ? (
     <div className="grid gap-3">
       {requests.map((request) => <MedicalRequestCard key={request.id} request={request} data={data} />)}
@@ -292,7 +411,7 @@ export default function MedicalServicesBoard({
 
   return (
     <div className="space-y-4">
-      {data.user.role === "doctor" && showRequestForm ? (
+      {(isDoctor || isPatient) && showRequestForm && requestForm ? (
         collapsibleRequestForm ? (
           <details className="group rounded-xl border">
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">

@@ -131,7 +131,7 @@ export default function VoiceNoteClinicalDocumentEditor({ voiceNote }) {
       <section className="rounded-xl border p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium">خلاصه ساختاریافته ویزیت</p>
-          <span className={`rounded-full px-2 py-1 text-xs ${confirmed ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
+          <span className={`rounded-full px-2 py-1 text-xs ${confirmed ? "bg-status-normal-bg text-status-normal" : "bg-status-low-bg text-status-low"}`}>
             {confirmed ? "تأییدشده توسط پزشک" : "پیش‌نویس · قطعی نیست"}
           </span>
         </div>

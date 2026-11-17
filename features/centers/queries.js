@@ -40,3 +40,12 @@ export async function getAdminCenters(type) {
   if (result.error) throw result.error;
   return result.data || [];
 }
+
+export async function getCenterPatientRequestPolicies(type) {
+  const user = await requireCenter(type);
+  const db = await createClient();
+  const { data, error } = await db.rpc("pas_my_center_service_policies");
+  if (error) throw error;
+  const items = Array.isArray(data?.items) ? data.items : [];
+  return { user, items };
+}

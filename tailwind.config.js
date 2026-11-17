@@ -8,6 +8,13 @@ module.exports = {
     "./lib/**/*.{js,jsx}",
   ],
   theme: {
+    screens: {
+      sm: "40rem",
+      md: "48rem",
+      lg: "64rem",
+      xl: "80rem",
+      "2xl": "96rem",
+    },
     container: {
       center: true,
       padding: {
@@ -16,7 +23,7 @@ module.exports = {
         lg: "2rem",
       },
       screens: {
-        "2xl": "1280px",
+        "2xl": "80rem",
       },
     },
     extend: {
@@ -56,6 +63,24 @@ module.exports = {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+          bg: "hsl(var(--success-bg))",
+          border: "hsl(var(--success-border))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+          bg: "hsl(var(--warning-bg))",
+          border: "hsl(var(--warning-border))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+          bg: "hsl(var(--info-bg))",
+          border: "hsl(var(--info-border))",
         },
         status: {
           normal: {
@@ -121,10 +146,60 @@ module.exports = {
           },
         },
       },
+      fontSize: {
+        xs: ["var(--font-size-xs)", { lineHeight: "var(--line-height-xs)", letterSpacing: "var(--letter-spacing-xs)" }],
+        sm: ["var(--font-size-sm)", { lineHeight: "var(--line-height-sm)", letterSpacing: "var(--letter-spacing-sm)" }],
+        base: ["var(--font-size-base)", { lineHeight: "var(--line-height-base)", letterSpacing: "var(--letter-spacing-base)" }],
+        lg: ["var(--font-size-lg)", { lineHeight: "var(--line-height-lg)", letterSpacing: "var(--letter-spacing-lg)" }],
+        xl: ["var(--font-size-xl)", { lineHeight: "var(--line-height-xl)", letterSpacing: "var(--letter-spacing-xl)" }],
+        "2xl": ["var(--font-size-2xl)", { lineHeight: "var(--line-height-2xl)", letterSpacing: "var(--letter-spacing-2xl)" }],
+        "3xl": ["var(--font-size-3xl)", { lineHeight: "var(--line-height-3xl)", letterSpacing: "var(--letter-spacing-3xl)" }],
+        "4xl": ["var(--font-size-4xl)", { lineHeight: "var(--line-height-4xl)", letterSpacing: "var(--letter-spacing-4xl)" }],
+      },
+      spacing: {
+        "pas-1": "var(--space-1)",
+        "pas-2": "var(--space-2)",
+        "pas-3": "var(--space-3)",
+        "pas-4": "var(--space-4)",
+        "pas-5": "var(--space-5)",
+        "pas-6": "var(--space-6)",
+        "pas-8": "var(--space-8)",
+        "pas-10": "var(--space-10)",
+        "pas-12": "var(--space-12)",
+        "pas-16": "var(--space-16)",
+        "pas-20": "var(--space-20)",
+        "pas-24": "var(--space-24)",
+      },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "var(--radius-md)",
+        sm: "var(--radius-sm)",
+        xl: "var(--radius-xl)",
+        "2xl": "var(--radius-2xl)",
+        full: "var(--radius-full)",
+      },
+      boxShadow: {
+        "pas-1": "var(--shadow-1)",
+        "pas-2": "var(--shadow-2)",
+        "pas-3": "var(--shadow-3)",
+        "pas-4": "var(--shadow-4)",
+      },
+      zIndex: {
+        sticky: "var(--z-sticky)",
+        dropdown: "var(--z-dropdown)",
+        overlay: "var(--z-overlay)",
+        modal: "var(--z-modal)",
+        toast: "var(--z-toast)",
+        tooltip: "var(--z-tooltip)",
+      },
+      transitionDuration: {
+        "pas-fast": "var(--motion-1)",
+        "pas-ui": "var(--motion-2)",
+        "pas-panel": "var(--motion-3)",
+        "pas-slow": "var(--motion-4)",
+      },
+      transitionTimingFunction: {
+        "pas-standard": "var(--motion-ease-standard)",
       },
       keyframes: {
         "accordion-down": {

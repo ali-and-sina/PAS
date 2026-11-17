@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPatientResult } from "@/features/patient/queries";
 import { formatReferenceRange, getReferenceSourceLabel } from "@/features/lab-results/reference-format";
 import { getTestDisplayName } from "@/lib/medical/test-name";
+import PatientLabTrendDialog from "@/features/patient/components/PatientLabTrendDialog";
 
 export const dynamic = "force-dynamic";
 
@@ -175,8 +176,15 @@ export default async function PatientResultDetailPage({ params }) {
                 return (
                   <article key={observation.id} className="rounded-2xl border p-4 sm:p-5">
                     <div className="grid gap-4 lg:grid-cols-[1.1fr_0.8fr_0.8fr_1fr] lg:items-center">
-                      <div>
-                        <p className="font-medium">{getTestDisplayName(test)}</p>
+                      <div className="min-w-0">
+                        {hasNumericValue && test?.id ? (
+                          <PatientLabTrendDialog
+                            testDefinitionId={test.id}
+                            testName={getTestDisplayName(test)}
+                          />
+                        ) : (
+                          <p className="font-medium">{getTestDisplayName(test)}</p>
+                        )}
                         {test?.internal_code && (
                           <p className="mt-1 text-xs text-muted-foreground">{test.internal_code}</p>
                         )}
@@ -247,8 +255,8 @@ export default async function PatientResultDetailPage({ params }) {
         </Card>
       </section>
 
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-        <p className="text-sm leading-7 text-amber-900">
+      <div className="rounded-2xl border border-status-low-border bg-status-low-bg p-5">
+        <p className="text-sm leading-7 text-status-low">
           محدوده مرجع فقط برای مقایسه عددی نتیجه با محدوده ثبت‌شده توسط آزمایشگاه است و به‌تنهایی به معنی تشخیص بیماری نیست. تفسیر بالینی بر عهده پزشک است.
         </p>
       </div>

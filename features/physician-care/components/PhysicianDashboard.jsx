@@ -57,7 +57,6 @@ export default function PhysicianDashboard({ data }) {
   return (
     <div className="space-y-6">
       <DashboardWelcome
-        eyebrow="مراقبت روزانه · فضای پزشک"
         title={`سلام، ${greetingName}`}
         description="بیماران، نتایج تازه و پیگیری‌های امروز را از اینجا دنبال کنید."
         actions={<>

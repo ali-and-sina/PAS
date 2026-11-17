@@ -16,7 +16,7 @@ export default function ResultEntryRow({ test, value = "", onChange }) {
 
   return (
     <div className="rounded-xl border bg-card p-4 sm:p-5">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(160px,220px)_minmax(180px,0.8fr)] xl:items-center">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(10rem,13.75rem)_minmax(11.25rem,0.8fr)] xl:items-center">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Label

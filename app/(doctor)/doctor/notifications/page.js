@@ -70,7 +70,7 @@ export default async function DoctorNotificationsPage({ searchParams }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="font-medium">{item.title}</h2>
-                    <span className={`rounded-full px-2 py-1 text-xs ${item.status === "reviewed" ? "bg-emerald-50 text-emerald-700" : item.is_read ? "bg-muted text-muted-foreground" : "bg-accent text-primary"}`}>{getStatusLabel(item)}</span>
+                    <span className={`rounded-full px-2 py-1 text-xs ${item.status === "reviewed" ? "bg-status-normal-bg text-status-normal" : item.is_read ? "bg-muted text-muted-foreground" : "bg-accent text-primary"}`}>{getStatusLabel(item)}</span>
                   </div>
                   {item.body ? <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{item.body}</p> : null}
                   <p className="mt-3 text-xs text-muted-foreground">{formatDate(item.created_at)}</p>

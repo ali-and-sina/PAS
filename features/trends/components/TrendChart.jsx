@@ -123,7 +123,7 @@ export default function TrendChart({ data = [], unit = null }) {
           x={padding.left - 9}
           y={padding.top + 4}
           textAnchor="end"
-          className="fill-muted-foreground text-[11px]"
+          className="fill-muted-foreground text-[0.6875rem]"
         >
           {max}
         </text>
@@ -131,7 +131,7 @@ export default function TrendChart({ data = [], unit = null }) {
           x={padding.left - 9}
           y={padding.top + chartHeight}
           textAnchor="end"
-          className="fill-muted-foreground text-[11px]"
+          className="fill-muted-foreground text-[0.6875rem]"
         >
           {min}
         </text>
@@ -143,7 +143,7 @@ export default function TrendChart({ data = [], unit = null }) {
               x={point.x}
               y={height - 18}
               textAnchor="middle"
-              className="fill-muted-foreground text-[10px]"
+              className="fill-muted-foreground text-[0.625rem]"
             >
               {point.date}
             </text>

@@ -179,7 +179,7 @@ function getServiceIcon(kind) {
   return Scan;
 }
 
-function ServiceOverviewCard({ id, title, description, count, detail, icon: Icon, children }) {
+function ServiceOverviewCard({ id, title, description, count, detail, countLabel = "درخواست", icon: Icon, children }) {
   return (
     <section id={id} aria-labelledby={`${id}-heading`} className="scroll-mt-24 flex min-w-0 flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5">
       <div className="flex items-start gap-3">
@@ -192,7 +192,7 @@ function ServiceOverviewCard({ id, title, description, count, detail, icon: Icon
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-y py-3">
-        <span className="text-sm font-semibold tabular-nums">{new Intl.NumberFormat("fa-IR").format(count)} درخواست</span>
+        <span className="text-sm font-semibold tabular-nums">{new Intl.NumberFormat("fa-IR").format(count)} {countLabel}</span>
         <span className="text-xs text-muted-foreground">{detail}</span>
       </div>
       <div className="min-w-0 space-y-3">{children}</div>
@@ -271,7 +271,8 @@ export default function MedicalCentersWorkspace({
                 title={service.title}
                 description={service.description}
                 count={service.count}
-                detail={service.detail}
+                countLabel={`از حداکثر ${new Intl.NumberFormat("fa-IR").format(medicalData?.requestLimit || 100)} درخواست اخیر`}
+                detail={`${service.detail} در همین مجموعه`}
                 icon={service.icon}
               >
                 <MedicalServicesBoard
@@ -280,7 +281,7 @@ export default function MedicalCentersWorkspace({
                   today={today}
                   defaultPatientId={defaultPatientId}
                   serviceKind={service.key}
-                  showRequestForm={isDoctor}
+                  showRequestForm={isDoctor || isPatient}
                   showRequests
                   collapsibleRequestForm
                   collapsibleRequests

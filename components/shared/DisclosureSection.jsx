@@ -39,7 +39,7 @@ export default function DisclosureSection({
 
         <span className="flex shrink-0 items-center gap-2 sm:gap-3">
           {meta ? (
-            <span className="whitespace-nowrap rounded-full bg-muted px-2 py-1 text-[11px] text-muted-foreground sm:px-2.5 sm:text-xs">
+            <span className="whitespace-nowrap rounded-full bg-muted px-2 py-1 text-[0.6875rem] text-muted-foreground sm:px-2.5 sm:text-xs">
               {meta}
             </span>
           ) : null}

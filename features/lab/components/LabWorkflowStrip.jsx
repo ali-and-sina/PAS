@@ -36,7 +36,7 @@ export default function LabWorkflowStrip({ status = "pending" }) {
           const current = index === currentIndex;
 
           return (
-            <div key={step.key} className="flex min-w-0 items-center gap-2 sm:min-w-[122px] sm:flex-1 md:flex-none">
+            <div key={step.key} className="flex min-w-0 items-center gap-2 sm:min-w-[7.625rem] sm:flex-1 md:flex-none">
               <span
                 className={cn(
                   "flex size-8 shrink-0 items-center justify-center rounded-full border",

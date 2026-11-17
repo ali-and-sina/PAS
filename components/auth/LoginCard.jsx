@@ -370,9 +370,9 @@ export default function LoginCard({
         {done ? (
           <div
             role="status"
-            className="flex items-center justify-center gap-2 py-8 text-sm text-slate-600"
+            className="flex items-center justify-center gap-2 py-8 text-sm text-success"
           >
-            <CheckCircle2 className="size-5 text-teal-500" aria-hidden="true" />
+            <CheckCircle2 className="size-5 text-success" aria-hidden="true" />
             ورود انجام شد. در حال انتقال...
           </div>
         ) : (

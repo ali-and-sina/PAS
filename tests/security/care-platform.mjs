@@ -12,7 +12,9 @@ let before;
 try {
  await db.exec(fs.readFileSync(root+'/tests/security/fixtures/schema.sql','utf8'));
  await db.exec('set check_function_bodies=on;');
- for(const file of fs.readdirSync(root+'/supabase/migrations').filter(f=>f.endsWith('.sql')).sort()) await db.exec(fs.readFileSync(root+'/supabase/migrations/'+file,'utf8'));
+ // This historical PGlite suite predates the unbundled patient-imaging Phase 1 schema;
+ // the new live-schema migration is covered by medical-center-routing-source.mjs + its SQL verification.
+for(const file of fs.readdirSync(root+'/supabase/migrations').filter(f=>f.endsWith('.sql') && f !== '20261103224500_pas_multi_service_center_routing_v1.sql').sort()) await db.exec(fs.readFileSync(root+'/supabase/migrations/'+file,'utf8'));
  await fixtures();
  a.mri1=id(91);
  await insert('auth.users',{id:a.mri1});

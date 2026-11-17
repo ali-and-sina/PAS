@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { findPatientForDoctor } from "@/features/patients/server";
+import { searchDoctorPatientSuggestions } from "@/features/patients/queries";
 import { requireVerifiedDoctor } from "@/features/doctor/access";
 import { isValidIranianNationalId, normalizeDigits, normalizeIranianMobile } from "@/lib/utils/validation";
 
@@ -112,4 +113,13 @@ export async function addExistingPatient(_previousState, formData) {
     status: "pending",
     patientId: patient.id,
   };
+}
+
+
+export async function searchDoctorPatientsForRecord(query) {
+  const search = typeof query === "string" ? query.trim().slice(0, 100) : "";
+  if (search.length < 2) return { ok: true, patients: [] };
+
+  const patients = await searchDoctorPatientSuggestions(search);
+  return { ok: true, patients };
 }

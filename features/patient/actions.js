@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/auth/server";
 import { hashGuestResultToken } from "@/features/patient/guest";
+import { getPatientTrend } from "@/features/patient/queries";
 
 const DEFAULT_TTL_HOURS = 168;
 const MAX_TTL_HOURS = 720;
@@ -131,4 +132,40 @@ export async function revokeGuestResultAccess(accessId) {
   revalidatePath(`/lab/results/${access.diagnostic_report_id}`);
 
   return { ok: true };
+}
+
+
+/**
+ * Returns a minimal, authenticated patient's own numeric result history for a
+ * single test. The query itself scopes all reports to the signed-in patient.
+ */
+export async function getPatientTestTrendForDialog(testDefinitionId) {
+  const id = typeof testDefinitionId === "string" ? testDefinitionId.trim() : "";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    return { ok: false, code: "INVALID_TEST", rows: [] };
+  }
+
+  const history = await getPatientTrend(id);
+  const rows = history.flatMap((item) => {
+    if (item.value_numeric === null || item.value_numeric === undefined) return [];
+    const value = Number(item.value_numeric);
+    if (!Number.isFinite(value)) return [];
+
+    const observedAt = item.observed_at || item.finalized_at || item.created_at || null;
+    if (!observedAt || Number.isNaN(new Date(observedAt).getTime())) return [];
+
+    const test = Array.isArray(item.test_definitions)
+      ? item.test_definitions[0]
+      : item.test_definitions;
+
+    return [{
+      id: item.id,
+      date: observedAt,
+      value,
+      unit: String(item.unit || test?.default_unit || "").trim(),
+    }];
+  });
+
+  rows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  return { ok: true, rows };
 }

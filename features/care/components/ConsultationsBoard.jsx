@@ -1,18 +1,41 @@
 "use client";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { createClient } from "@/lib/supabase/client";
 import { getCareMessages, createCareUpload, runCareCommand } from "@/features/care/actions";
 import { useCareAction, CareFeedback, CommandButton } from "@/components/care/ActionControls";
 import { RECORD_SCOPES, CONSULTATION_STATUS } from "@/lib/care/constants";
 import ChatVoiceRecorder from "./ChatVoiceRecorder";
-import VoiceVisitNoteRecorder from "@/features/physician-care/components/VoiceVisitNoteRecorder";
 import VoiceRecordingConsentCard from "@/features/physician-care/components/VoiceRecordingConsentCard";
 import VisitClosureForm from "./VisitClosureForm";
+
+
+const VoiceVisitNoteRecorder = dynamic(
+  () => import("@/features/physician-care/components/VoiceVisitNoteRecorder"),
+  { loading: () => <div className="min-h-24 animate-pulse rounded-xl bg-muted/30" aria-hidden="true" /> },
+);
+
+function DeferredVoiceNoteDetails({ patientId, visits }) {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <details
+      className="rounded-xl border p-4"
+      onToggle={(event) => setIsOpen(event.currentTarget.open)}
+    >
+      <summary className="min-h-8 cursor-pointer text-sm font-semibold">
+        ثبت خلاصهٔ صوتی و ختم ویزیت
+      </summary>
+      <p className="my-3 text-xs leading-6 text-muted-foreground">
+        ثبت نهایی این یادداشت، ویزیت را خودکار مختومه می‌کند. رضایت بیمار برای یادداشت صوتی باید فعال باشد. با بستن این بخش، ضبط جاری متوقف و میکروفون آزاد می‌شود.
+      </p>
+      {isOpen ? <VoiceVisitNoteRecorder patientId={patientId} visits={visits} /> : null}
+    </details>
+  );
+}
 
 function ConsultationChat({ request, user }) {
   const [messages, setMessages] = useState([]);
@@ -59,6 +82,7 @@ function ConsultationChat({ request, user }) {
         const id = crypto.randomUUID();
         const upload = await createCareUpload({ kind: "consultation-audio", resourceId: request.id, messageId: id, mimeType: blob.type, fileSize: blob.size });
         if (!upload.ok) return setError(upload.message);
+        const { createClient } = await import("@/lib/supabase/client");
         const db = createClient();
         const { error: uploadError } = await db.storage.from(upload.bucket).uploadToSignedUrl(upload.path, upload.token, blob, { contentType: blob.type });
         if (uploadError) return setError("بارگذاری ویس انجام نشد.");
@@ -82,7 +106,10 @@ function ConsultationChat({ request, user }) {
       <ChatVoiceRecorder onSend={sendAudio} disabled={pending} />
       {user.role === "doctor" && request.visit_id && <>
         <VisitClosureForm visitId={request.visit_id} />
-        <details className="rounded-xl border p-4"><summary className="min-h-8 cursor-pointer text-sm font-semibold">ثبت خلاصهٔ صوتی و ختم ویزیت</summary><p className="my-3 text-xs leading-6 text-muted-foreground">ثبت نهایی این یادداشت، ویزیت را خودکار مختومه می‌کند. رضایت بیمار برای یادداشت صوتی باید فعال باشد.</p><VoiceVisitNoteRecorder patientId={request.patient_id} visits={[{id:request.visit_id,status:"in_progress",visit_date:request.accepted_at}]} /></details>
+        <DeferredVoiceNoteDetails
+          patientId={request.patient_id}
+          visits={[{ id: request.visit_id, status: "in_progress", visit_date: request.accepted_at }]}
+        />
       </>}
     </>}
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
@@ -102,7 +129,7 @@ export default function ConsultationsBoard({ data }) {
   return <div className="space-y-6">
     {user.role === "doctor" ? <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card p-5"><div><h2 className="font-semibold">پذیرش ویزیت آنلاین</h2><p className="mt-1 text-sm text-muted-foreground">{available ? "تا یک ساعت پس از آخرین فعال‌سازی، در فهرست پزشکان در دسترس هستید." : "در حال حاضر برای درخواست‌های جدید در دسترس نیستید."}</p></div><div className="flex flex-wrap gap-2"><label className="flex items-center gap-2 text-sm"><span>ظرفیت هم‌زمان</span><select value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} className="min-h-11 rounded-xl border bg-card px-3" disabled={pending}>{[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n.toLocaleString("fa-IR")}</option>)}</select></label><Button type="button" disabled={pending} loading={pending} variant={available ? "outline" : "default"} onClick={() => run("availability.set", { is_available: !available, capacity })}>{available ? "پایان پذیرش آنلاین" : "فعال‌سازی پذیرش آنلاین"}</Button>{available && <Button type="button" variant="ghost" disabled={pending} onClick={() => run("availability.set", { is_available: true, capacity })}>تمدید یک‌ساعته</Button>}</div></section> :
       <section className="space-y-4 rounded-2xl border bg-card p-5"><h2 className="font-semibold">پزشکان در دسترس و پزشکان من</h2><Input aria-label="جست‌وجوی نام یا تخصص پزشک" placeholder="نام یا تخصص پزشک" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <div className="grid gap-3 sm:grid-cols-2">{doctors.filter((d) => (d.full_name + " " + (d.specialty || "")).includes(search.trim())).map((doctor) => <article key={doctor.doctor_id} className={"space-y-3 rounded-xl border p-4 " + (selected === doctor.doctor_id ? "border-primary bg-primary/5" : "")}><div className="flex flex-wrap justify-between gap-2"><h3 className="font-semibold">{doctor.full_name}</h3><span className={doctor.available ? "text-xs text-emerald-800" : "text-xs text-muted-foreground"}>{doctor.available ? "در دسترس" : "پزشک من؛ پاسخ در زمان حضور"}</span></div><p className="text-sm text-muted-foreground">{doctor.specialty || "پزشک"}</p><Button type="button" variant="outline" disabled={pending} onClick={() => setSelected(doctor.doctor_id)}>درخواست ویزیت</Button></article>)}</div>
+        <div className="grid gap-3 sm:grid-cols-2">{doctors.filter((d) => (d.full_name + " " + (d.specialty || "")).includes(search.trim())).map((doctor) => <article key={doctor.doctor_id} className={"space-y-3 rounded-xl border p-4 " + (selected === doctor.doctor_id ? "border-primary bg-primary/5" : "")}><div className="flex flex-wrap justify-between gap-2"><h3 className="font-semibold">{doctor.full_name}</h3><span className={doctor.available ? "text-xs text-status-normal" : "text-xs text-muted-foreground"}>{doctor.available ? "در دسترس" : "پزشک من؛ پاسخ در زمان حضور"}</span></div><p className="text-sm text-muted-foreground">{doctor.specialty || "پزشک"}</p><Button type="button" variant="outline" disabled={pending} onClick={() => setSelected(doctor.doctor_id)}>درخواست ویزیت</Button></article>)}</div>
         {!doctors.length && <p className="rounded-xl bg-muted/40 p-4 text-sm leading-7 text-muted-foreground">پزشک در دسترس یا پزشک مرتبطی برای نمایش وجود ندارد. پزشک می‌تواند پذیرش آنلاین را از پنل خود فعال کند.</p>}
         {selected && <form className="space-y-4 rounded-xl border p-4" onSubmit={(e) => { e.preventDefault(); run("consultation.request", { doctor_id: selected, reason, scopes: scope }, () => { setReason(""); setSelected(null); }); }}><h3 className="font-semibold">درخواست برای {doctors.find((d) => d.doctor_id === selected)?.full_name}</h3><label className="block space-y-2 text-sm"><span>علت مراجعه و توضیحات</span><Textarea value={reason} onChange={(e) => setReason(e.target.value)} minLength={5} maxLength={2500} rows={4} required disabled={pending} /></label><fieldset className="space-y-2"><legend className="mb-2 text-sm font-semibold">اطلاعاتی که در اختیار پزشک می‌گذارید</legend>{RECORD_SCOPES.map(([key, label]) => <label key={key} className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="size-4 accent-teal-700" checked={scope.includes(key)} disabled={pending || key === "visits"} onChange={(e) => setScope((old) => e.target.checked ? [...old, key] : old.filter((v) => v !== key))} />{label}</label>)}</fieldset><p className="text-xs leading-6 text-muted-foreground">برای پزشک جدید، مجوزهای انتخابی تا هفت روز فعال‌اند. تنظیمات دسترسی قبلی پزشک باقی می‌ماند و از بخش دسترسی پرونده قابل تغییر است.</p><div className="flex flex-wrap gap-2"><Button type="submit" disabled={pending} loading={pending}>ثبت درخواست و مجوز ویزیت</Button><Button type="button" variant="ghost" onClick={() => setSelected(null)}>انصراف</Button></div></form>}
       </section>}
@@ -110,7 +137,7 @@ export default function ConsultationsBoard({ data }) {
     {user.role === "patient" && <details className="rounded-2xl border bg-card p-4"><summary className="min-h-8 cursor-pointer text-sm font-semibold">مجوز یادداشت صوتی ویزیت</summary><div className="mt-4"><VoiceRecordingConsentCard initialGranted={data.voiceConsent?.granted || false} grantedAt={data.voiceConsent?.grantedAt || null} /></div></details>}
     <section className="space-y-4"><h2 className="text-lg font-semibold">ویزیت‌های آنلاین</h2>{!requests.length && <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">هنوز درخواست ویزیتی ثبت نشده است.</p>}
       {requests.map((request) => <article key={request.id} className="space-y-4 rounded-2xl border bg-card p-4 sm:p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold">{user.role === "patient" ? request.doctor_name : request.patient_name}</h3><p className="mt-1 text-xs text-muted-foreground">{CONSULTATION_STATUS[request.status]}</p></div>{user.role === "doctor" && request.status !== "requested" && <Link href={"/doctor/patients/" + request.patient_id} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">پروندهٔ مجاز بیمار</Link>}</div><p className="whitespace-pre-line break-words text-sm leading-7 text-muted-foreground">{request.reason}</p>
-        {request.status === "requested" ? <div className="flex flex-wrap gap-2">{user.role === "doctor" && <CommandButton action="consultation.accept" payload={{ id: request.id }} variant="default">پذیرش و شروع ویزیت</CommandButton>}<CommandButton action="consultation.cancel" payload={{ id: request.id }}>{user.role === "doctor" ? "نپذیرفتن درخواست" : "لغو درخواست"}</CommandButton></div> : ["accepted", "completed"].includes(request.status) && <Button type="button" variant="outline" onClick={() => setOpened(opened === request.id ? null : request.id)}>{opened === request.id ? "بستن گفت‌وگو" : "مشاهدهٔ گفت‌وگو"}</Button>}
+        {request.status === "requested" ? <div className="flex flex-wrap gap-2">{user.role === "doctor" && <CommandButton action="consultation.accept" payload={{ id: request.id }} variant="default">پذیرش و شروع ویزیت</CommandButton>}<CommandButton action="consultation.cancel" payload={{ id: request.id }} confirm={{title:user.role === "doctor" ? "نپذیرفتن درخواست ویزیت؟" : "لغو درخواست ویزیت؟",description:"درخواست ویزیت به وضعیت لغوشده تغییر می‌کند.",confirmLabel:user.role === "doctor" ? "نپذیرفتن درخواست" : "لغو درخواست",destructive:true}}>{user.role === "doctor" ? "نپذیرفتن درخواست" : "لغو درخواست"}</CommandButton></div> : ["accepted", "completed"].includes(request.status) && <Button type="button" variant="outline" onClick={() => setOpened(opened === request.id ? null : request.id)}>{opened === request.id ? "بستن گفت‌وگو" : "مشاهدهٔ گفت‌وگو"}</Button>}
         {opened === request.id && <ConsultationChat request={request} user={user} />}
       </article>)}
     </section>

@@ -9,6 +9,7 @@ import { createLabOrder } from "@/features/lab-orders/actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toastWithUndo } from "@/components/ui/toast";
 
 const initialState = { ok: false, message: "" };
 
@@ -35,6 +36,13 @@ export default function LabOrderForm({ patients, testPanels, testDefinitions = [
     label: row.name_fa || row.name || row.internal_code || "آزمایش",
     category: row.category,
   })), [choices]);
+
+  function removeItem(item) {
+    setSelectedItems((items) => items.filter((entry) => entry.key !== item.key));
+    toastWithUndo("قلم از فهرست انتخاب حذف شد.", () => {
+      setSelectedItems((items) => items.some((entry) => entry.key === item.key) ? items : [...items, item]);
+    }, { undoLabel: "بازگردانی", duration: 5000 });
+  }
 
   function addItem() {
     const choice = normalizedChoices.find((row) => row.id === selectedId);
@@ -63,7 +71,7 @@ export default function LabOrderForm({ patients, testPanels, testDefinitions = [
       <fieldset className="space-y-3 rounded-xl border p-4">
         <legend className="px-1 text-sm font-medium">آزمایش‌های درخواستی</legend>
         <p className="text-sm leading-6 text-muted-foreground">آزمایش‌ها را انتخاب کنید؛ انتخاب شعبهٔ مقصد در اختیار بیمار خواهد بود.</p>
-        <div className="grid gap-3 sm:grid-cols-[140px_minmax(0,1fr)_auto] sm:items-end">
+        <div className="grid gap-3 sm:grid-cols-[8.75rem_minmax(0,1fr)_auto] sm:items-end">
           <div className="space-y-2">
             <Label htmlFor="item_kind">نوع مورد</Label>
             <select id="item_kind" value={kind} onChange={(event) => { setKind(event.target.value); setSelectedId(""); }} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
@@ -83,7 +91,7 @@ export default function LabOrderForm({ patients, testPanels, testDefinitions = [
         {!normalizedChoices.length && <p className="text-sm text-muted-foreground">برای این نوع مورد، داده‌ای در فهرست فعال وجود ندارد.</p>}
         {selectedItems.length ? (
           <ul className="space-y-2">
-            {selectedItems.map((item) => <li key={item.key} className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-sm"><span className="flex items-center gap-2"><Check className="size-4 text-primary" aria-hidden="true" />{item.label}<span className="text-xs text-muted-foreground">{item.test_panel_id ? "پنل" : "تکی"}</span></span><Button type="button" variant="ghost" size="icon" aria-label={`حذف ${item.label}`} onClick={() => setSelectedItems((items) => items.filter((entry) => entry.key !== item.key))}><X aria-hidden="true" /></Button></li>)}
+            {selectedItems.map((item) => <li key={item.key} className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-sm"><span className="flex items-center gap-2"><Check className="size-4 text-primary" aria-hidden="true" />{item.label}<span className="text-xs text-muted-foreground">{item.test_panel_id ? "پنل" : "تکی"}</span></span><Button type="button" variant="ghost" size="icon" aria-label={`حذف ${item.label}`} onClick={() => removeItem(item)}><X aria-hidden="true" /></Button></li>)}
           </ul>
         ) : <p className="rounded-lg border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">هنوز موردی انتخاب نشده است.</p>}
         <input type="hidden" name="items_json" value={JSON.stringify(selectedItems.map(({ test_panel_id, test_definition_id }) => ({ test_panel_id, test_definition_id })))} />

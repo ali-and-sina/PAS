@@ -18,7 +18,6 @@ export default async function LabDashboardPage() {
   return (
     <div className="space-y-6">
       <DashboardWelcome
-        eyebrow="گردش‌کار آزمایشگاه"
         title="داشبورد آزمایشگاه"
         description="فرآیند آزمایشگاه را از پذیرش درخواست تا نهایی‌سازی نتیجه در یک نگاه مدیریت کنید."
         actions={
@@ -32,7 +31,7 @@ export default async function LabDashboardPage() {
 
       <LabDashboardStats data={data} />
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_18.75rem]">
         <Card>
           <CardContent className="p-5 sm:p-6">
             <div className="mb-5 flex items-start justify-between gap-3">

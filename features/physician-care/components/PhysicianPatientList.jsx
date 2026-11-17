@@ -38,13 +38,13 @@ export default function PhysicianPatientList({ patients = [] }) {
   return (
     <div className="space-y-4">
       <div className="relative max-w-xl">
-        <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="جست‌وجوی نام، کد ملی یا موبایل"
           aria-label="جست‌وجوی بیماران"
-          className="pr-9"
+          className="ps-9"
         />
       </div>
 
@@ -57,7 +57,7 @@ export default function PhysicianPatientList({ patients = [] }) {
       ) : (
         <div className="overflow-hidden rounded-xl border bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
+            <table className="w-full min-w-[47.5rem] text-sm">
               <thead className="border-b bg-muted/40">
                 <tr>
                   <th className="p-4 text-right font-medium">بیمار</th>
@@ -85,7 +85,7 @@ export default function PhysicianPatientList({ patients = [] }) {
                       <td className="p-4 tabular-nums" dir="ltr">{patient.phone || "—"}</td>
                       <td className="p-4">
                         <Button asChild size="sm" variant="outline">
-                          <Link href={`/doctor/patients/${patient.id}`}>مشاهده پرونده</Link>
+                          <Link prefetch={false} href={`/doctor/patients/${patient.id}`}>مشاهده پرونده</Link>
                         </Button>
                       </td>
                     </tr>

@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import Spinner from "@/components/shared/Spinner";
 
 function NavigationFeedbackContent() {
   const pathname = usePathname();
@@ -39,7 +40,7 @@ function NavigationFeedbackContent() {
       if (fallbackTimerRef.current) window.clearTimeout(fallbackTimerRef.current);
 
       // Avoid flashing the indicator on very fast, cached navigations.
-      showTimerRef.current = window.setTimeout(() => setIsVisible(true), 120);
+      showTimerRef.current = window.setTimeout(() => setIsVisible(true), 250);
       // Guard against a route whose transition never commits (for example, a failed navigation).
       fallbackTimerRef.current = window.setTimeout(() => {
         setIsNavigating(false);
@@ -116,10 +117,10 @@ function NavigationFeedbackContent() {
   if (!isNavigating || !isVisible) return null;
 
   return (
-    <div className="pas-navigation-feedback" role="status" aria-live="polite" aria-atomic="true">
+    <div className="pas-navigation-feedback" role="status" aria-live="polite" aria-atomic="true" aria-busy="true">
       <span className="pas-navigation-feedback__bar" aria-hidden="true" />
       <span className="pas-navigation-feedback__label">
-        <span className="pas-navigation-feedback__spinner" aria-hidden="true" />
+        <Spinner size="sm" decorative label="در حال باز کردن صفحه…" delay={0} minDuration={400} />
         در حال باز کردن صفحه…
       </span>
     </div>

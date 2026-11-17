@@ -2,5 +2,6 @@ import PageHeader from "@/components/shared/PageHeader";
 import CenterWorkspace from "@/features/centers/components/CenterWorkspace";
 import { getCenterWorklist } from "@/features/centers/queries";
 import { tehranDayKey } from "@/lib/care/dates";
+import ProviderReferralSectionNav from "@/features/insurance-prescriptions/components/ProviderReferralSectionNav";
 export const dynamic="force-dynamic";
-export default async function WorkspacePage({params,searchParams}){const {type}=await params;const filters=await searchParams;const data=await getCenterWorklist(type,null,{...filters,});return <div className="space-y-6"><PageHeader title={data.config.queue} description={data.user.center_name+" · "+data.config.description} /><CenterWorkspace data={data} view="requests" today={tehranDayKey()} /></div>;}
+export default async function WorkspacePage({params,searchParams}){const {type}=await params;const filters=await searchParams;const data=await getCenterWorklist(type,null,{...filters,});return <div className="space-y-6"><PageHeader title={data.config.queue} description={data.user.center_name+" · "+data.config.description} /><ProviderReferralSectionNav type={type} active="direct" /><CenterWorkspace data={data} view="requests" today={tehranDayKey()} /></div>;}

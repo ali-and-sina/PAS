@@ -19,7 +19,7 @@ export default function InterpretationForm({ reportId }) {
         <Textarea id={`content-${reportId}`} name="content" rows={5} required maxLength={5000} placeholder="تفسیر بالینی خود را وارد کنید..." />
       </div>
       <input type="hidden" name="is_visible_to_patient" value="true" />
-      {state.message ? <p className={state.ok ? "text-sm text-emerald-600" : "text-sm text-destructive"} role="alert">{state.message}</p> : null}
+      {state.message ? <p className={state.ok ? "text-sm text-status-normal" : "text-sm text-destructive"} role="alert">{state.message}</p> : null}
       <Button type="submit" disabled={pending} loading={pending}>{pending ? "در حال ثبت..." : "ثبت تفسیر"}</Button>
     </form>
   );

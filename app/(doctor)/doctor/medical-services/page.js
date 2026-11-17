@@ -24,11 +24,25 @@ export default async function DoctorMedicalCentersPage({ searchParams }) {
   if (!user) redirect("/login");
 
   const params = await searchParams;
-  const [patients, medicalData, labRequests, labOrders, labResults, testPanels, testDefinitions] = await Promise.all([
+  const [
+    patients,
+    medicalData,
+    labRequests,
+    labOrders,
+    labResults,
+    testPanels,
+    testDefinitions,
+  ] = await Promise.all([
     getDoctorPatients(user.id),
     getMedicalServicesData("doctor"),
-    getDoctorLabRequests({ page: params?.labRequestsPage ?? 1, pageSize: HUB_PAGE_SIZE }),
-    getDoctorLabOrders(user.id, null, { page: params?.labOrdersPage ?? 1, pageSize: HUB_PAGE_SIZE }),
+    getDoctorLabRequests({
+      page: params?.labRequestsPage ?? 1,
+      pageSize: HUB_PAGE_SIZE,
+    }),
+    getDoctorLabOrders(user.id, null, {
+      page: params?.labOrdersPage ?? 1,
+      pageSize: HUB_PAGE_SIZE,
+    }),
     getDoctorReviewableReports(user.id),
     getTestPanels(),
     getTestDefinitions(),
@@ -38,7 +52,7 @@ export default async function DoctorMedicalCentersPage({ searchParams }) {
     <div className="space-y-6">
       <PageHeader
         title="مراکز درمانی"
-        description="برای بیماران درخواست تصویربرداری، آزمایش و دیگر خدمات تخصصی و درمانی ثبت کنید و وضعیت پذیرش و گزارش‌ها را دنبال کنید."
+        description="برای بیمار درخواست خدمت درمانی ثبت کنید. انتخاب مرکز انجام، پس از ثبت درخواست، در اختیار بیمار است؛ وضعیت پذیرش و گزارش‌ها را نیز همین‌جا پیگیری کنید."
       />
       <MedicalCentersWorkspace
         role="doctor"
@@ -50,7 +64,12 @@ export default async function DoctorMedicalCentersPage({ searchParams }) {
         testPanels={testPanels}
         testDefinitions={testDefinitions}
         today={tehranDayKey()}
-        defaultPatientId={typeof params?.patient === "string" && patients.some((patient) => patient.id === params.patient) ? params.patient : ""}
+        defaultPatientId={
+          typeof params?.patient === "string" &&
+          patients.some((patient) => patient.id === params.patient)
+            ? params.patient
+            : ""
+        }
       />
     </div>
   );

@@ -13,10 +13,61 @@ const COMMANDS = new Set([
   "profile.update", "identity.request", "access.set", "availability.set",
   "consultation.request", "consultation.accept", "consultation.cancel", "consultation.message",
   "visit.close", "center.status", "medical.session", "medical.schedule", "medical.request", "medical.assign", "medical.advance",
-  "medical.finish", "medication.received", "pharmacy.request", "pharmacy.cancel",
+  "medical.finish", "medical.patient_request", "medication.received", "pharmacy.request", "pharmacy.cancel",
   "pharmacy.advance", "integration.configure",
 ]);
 const invalid = () => ({ ok: false, message: "اطلاعات واردشده معتبر نیست." });
+const SEARCHABLE_SERVICE_KINDS = new Set([
+  "ct", "mri", "ecg", "ultrasound", "mammography", "xray", "physiotherapy", "other",
+]);
+
+export async function searchMedicalServiceProviders(input = {}) {
+  input = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+  const user = await getSessionUser();
+  if (!user?.id || !["patient", "doctor"].includes(user.role)) {
+    return { ok: false, message: "برای جستجوی مراکز، ورود بیمار یا پزشک لازم است." };
+  }
+
+  const serviceKind = typeof input.service_kind === "string" ? input.service_kind : "";
+  const query = typeof input.query === "string" ? input.query.trim().slice(0, 100) : "";
+  const page = Number.isInteger(input.page) ? Math.min(10000, Math.max(1, input.page)) : 1;
+  const pageSize = Number.isInteger(input.page_size) ? Math.min(50, Math.max(1, input.page_size)) : 20;
+  const patientRequestsOnly = input.patient_requests_only === true;
+
+  if (!SEARCHABLE_SERVICE_KINDS.has(serviceKind) ||
+      (patientRequestsOnly && user.role !== "patient")) {
+    return invalid();
+  }
+
+  try {
+    const db = await createClient();
+    const rpc = patientRequestsOnly
+      ? "pas_search_patient_request_providers"
+      : "pas_search_service_providers";
+    const { data, error } = await db.rpc(rpc, {
+      p_service_kind: serviceKind,
+      p_query: query || null,
+      p_page: page,
+      p_page_size: pageSize,
+    });
+    if (error) {
+      console.error("[provider directory search]", { code: error.code });
+      return { ok: false, message: "جستجوی مراکز انجام نشد؛ دوباره تلاش کنید." };
+    }
+    return {
+      ok: true,
+      data: {
+        items: Array.isArray(data?.items) ? data.items : [],
+        total: Math.max(0, Number(data?.total) || 0),
+        page: Math.max(1, Number(data?.page) || page),
+        page_size: Math.max(1, Number(data?.page_size) || pageSize),
+      },
+    };
+  } catch (error) {
+    console.error("[provider directory search]", { message: error?.message });
+    return { ok: false, message: "جستجوی مراکز انجام نشد؛ دوباره تلاش کنید." };
+  }
+}
 
 function refreshCarePages() {
   for (const path of ["/patient", "/doctor", "/lab", "/center", "/admin"]) revalidatePath(path, "layout");

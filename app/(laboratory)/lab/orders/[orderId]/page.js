@@ -22,7 +22,7 @@ function StatusAction({ orderId, status, label, variant = "default" }) {
     <form action={updateLabOrderStatus}>
       <input type="hidden" name="order_id" value={orderId} />
       <input type="hidden" name="status" value={status} />
-      <Button type="submit" size="sm" variant={variant}>{label}</Button>
+      <Button type="submit" size="sm" className="min-h-11 px-3 py-2 text-xs" variant={variant}>{label}</Button>
     </form>
   );
 }
@@ -77,7 +77,7 @@ export default async function LabOrderDetailPage({ params }) {
         description="آزمایش‌های درخواست‌شده، یادداشت بالینی، زمان‌بندی و گزارش‌های این پذیرش"
         meta={`${order.items.length} آزمایش`}
       >
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <OrderDetailCard order={order} />
 
         <div className="space-y-4">

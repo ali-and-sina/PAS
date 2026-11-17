@@ -15,7 +15,7 @@ function ActionMessage({ state }) {
   if (!state?.message) return null;
   return (
     <p
-      className={`text-sm ${state.ok ? "text-emerald-700" : "text-destructive"}`}
+      className={`text-sm ${state.ok ? "text-status-normal" : "text-destructive"}`}
       role="status"
       aria-live="polite"
     >

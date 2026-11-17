@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { ArrowLeft, Building2, Clock3, Stethoscope, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  Clock3,
+  FileCheck2,
+  Stethoscope,
+  Users,
+} from "lucide-react";
 import DashboardWelcome from "@/components/shared/DashboardWelcome";
 import StatCard from "@/components/shared/StatCard";
 import { Button } from "@/components/ui/button";
@@ -20,21 +27,64 @@ export default async function AdminHomePage() {
 
   return (
     <div className="space-y-6">
-      <DashboardWelcome eyebrow="فضای مدیریت" title="مدیریت سامانه" description="نمای کلی کاربران، تأیید پزشکان و مدیریت مراکز درمانی." actions={<Button asChild><Link href="/admin/doctors/new">ثبت پزشک جدید</Link></Button>} />
+      <DashboardWelcome
+        title="مدیریت سامانه"
+        description="نمای کلی کاربران، تأیید پزشکان و مدیریت مراکز درمانی."
+        actions={
+          <Button asChild>
+            <Link href="/admin/doctors/new">ثبت پزشک جدید</Link>
+          </Button>
+        }
+      />
       <section aria-labelledby="overview-title">
-        <h2 id="overview-title" className="sr-only">نمای کلی</h2>
+        <h2 id="overview-title" className="sr-only">
+          نمای کلی
+        </h2>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {stats.map(({ key, label, icon: Icon }) => (
-            <StatCard key={key} label={label} value={overview[key]} icon={Icon} href={key === "patients" ? "/admin/users" : key === "laboratories" ? "/admin/laboratories" : "/admin/doctors"} tone={key === "pendingDoctors" ? "warning" : "info"} />
+            <StatCard
+              key={key}
+              label={label}
+              value={overview[key]}
+              icon={Icon}
+              href={
+                key === "patients"
+                  ? "/admin/users"
+                  : key === "laboratories"
+                    ? "/admin/laboratories"
+                    : "/admin/doctors"
+              }
+              tone={key === "pendingDoctors" ? "warning" : "info"}
+            />
           ))}
         </div>
       </section>
       <Card>
-        <CardHeader><CardTitle>عملیات سریع</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-3">
-          <Button asChild variant="outline" className="justify-between"><Link href="/admin/doctors">مدیریت پزشکان <ArrowLeft aria-hidden="true" /></Link></Button>
-          <Button asChild variant="outline" className="justify-between"><Link href="/admin/centers">مدیریت مراکز درمانی <ArrowLeft aria-hidden="true" /></Link></Button>
-          <Button asChild variant="outline" className="justify-between"><Link href="/admin/users">مشاهده کاربران <ArrowLeft aria-hidden="true" /></Link></Button>
+        <CardHeader>
+          <CardTitle>عملیات سریع</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Button asChild variant="outline" className="justify-between">
+            <Link href="/admin/doctors">
+              مدیریت پزشکان <ArrowLeft aria-hidden="true" />
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="justify-between">
+            <Link href="/admin/centers">
+              مدیریت مراکز درمانی <ArrowLeft aria-hidden="true" />
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="justify-between">
+            <Link href="/admin/users">
+              مشاهده کاربران <ArrowLeft aria-hidden="true" />
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="justify-between">
+            <Link href="/admin/insurance-prescriptions">
+              <FileCheck2 aria-hidden="true" />
+              نسخه‌های بیمه‌ای <ArrowLeft aria-hidden="true" />
+            </Link>
+          </Button>
         </CardContent>
       </Card>
     </div>

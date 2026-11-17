@@ -38,4 +38,9 @@ const AvatarFallback = React.forwardRef(({ className, ...props }, ref) => (
 ))
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
 
-export { Avatar, AvatarImage, AvatarFallback }
+function AvatarInitials({ name = "", className, ...props }) {
+  const initials = String(name).trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => Array.from(part)[0]).join("").toLocaleUpperCase("fa");
+  return <AvatarFallback className={className} {...props}>{initials || "؟"}</AvatarFallback>;
+}
+
+export { Avatar, AvatarImage, AvatarFallback, AvatarInitials }

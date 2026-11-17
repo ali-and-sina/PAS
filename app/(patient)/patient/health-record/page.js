@@ -58,7 +58,7 @@ export default async function PatientHealthRecordPage() {
         description="یک مسیر زمانی از رویدادهای واقعی سلامت شما."
       />
 
-      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(260px,.8fr)_minmax(0,1.2fr)]">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(16.25rem,.8fr)_minmax(0,1.2fr)]">
         <CareProgress progress={overview.progress} />
         <HealthCalendar patientId={overview.patientId} initialMonth={overview.month} initialEvents={overview.events} today={overview.today} />
       </div>
@@ -94,7 +94,7 @@ export default async function PatientHealthRecordPage() {
 
                 return (
                   <li key={event.id} className="relative">
-                    <span className="absolute -start-[39px] top-1 flex size-7 items-center justify-center rounded-full border bg-card text-primary shadow-sm">
+                    <span className="absolute -start-[2.4375rem] top-1 flex size-7 items-center justify-center rounded-full border bg-card text-primary shadow-sm">
                       <Icon className="size-3.5" aria-hidden="true" />
                     </span>
 

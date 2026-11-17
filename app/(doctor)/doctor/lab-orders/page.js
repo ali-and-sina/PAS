@@ -13,9 +13,9 @@ import Pagination from "@/components/shared/Pagination";
 export const metadata = { title: "درخواست‌های آزمایش" };
 
 const STATUS = {
-  submitted: { label: "در انتظار انتخاب آزمایشگاه توسط بیمار", className: "bg-amber-50 text-amber-800" },
+  submitted: { label: "در انتظار انتخاب آزمایشگاه توسط بیمار", className: "bg-status-low-bg text-status-low" },
   cancelled: { label: "لغوشده", className: "bg-muted text-muted-foreground" },
-  fulfilled: { label: "انجام‌شده", className: "bg-emerald-50 text-emerald-800" },
+  fulfilled: { label: "انجام‌شده", className: "bg-status-normal-bg text-status-normal" },
 };
 const DISPATCH = {
   pending: "در انتظار پاسخ آزمایشگاه",

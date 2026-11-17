@@ -7,6 +7,7 @@ import {
   ROLES,
   getRoleHome,
 } from "@/lib/auth";
+import { getProviderWorkspaceNavigationUser } from "@/features/insurance-prescriptions/queries";
 
 export default async function DoctorLayout({ children }) {
   const user = await getSessionUser();
@@ -15,5 +16,6 @@ export default async function DoctorLayout({ children }) {
   if (user.role !== ROLES.DOCTOR) redirect(getRoleHome(user.role));
   if (user.is_verified === false) redirect(PENDING_VERIFICATION_PATH);
 
-  return <AppShell user={user}>{children}</AppShell>;
+  const workspaceUser = await getProviderWorkspaceNavigationUser(user);
+  return <AppShell user={workspaceUser}>{children}</AppShell>;
 }

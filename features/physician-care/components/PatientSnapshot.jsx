@@ -15,11 +15,15 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DisclosureSection from "@/components/shared/DisclosureSection";
-import LabTrendChart from "@/features/physician-care/components/LabTrendChart";
-import VoiceVisitNoteRecorder from "@/features/physician-care/components/VoiceVisitNoteRecorder";
-import VoiceNoteClinicalDocumentEditor from "@/features/physician-care/components/VoiceNoteClinicalDocumentEditor";
+import DeferredLabTrendChart from "@/features/physician-care/components/DeferredLabTrendChart";
 import VisitManager from "@/features/physician-care/components/VisitManager";
 import PrivateNoteForm from "@/features/private-notes/components/PrivateNoteForm";
+import {
+  DeferredVoiceVisitNoteRecorder,
+  DeferredVoiceNoteClinicalDocumentEditor,
+} from "@/features/physician-care/components/DeferredVoiceNoteFeatures";
+import DoctorInsurancePrescriptions from "@/features/insurance-prescriptions/components/DoctorInsurancePrescriptions";
+import DoctorPatientQuickSearch from "@/features/patients/components/DoctorPatientQuickSearch";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -60,7 +64,7 @@ function valueText(value) {
   return String(value);
 }
 
-export default function PatientSnapshot({ data, overview }) {
+export default function PatientSnapshot({ data, overview, insurancePrescriptions, patientId }) {
   const patient = data.patient;
   const age = getAge(patient.patientProfile?.date_of_birth);
   const latestVisit = data.latestVisit;
@@ -90,6 +94,7 @@ export default function PatientSnapshot({ data, overview }) {
 
   return (
     <div className="space-y-6">
+      <DoctorPatientQuickSearch />
       <section className="rounded-2xl border bg-card p-5 sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
@@ -147,7 +152,8 @@ export default function PatientSnapshot({ data, overview }) {
       </section>
 
       {overview && <RecordAccessNotice scopes={overview.accessScopes} />}
-      {overview && <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(260px,.8fr)_minmax(0,1.2fr)]"><CareProgress progress={overview.progress}/><HealthCalendar patientId={overview.patientId} initialMonth={overview.month} initialEvents={overview.events} today={overview.today}/></div>}
+      <DoctorInsurancePrescriptions data={insurancePrescriptions} patientId={patientId} />
+      {overview && <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(16.25rem,.8fr)_minmax(0,1.2fr)]"><CareProgress progress={overview.progress}/><HealthCalendar patientId={overview.patientId} initialMonth={overview.month} initialEvents={overview.events} today={overview.today}/></div>}
       <DisclosureSection
         title="پزشکان مرتبط با بیمار"
         description="فقط پزشکان دارای رابطه فعال و تأییدشده نمایش داده می‌شوند."
@@ -280,8 +286,18 @@ export default function PatientSnapshot({ data, overview }) {
                 {data.labHistory.map((report) => (
                   <div key={report.id} className="rounded-xl border p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="font-medium">گزارش آزمایش</p>
+                      <div className="min-w-0">
+                        {report.lab_order_id ? (
+                          <Link
+                            href={`/doctor/lab-orders/${report.lab_order_id}#report-${report.id}`}
+                            prefetch={false}
+                            className="inline-flex min-h-8 items-center font-medium text-primary underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            مشاهده جزئیات نتیجهٔ آزمایش
+                          </Link>
+                        ) : (
+                          <p className="font-medium">گزارش آزمایش</p>
+                        )}
                         <p className="mt-1 text-xs text-muted-foreground">
                           {formatDate(report.finalized_at || report.created_at)}{" "}
                           • {report.laboratoryName}
@@ -359,7 +375,7 @@ export default function PatientSnapshot({ data, overview }) {
                     {valueText(firstChange.current)}
                   </span>
                 </div>
-                <LabTrendChart points={trendPoints} unit={firstChange.unit} />
+                <DeferredLabTrendChart points={trendPoints} unit={firstChange.unit} />
               </>
             ) : (
               <div className="flex h-56 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
@@ -435,7 +451,7 @@ export default function PatientSnapshot({ data, overview }) {
         description="ضبط یادداشت ویزیت و مرور خلاصه‌های صوتی قبلی"
         meta={`${data.voiceNotes.length} یادداشت قبلی`}
       >
-        <VoiceVisitNoteRecorder patientId={patient.id} visits={data.visits} />
+        <DeferredVoiceVisitNoteRecorder patientId={patient.id} visits={data.visits} />
         {data.voiceNotes.length > 0 ? (
           <div className="space-y-3">
             {data.voiceNotes.map((voiceNote) => (
@@ -456,7 +472,7 @@ export default function PatientSnapshot({ data, overview }) {
                 ) : (
                   <p className="mt-4 text-sm text-muted-foreground">فایل صوتی در حال حاضر در دسترس نیست.</p>
                 )}
-                <VoiceNoteClinicalDocumentEditor voiceNote={voiceNote} />
+                <DeferredVoiceNoteClinicalDocumentEditor voiceNote={voiceNote} />
               </article>
             ))}
           </div>
@@ -477,14 +493,14 @@ export default function PatientSnapshot({ data, overview }) {
               هنوز رویدادی برای روند سلامت ثبت نشده است.
             </div>
           ) : (
-            <div className="relative space-y-6 pr-5 before:absolute before:right-1 before:top-2 before:h-[calc(100%-1rem)] before:w-px before:bg-border">
+            <div className="relative space-y-6 pe-5 before:absolute before:end-1 before:top-2 before:h-[calc(100%-1rem)] before:w-px before:bg-border">
               {data.timeline.map((event) => (
                 <article key={event.id} className="relative">
                   <span
-                    className="absolute -right-[4px] top-1.5 size-2.5 rounded-full border-2 border-card bg-primary"
+                    className="absolute -end-[0.25rem] top-1.5 size-2.5 rounded-full border-2 border-card bg-primary"
                     aria-hidden="true"
                   />
-                  <div className="pr-3">
+                  <div className="pe-3">
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                       <h3 className="text-sm font-medium">{event.title}</h3>
                       <time className="text-xs text-muted-foreground">

@@ -198,7 +198,7 @@ export default function ResultImportPanel({ tests = [], onImport }) {
           </div>
 
           {tests.length ? (
-            <span className="text-[11px] text-muted-foreground">{tests.length} تست در این پذیرش</span>
+            <span className="text-[0.6875rem] text-muted-foreground">{tests.length} تست در این پذیرش</span>
           ) : null}
         </div>
 

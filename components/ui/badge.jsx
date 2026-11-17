@@ -1,36 +1,40 @@
-import * as React from "react"
+import * as React from "react";
 import { cva } from "class-variance-authority";
-
-import { cn } from "@/lib/utils"
+import { Slot } from "@radix-ui/react-slot";
+import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold leading-4 transition-colors",
   {
     variants: {
       variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive:
-          "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
-        outline: "text-foreground",
+        default: "border-transparent bg-primary text-primary-foreground",
+        secondary: "border-transparent bg-secondary text-secondary-foreground",
+        destructive: "border-transparent bg-destructive text-destructive-foreground",
+        outline: "border-border bg-transparent text-foreground",
+        success: "border-success/25 bg-success/10 text-success-foreground",
+        warning: "border-warning/30 bg-warning/10 text-warning-foreground",
+        info: "border-info/25 bg-info/10 text-info-foreground",
+        neutral: "border-border bg-muted text-muted-foreground",
+      },
+      size: {
+        sm: "px-2 py-0.5 text-[0.6875rem]",
+        md: "px-2.5 py-1 text-xs",
       },
     },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
+    defaultVariants: { variant: "default", size: "md" },
+  },
+);
 
-function Badge({
-  className,
-  variant,
-  ...props
-}) {
-  return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
-  )
-}
+const Badge = React.forwardRef(({ className, variant, size, asChild = false, ...props }, ref) => {
+  const Comp = asChild ? Slot : "span";
+  return <Comp ref={ref} className={cn(badgeVariants({ variant, size }), className)} {...props} />;
+});
+Badge.displayName = "Badge";
 
-export { Badge, badgeVariants }
+const Tag = React.forwardRef(({ className, ...props }, ref) => (
+  <Badge ref={ref} variant="outline" className={cn("font-medium", className)} {...props} />
+));
+Tag.displayName = "Tag";
+
+export { Badge, Tag, badgeVariants };

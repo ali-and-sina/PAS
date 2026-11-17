@@ -99,7 +99,7 @@ export default function AdminLoginCard({ next = null, isTestLoginEnabled = false
   }
 
   return (
-    <Card className={`relative w-full max-w-md overflow-hidden rounded-[1.65rem] border border-border/70 bg-card/95 shadow-[0_24px_70px_-38px_hsl(var(--primary)/0.42)] backdrop-blur-xl`}>
+    <Card className={`relative w-full max-w-md overflow-hidden rounded-[1.65rem] border border-border/70 bg-card/95 shadow-[0_1.5rem_4.375rem_-2.375rem_hsl(var(--primary)/0.42)] backdrop-blur-xl`}>
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-12 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent"
@@ -107,7 +107,7 @@ export default function AdminLoginCard({ next = null, isTestLoginEnabled = false
       <CardHeader className="space-y-3 px-6 pb-5 pt-8 text-center sm:px-8 sm:pt-9">
         <div className="mb-1 flex flex-col items-center gap-3">
           <Brand />
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/[0.055] px-3 py-1 text-[11px] font-medium text-primary">
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/[0.055] px-3 py-1 text-[0.6875rem] font-medium text-primary">
             دسترسی امن مدیران سامانه
           </span>
         </div>

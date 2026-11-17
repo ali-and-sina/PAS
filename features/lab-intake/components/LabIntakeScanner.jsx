@@ -8,11 +8,12 @@ import { Camera, CheckCircle2, Clipboard, ScanLine } from "lucide-react";
 
 import { collectHomeSampleFromQr, resolveLabWorkflowQrToken } from "@/features/lab-intake/actions";
 import { Button } from "@/components/ui/button";
+import Spinner from "@/components/shared/Spinner";
 import { Input } from "@/components/ui/input";
 
 const LabCameraScanner = dynamic(() => import("./LabCameraScanner"), {
   ssr: false,
-  loading: () => <div className="mt-4 flex aspect-video max-w-lg items-center justify-center rounded-xl border bg-muted/30 text-sm text-muted-foreground">در حال آماده‌سازی دوربین…</div>,
+  loading: () => <div role="status" aria-live="polite" className="mt-4 flex aspect-video max-w-lg items-center justify-center gap-2 rounded-xl border bg-muted/30 text-sm text-muted-foreground"><Spinner size="sm" decorative label="در حال آماده‌سازی دوربین…" /><span>در حال آماده‌سازی دوربین…</span></div>,
 });
 
 const TOKEN_PATTERN = /^[0-9a-f]{64}$/i;

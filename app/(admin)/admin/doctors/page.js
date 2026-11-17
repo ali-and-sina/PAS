@@ -50,7 +50,7 @@ export default async function AdminDoctorsPage({ searchParams }) {
                   <TableRow key={doctor.id}>
                     <TableCell>
                       <div className="min-w-36 space-y-1">
-                        <Link className="font-medium hover:underline" href={`/admin/doctors/${doctor.id}`}>{doctor.full_name || "بدون نام"}</Link>
+                        <Link prefetch={false} className="font-medium hover:underline" href={`/admin/doctors/${doctor.id}`}>{doctor.full_name || "بدون نام"}</Link>
                         <p dir="ltr" className="text-start text-xs text-muted-foreground">{doctor.phone || "—"}</p>
                       </div>
                     </TableCell>
@@ -68,10 +68,10 @@ export default async function AdminDoctorsPage({ searchParams }) {
               <article key={doctor.id} className="min-w-0 space-y-3 p-4">
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <Link className="break-words font-semibold hover:underline" href={`/admin/doctors/${doctor.id}`}>{doctor.full_name || "بدون نام"}</Link>
+                    <Link prefetch={false} className="break-words font-semibold hover:underline" href={`/admin/doctors/${doctor.id}`}>{doctor.full_name || "بدون نام"}</Link>
                     <p dir="ltr" className="mt-1 break-words text-start text-xs text-muted-foreground">{doctor.phone || "—"}</p>
                   </div>
-                  <span className={doctor.is_verified ? "shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-xs text-emerald-700" : "shrink-0 rounded-full bg-amber-50 px-2 py-1 text-xs text-amber-800"}>
+                  <span className={doctor.is_verified ? "shrink-0 rounded-full bg-status-normal-bg px-2 py-1 text-xs text-status-normal" : "shrink-0 rounded-full bg-status-low-bg px-2 py-1 text-xs text-status-low"}>
                     {doctor.is_verified ? "تأییدشده" : "در انتظار تأیید"}
                   </span>
                 </div>

@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePatient } from "@/features/patient/auth";
 import { recordPatientAudit } from "@/features/patient/audit";
 import { requireVerifiedDoctor } from "@/features/doctor/access";
-import { normalizeDigits, normalizeIranianMobile } from "@/lib/utils/validation";
+import { getNationalIdSearchVariants, normalizeDigits, normalizeIranianMobile } from "@/lib/utils/validation";
 import {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
@@ -56,6 +56,7 @@ function normalizePatientSearch(value) {
     mobileDigits ? mobileDigits.slice(2) : "",
     mobileDigits ? `0098${mobileDigits.slice(2)}` : "",
   ].filter(Boolean))];
+  const nationalIdSearchTerms = getNationalIdSearchVariants(raw);
 
   return {
     raw,
@@ -64,7 +65,7 @@ function normalizePatientSearch(value) {
     ].map((term) => `full_name.ilike.%${term}%`),
     digitFilters: digits
       ? [
-          `national_id.ilike.%${digits}%`,
+          ...nationalIdSearchTerms.map((term) => `national_id.ilike.%${term}%`),
           ...mobileSearchTerms.map((term) => `phone.ilike.%${term}%`),
         ]
       : [],
@@ -169,6 +170,30 @@ export async function getDoctorPatientsPage(doctorId, options = {}) {
   if (!doctor?.id || doctor.id !== doctorId) return EMPTY_DOCTOR_PATIENT_PAGE;
   const supabase = await createClient();
   return queryDoctorPatientsPage(supabase, doctor.id, options);
+}
+
+/**
+ * Small, active-relationship-only suggestion list for the doctor record switcher.
+ * It deliberately returns no national ID, phone, or other profile details.
+ */
+export async function searchDoctorPatientSuggestions(search) {
+  const doctor = await requireVerifiedDoctor();
+  if (!doctor?.id) return [];
+
+  const normalizedSearch = typeof search === "string" ? search.trim().slice(0, 100) : "";
+  if (normalizedSearch.length < 2) return [];
+
+  const supabase = await createClient();
+  const result = await queryDoctorPatientsPage(supabase, doctor.id, {
+    page: 1,
+    pageSize: 8,
+    search: normalizedSearch,
+  });
+
+  return result.items.map((patient) => ({
+    id: patient.id,
+    full_name: patient.full_name || "بیمار",
+  }));
 }
 
 /** Backward-compatible patient options for existing form selectors. Each database read is bounded. */

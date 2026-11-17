@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import Spinner from "@/components/shared/Spinner";
 
 function buildHref(pathname, query, page, pageParam) {
   const params = new URLSearchParams();
@@ -21,6 +22,7 @@ export default function Pagination({
   totalCount = 0,
   totalPages = 1,
   hasNextPage,
+  loading = false,
   pageParam = "page",
   query = {},
 }) {
@@ -33,19 +35,22 @@ export default function Pagination({
   const end = totalCount === null ? safePage * pageSize : Math.min(safePage * pageSize, totalCount);
 
   return (
-    <nav aria-label="صفحه‌بندی فهرست" className="flex flex-col gap-3 rounded-xl border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+    <nav aria-label="صفحه‌بندی فهرست" aria-busy={loading || undefined} className="flex flex-col gap-3 rounded-xl border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-1">
       <p className="text-xs text-muted-foreground" aria-live="polite">
         {totalCount === null ? "نمایش موارد این صفحه؛ تعداد کل با این فیلتر محاسبه نمی‌شود" : `نمایش ${start.toLocaleString("fa-IR")} تا ${end.toLocaleString("fa-IR")} از ${totalCount.toLocaleString("fa-IR")} مورد`}
       </p>
+      {loading ? <p role="status" aria-live="polite" className="inline-flex items-center gap-2 text-xs text-muted-foreground"><Spinner size="sm" decorative label="در حال بارگذاری صفحه…" /><span>در حال بارگذاری صفحه…</span></p> : null}
+      </div>
       <div className="flex items-center justify-between gap-2 sm:justify-end">
         {safePage > 1 ? (
-          <Button asChild size="sm" variant="outline">
+          <Button asChild size="sm" variant="outline" disabled={loading}>
             <Link href={buildHref(pathname, query, safePage - 1, pageParam)} prefetch={false}>صفحهٔ قبل</Link>
           </Button>
         ) : <Button size="sm" variant="outline" disabled>صفحهٔ قبل</Button>}
         <span className="min-w-max text-xs text-muted-foreground">{safeTotalPages ? `صفحهٔ ${safePage.toLocaleString("fa-IR")} از ${safeTotalPages.toLocaleString("fa-IR")}` : `صفحهٔ ${safePage.toLocaleString("fa-IR")}`}</span>
         {canGoNext ? (
-          <Button asChild size="sm" variant="outline">
+          <Button asChild size="sm" variant="outline" disabled={loading}>
             <Link href={buildHref(pathname, query, safePage + 1, pageParam)} prefetch={false}>صفحهٔ بعد</Link>
           </Button>
         ) : <Button size="sm" variant="outline" disabled>صفحهٔ بعد</Button>}

@@ -53,7 +53,7 @@ export default async function LabResultsPage({ searchParams }) {
                 </div>
                 <div className="flex items-center gap-3">
                   <LabResultStatus status={report.status} />
-                  <Button asChild size="sm" variant="outline"><Link href={`/lab/results/${report.id}`}>مشاهده</Link></Button>
+                  <Button asChild size="sm" variant="outline"><Link prefetch={false} href={`/lab/results/${report.id}`}>مشاهده</Link></Button>
                 </div>
               </div>
             </div>

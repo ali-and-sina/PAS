@@ -87,7 +87,7 @@ export default async function DoctorPatientsPage({ searchParams }) {
         <>
           <div className="hidden overflow-hidden rounded-xl border bg-card lg:block">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-sm">
+              <table className="w-full min-w-[45rem] text-sm">
                 <thead className="border-b bg-muted/40 text-start">
                   <tr>
                     <th scope="col" className="p-4 text-start font-medium">بیمار</th>
@@ -105,7 +105,7 @@ export default async function DoctorPatientsPage({ searchParams }) {
                       <td dir="ltr" className="p-4 text-start tabular-nums">{patient.phone || "—"}</td>
                       <td className="p-4">{formatDate(patient.patientProfile?.date_of_birth)}</td>
                       <td className="p-4">
-                        <Link href={`/doctor/patients/${patient.id}`} className="text-primary hover:underline">مشاهده پرونده</Link>
+                        <Link prefetch={false} href={`/doctor/patients/${patient.id}`} className="text-primary hover:underline">مشاهده پرونده</Link>
                       </td>
                     </tr>
                   ))}
@@ -120,7 +120,7 @@ export default async function DoctorPatientsPage({ searchParams }) {
                 <h2 className="break-words font-semibold">{patient.full_name || "بدون نام"}</h2>
                 <PatientDetails patient={patient} />
                 <Button asChild variant="outline" size="sm" className="mt-4 w-full">
-                  <Link href={`/doctor/patients/${patient.id}`}>مشاهدهٔ پرونده</Link>
+                  <Link prefetch={false} href={`/doctor/patients/${patient.id}`}>مشاهدهٔ پرونده</Link>
                 </Button>
               </article>
             ))}

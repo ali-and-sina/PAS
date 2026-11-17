@@ -17,7 +17,7 @@ export default function AuthPageShell({ children, variant = "public" }) {
   const isAdmin = variant === "admin";
   const steps = isAdmin ? adminSteps : careSteps;
   return <main id="main-content" className="flex min-h-svh items-center justify-center bg-background px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
-    <div className="grid w-full max-w-md overflow-hidden rounded-3xl border bg-card shadow-[0_24px_80px_-48px_hsl(var(--foreground)/0.3)] lg:min-h-[740px] lg:max-w-6xl lg:grid-cols-[1.05fr_1fr]">
+    <div className="grid w-full max-w-md overflow-hidden rounded-3xl border bg-card shadow-[0_1.5rem_5rem_-3rem_hsl(var(--foreground)/0.3)] lg:min-h-[46.25rem] lg:max-w-6xl lg:grid-cols-[1.05fr_1fr]">
       <aside aria-label={isAdmin ? "فضای مدیریت پاس" : "درباره پاس"} className={`${styles.panel} relative hidden flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground lg:flex xl:p-12`}>
         <div aria-hidden="true" className={styles.rings} />
         <div className="relative"><Brand inverse /><p className="mt-14 text-sm font-medium text-white">{isAdmin ? "مدیریت هماهنگ سامانه" : "همراه مسیر سلامت"}</p><p className="mt-4 max-w-md text-4xl font-extrabold leading-[1.65] xl:text-[2.75rem]">{isAdmin ? <>یک نمای روشن<br />از تمام سامانه.</> : <>مراقبت بهتر،<br />با ارتباط روشن‌تر.</>}</p><p className="mt-5 max-w-sm text-sm leading-8 text-white">{isAdmin ? "کاربران، پزشکان و مراکز درمانی را از یک فضای کاری یکپارچه مدیریت کنید." : "از ویزیت و درخواست خدمات درمانی تا دریافت گزارش، نسخه و پیگیری؛ بیمار، پزشک و مراکز درمانی در یک مسیر هماهنگ."}</p></div>
